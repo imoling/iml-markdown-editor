@@ -1,0 +1,52 @@
+:root {
+  --bg-page: #FFFFFF;
+  --bg-surface: #F2F2F7;
+  --bg-card: #FFFFFF;
+  --bg-elevated: #E5E5EA;
+  --text-primary: #1C1C1E;
+  --text-secondary: #3A3A3C;
+  --text-tertiary: #636366;
+  --text-muted: #8E8E93;
+  --border-subtle: #D1D1D6;
+  --border-strong: #C7C7CC;
+  --color-accent-green: #34C759;
+  --color-accent-indigo: #007AFF;
+  --color-accent-coral: #FF3B30;
+  --font-heading: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-code: "JetBrains Mono", "Fira Code", monospace;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--bg-page);
+  color: var(--text-primary);
+  margin: 0;
+  overflow: hidden; /* Prevent body scrolling in desktop app */
+  user-select: none; /* Make UI feel like native app */
+  -webkit-user-select: none;
+}
+
+/* Allow text selection in editor areas */
+.editor-content {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+}
+
+/* Ensure all buttons, inputs, links, and clickable divs bypass window dragging on macOS */
+button, a, input, select, textarea, [role="button"], .clickable {
+  -webkit-app-region: no-drag;
+}

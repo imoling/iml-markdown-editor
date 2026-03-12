@@ -1,0 +1,348 @@
+/* Tiptap styles */
+.tiptap-container {
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.tiptap-prosemirror {
+  outline: none;
+  font-family: var(--font-body);
+  color: var(--text-primary);
+  line-height: 1.5;
+  min-height: 500px; /* Ensure there is a clickable area even if empty */
+}
+
+/* Ensure the ProseMirror content area itself fills the container */
+.tiptap-container .ProseMirror {
+  min-height: calc(100vh - 120px);
+  outline: none;
+}
+
+.tiptap-prosemirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: var(--text-muted);
+  pointer-events: none;
+  height: 0;
+  font-style: italic;
+}
+
+.tiptap-prosemirror p {
+  margin-bottom: 0.5em;
+  font-size: 16px;
+  color: var(--text-primary);
+}
+
+.tiptap-prosemirror h1, 
+.tiptap-prosemirror h2, 
+.tiptap-prosemirror h3 {
+  font-family: var(--font-heading);
+  letter-spacing: -0.5px;
+  color: var(--text-primary);
+  margin-top: 1.25em;
+  margin-bottom: 0.4em;
+  font-weight: 600;
+}
+
+.tiptap-prosemirror h1 {
+  font-size: 32px;
+  letter-spacing: -0.8px;
+  margin-top: 0;
+  margin-bottom: 24px;
+}
+
+/* Table styles */
+.tiptap-prosemirror table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+}
+
+.tiptap-prosemirror table td,
+.tiptap-prosemirror table th {
+  min-width: 1em;
+  border: 1px solid var(--border-subtle);
+  padding: 8px 12px;
+  vertical-align: top;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.tiptap-prosemirror table th {
+  font-weight: bold;
+  text-align: left;
+  background-color: var(--bg-surface);
+}
+
+.tiptap-prosemirror .selectedCell:after {
+  z-index: 2;
+  position: absolute;
+  content: "";
+  left: 0; right: 0; top: 0; bottom: 0;
+  background: rgba(99, 102, 241, 0.08); /* Indigo accent */
+  pointer-events: none;
+}
+
+/* Code block styles */
+.tiptap-prosemirror pre {
+  background: var(--bg-elevated);
+  border-radius: 8px;
+  padding: 16px;
+  margin: 1.5em 0;
+  border: 1px solid var(--border-subtle);
+}
+
+.tiptap-prosemirror pre code {
+  font-family: var(--font-code);
+  font-size: 14px;
+  background: none;
+  padding: 0;
+  color: inherit;
+}
+
+/* Math block styles */
+.math-block-container {
+  display: block;
+  padding: 20px;
+  margin: 1.5em 0;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.math-block-container:hover {
+  border-color: var(--color-accent-indigo);
+}
+
+/* Syntax Highlighting (Lowlight) */
+.hljs-comment, .hljs-quote { color: #8e908c; font-style: italic; }
+.hljs-variable, .hljs-template-variable, .hljs-tag, .hljs-name, .hljs-selector-id, .hljs-selector-class, .hljs-regexp, .hljs-deletion { color: #c82829; }
+.hljs-number, .hljs-built_in, .hljs-builtin-name, .hljs-literal, .hljs-type, .hljs-params, .hljs-meta, .hljs-link { color: #f5871f; }
+.hljs-attribute { color: #eab700; }
+.hljs-string, .hljs-symbol, .hljs-bullet, .hljs-addition { color: #718c00; }
+.hljs-title, .hljs-section { color: #4271ae; }
+.hljs-keyword, .hljs-selector-tag { color: #8959a8; }
+.hljs-emphasis { font-style: italic; }
+.hljs-strong { font-weight: bold; }
+/* Toolbar & Divider Styles */
+.toolbar-divider {
+  width: 1px;
+  height: 16px;
+  background-color: var(--border-subtle);
+  margin: 0 4px;
+}
+
+.toolbar-btn, .toolbar-icon-btn {
+  padding: 6px 10px;
+  border-radius: 6px;
+  transition: all 0.2s;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  WebkitAppRegion: no-drag;
+}
+
+.toolbar-btn:hover, .toolbar-icon-btn:hover {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.toolbar-btn.active, .toolbar-icon-btn.active {
+  background-color: var(--bg-surface);
+  color: var(--color-accent-indigo);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+/* Task List Styles */
+ul[data-type="taskList"] {
+  list-style: none;
+  padding: 0;
+}
+
+ul[data-type="taskList"] li {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 0.5em;
+}
+
+ul[data-type="taskList"] li > label {
+  flex: 0 0 auto;
+  user-select: none;
+  margin-right: 12px;
+  margin-top: 4px;
+}
+
+ul[data-type="taskList"] li > div {
+  flex: 1 1 auto;
+}
+
+ul[data-type="taskList"] input[type="checkbox"] {
+  cursor: pointer;
+  appearance: none;
+  background-color: transparent;
+  margin: 0;
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid var(--border-subtle);
+  border-radius: 4px;
+  display: grid;
+  place-content: center;
+  transition: all 0.2s;
+}
+
+ul[data-type="taskList"] input[type="checkbox"]:hover {
+  border-color: var(--color-accent-indigo);
+  background-color: var(--bg-hover);
+}
+
+ul[data-type="taskList"] input[type="checkbox"]:checked {
+  background-color: var(--color-accent-indigo);
+  border-color: var(--color-accent-indigo);
+}
+
+ul[data-type="taskList"] input[type="checkbox"]:before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  transform: scale(0);
+  transition: 120ms transform ease-in-out;
+  box-shadow: inset 1em 1em white;
+  background-color: CanvasText;
+  clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+}
+
+ul[data-type="taskList"] input[type="checkbox"]:checked:before {
+  transform: scale(1);
+}
+
+ul[data-type="taskList"] li[data-checked="true"] > div {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+/* List Styles */
+.tiptap-prosemirror ul, 
+.tiptap-prosemirror ol {
+  padding: 0 1rem 0 1.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.tiptap-prosemirror li p {
+  margin: 0;
+}
+
+/* Blockquote Styles */
+.tiptap-prosemirror blockquote {
+  padding-left: 1rem;
+  border-left: 4px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-style: italic;
+  margin: 1.5rem 0;
+}
+
+/* Link Styles */
+.tiptap-prosemirror a {
+  color: var(--color-accent-indigo);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.tiptap-prosemirror a:hover {
+  opacity: 0.8;
+}
+
+/* Image Styles */
+.tiptap-prosemirror img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  margin: 1rem 0;
+  display: block;
+}
+
+
+.bubble-menu button:hover,
+.floating-menu button:hover {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.bubble-menu button.active,
+.floating-menu button.active {
+  background-color: var(--bg-surface);
+  color: var(--color-accent-indigo);
+}
+
+/* CodeMirror styles overlay ... */
+.cm-theme-override {
+  height: 100%;
+  font-family: var(--font-code);
+}
+
+/* Override codemirror selection & active line colors to match themes */
+.cm-editor {
+  background-color: var(--bg-page) !important;
+  color: var(--text-primary) !important;
+  height: 100% !important;
+}
+
+.cm-scroller {
+  font-family: var(--font-code) !important;
+}
+
+.cm-content {
+  caret-color: var(--color-accent-indigo) !important;
+  padding: 40px !important; /* Give some breathing room to Markdown source */
+}
+
+.cm-cursor {
+  border-left-color: var(--color-accent-indigo) !important;
+}
+
+.cm-gutters {
+  background-color: var(--bg-page) !important;
+  color: var(--text-tertiary) !important;
+  border-right: none !important;
+}
+
+.cm-activeLineGutter {
+  background-color: rgba(0, 0, 0, 0.05) !important;
+  color: var(--text-primary) !important;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.tiptap-prosemirror a {
+  color: var(--color-accent-indigo);
+  text-decoration: underline;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.tiptap-prosemirror a:hover {
+  opacity: 0.8;
+}
+.cm-activeLine {
+  background-color: rgba(0, 0, 0, 0.02) !important;
+}
+
+.cm-selectionBackground {
+  background-color: rgba(0, 122, 255, 0.2) !important;
+}
+
