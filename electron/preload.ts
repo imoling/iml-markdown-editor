@@ -12,8 +12,10 @@ contextBridge.exposeInMainWorld('api', {
     saveImage: (activeFilePath: string, fileName: string, buffer: ArrayBuffer) => ipcRenderer.invoke('fs:saveImage', activeFilePath, fileName, buffer),
   },
   export: {
-    pdf: (htmlContent: string, defaultPath: string) => ipcRenderer.invoke('export:pdf', htmlContent, defaultPath),
-    word: (htmlContent: string, defaultPath: string) => ipcRenderer.invoke('export:word', htmlContent, defaultPath),
+    pdf: (htmlContent: string, defaultPath: string, filePath: string) => ipcRenderer.invoke('export:pdf', htmlContent, defaultPath, filePath),
+  },
+  shell: {
+    openExternal: (url: string) => ipcRenderer.invoke('open-url', url),
   },
   events: {
     on: (channel: string, callback: (...args: any[]) => void) => {

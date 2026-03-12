@@ -17,8 +17,6 @@ export function setupFileSystemIPC() {
       return null;
     }
     
-    // For simplicity, handle reading the first file if it's a file request
-    // or return the path if it's a directory
     return result.filePaths;
   });
 
@@ -53,7 +51,13 @@ export function setupFileSystemIPC() {
   // Save an image buffer to disk relative to the active file
   ipcMain.handle('fs:saveImage', async (_, activeFilePath: string, fileName: string, buffer: ArrayBuffer) => {
     try {
-      const dirPath = path.dirname(activeFilePath);
+      let dirPath: string;
+      if (activeFilePath.startsWith('new-')) {
+        dirPath = process.cwd();
+      } else {
+        dirPath = path.dirname(activeFilePath);
+      }
+      
       const assetsDir = path.join(dirPath, 'assets');
       if (!fs.existsSync(assetsDir)) {
          await fs.promises.mkdir(assetsDir, { recursive: true });
@@ -91,7 +95,7 @@ export function setupFileSystemIPC() {
   });
 
   // Export to PDF
-  ipcMain.handle('export:pdf', async (event, htmlContent: string, defaultPath: string) => {
+  ipcMain.handle('export:pdf', async (event, htmlContent: string, defaultPath: string, activeFilePath: string) => {
     try {
        const window = BrowserWindow.fromWebContents(event.sender);
        if (!window) return { success: false, error: 'No window found' };
@@ -103,28 +107,45 @@ export function setupFileSystemIPC() {
        
        if (savePath.canceled || !savePath.filePath) return { success: false, canceled: true };
        
-       // Create hidden window to render and print
-       const printWindow = new BrowserWindow({ show: false, webPreferences: { nodeIntegration: false, contextIsolation: true } });
+       const dirPath = !activeFilePath.startsWith('new-') ? path.dirname(activeFilePath) : process.cwd();
+       const baseHref = `file:///${dirPath.replace(/\\/g, '/')}/`;
+
+       const printWindow = new BrowserWindow({ 
+         show: false, 
+         webPreferences: { 
+           nodeIntegration: false, 
+           contextIsolation: true 
+         } 
+       });
        
-       // Load HTML data
-       const dataUri = 'data:text/html;charset=utf-8,' + encodeURIComponent(`
+       const fullHtml = `
          <html>
            <head>
+             <meta charset="utf-8">
+             <base href="${baseHref}">
              <style>
-               body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: 40px; }
-               img { max-width: 100%; border-radius: 8px; }
-               pre { background: #f6f8fa; padding: 16px; border-radius: 6px; }
-               code { font-family: 'Menlo', 'Monaco', monospace; }
+               body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: 40px; color: #333; line-height: 1.6; }
+               img { max-width: 100%; border-radius: 8px; margin: 10px 0; display: block; }
+               pre { background: #f6f8fa; padding: 16px; border-radius: 6px; overflow-x: auto; }
+               code { font-family: 'Menlo', 'Monaco', monospace; font-size: 0.9em; }
+               table { border-collapse: collapse; width: 100%; margin: 20px 0; }
+               th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+               th { background-color: #f8f9fa; }
+               h1, h2, h3 { color: #111; margin-top: 1.5em; }
              </style>
            </head>
            <body>${htmlContent}</body>
          </html>
-       `);
+       `;
        
-       await printWindow.loadURL(dataUri);
+       await printWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(fullHtml));
+       
+       // Wait for images
+       await new Promise(resolve => setTimeout(resolve, 800));
+
        const pdfBuffer = await printWindow.webContents.printToPDF({
           printBackground: true,
-          margins: { top: 0.5, bottom: 0.5, left: 0.5, right: 0.5 }
+          margins: { top: 1, bottom: 1, left: 1, right: 1 }
        });
        
        await fs.promises.writeFile(savePath.filePath, pdfBuffer);
@@ -132,39 +153,13 @@ export function setupFileSystemIPC() {
        
        return { success: true, path: savePath.filePath };
     } catch (error: any) {
+      console.error("PDF Export Error:", error);
       return { success: false, error: error.message };
     }
   });
 
-  // Export to DOCX
-  ipcMain.handle('export:word', async (event, htmlContent: string, defaultPath: string) => {
-     try {
-       const window = BrowserWindow.fromWebContents(event.sender);
-       if (!window) return { success: false, error: 'No window found' };
-       
-       const savePath = await dialog.showSaveDialog(window, {
-         defaultPath: defaultPath.replace('.md', '.docx'),
-         filters: [{ name: 'Word Document', extensions: ['docx'] }]
-       });
-       
-       if (savePath.canceled || !savePath.filePath) return { success: false, canceled: true };
-       
-       const HTMLtoDOCX = require('html-to-docx');
-       const docxBuffer = await HTMLtoDOCX(htmlContent, null, {
-         table: { row: { cantSplit: true } },
-         footer: true,
-         pageNumber: true,
-       });
-       
-       await fs.promises.writeFile(savePath.filePath, docxBuffer);
-       return { success: true, path: savePath.filePath };
-     } catch (error: any) {
-       console.error("DOCX Export Error:", error);
-       return { success: false, error: error.message };
-     }
-  });
 
-  // Read directory (simple implementation for Phase 4)
+  // Read directory
   ipcMain.handle('fs:readDir', async (_, dirPath: string) => {
     try {
       const dirents = await fs.promises.readdir(dirPath, { withFileTypes: true });
@@ -173,7 +168,6 @@ export function setupFileSystemIPC() {
         path: path.join(dirPath, dirent.name),
         isDirectory: dirent.isDirectory()
       }));
-      // Sort: Directories first, then alphabetical
       files.sort((a, b) => {
         if (a.isDirectory && !b.isDirectory) return -1;
         if (!a.isDirectory && b.isDirectory) return 1;

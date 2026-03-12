@@ -1,10 +1,10 @@
 import { create } from 'zustand';
-import { extractHeadings } from '../utils/markdown';
+import { extractHeadings } from '../utils/outline';
 
 export interface FileNode {
   name: string;
   path: string;
-  type: 'file' | 'directory';
+  isDirectory: boolean;
   children?: FileNode[];
 }
 
@@ -20,6 +20,11 @@ export interface HeadingNode {
   level: number;
   text: string;
   id: string;
+}
+
+export interface NavigationRequest {
+  heading: HeadingNode;
+  timestamp: number;
 }
 
 export interface AppState {
@@ -38,17 +43,20 @@ export interface AppState {
   replaceVisible: boolean;
   sidebarTab: 'catalog' | 'files';
   expandedPaths: string[];
+  navigationRequest: NavigationRequest | null;
   
   // Actions
   toggleMode: () => void;
   setActiveTab: (id: string | null) => void;
   openTab: (tab: Tab) => void;
   closeTab: (id: string) => void;
+  updateTabContent: (id: string, content: string) => void;
   setWorkspace: (path: string, name: string, files: FileNode[]) => void;
   updateFileNode: (path: string, updates: Partial<FileNode>) => void;
   updateTabId: (oldId: string, newId: string, newTitle: string) => void;
   setExpanded: (path: string, expanded: boolean) => void;
   revealInSidebar: (path: string) => Promise<void>;
+  scrollToHeading: (heading: HeadingNode) => void;
   
   // UI Actions
   toggleSidebar: () => void;
@@ -80,30 +88,62 @@ export const useAppStore = create<AppState>((set, get) => ({
   outline: [],
   findVisible: false,
   replaceVisible: false,
-  sidebarTab: 'catalog',
+  sidebarTab: 'files',
   expandedPaths: [],
+  navigationRequest: null,
   
   toggleMode: () => set((state) => ({ 
     mode: state.mode === 'word' ? 'markdown' : 'word' 
   })),
   
-  setActiveTab: (id) => {
+  setActiveTab: async (id) => {
     set({ activeTabId: id });
+    
+    // Auto-update workspace based on active tab
+    if (id && !id.startsWith('new-')) {
+      const sep = id.includes('/') ? '/' : '\\';
+      const lastSepIndex = id.lastIndexOf(sep);
+      if (lastSepIndex !== -1) {
+        const dirPath = id.substring(0, lastSepIndex);
+        const dirName = dirPath.split(sep).pop() || 'Workspace';
+        
+        // Only refresh if workspace actually changed or is currently null
+        if (get().workspacePath !== dirPath) {
+          try {
+            const result = await window.api.fs.readDir(dirPath);
+            if (result.success && result.files) {
+              set({ 
+                workspacePath: dirPath, 
+                workspaceName: dirName, 
+                fileTree: result.files,
+                expandedPaths: [...new Set([...get().expandedPaths, dirPath])]
+              });
+            }
+          } catch (error) {
+            console.error('Failed to auto-switch workspace:', error);
+          }
+        }
+      }
+    } else if (id && id.startsWith('new-')) {
+      // For new files, we might want to clear or keep workspace. 
+      // User says: "If unsaved then empty". 
+      // This implies we should clear workspace if a new (unsaved) tab is focused.
+      set({ workspacePath: null, workspaceName: null, fileTree: [] });
+    }
+
     if (id && (id.includes('/') || id.includes('\\'))) {
       get().revealInSidebar(id);
     }
   },
   
-  openTab: (tab) => set((state) => {
+  openTab: (tab) => {
+    const state = get();
     const exists = state.tabs.find((t) => t.id === tab.id);
     if (!exists) {
-      return { 
-        tabs: [...state.tabs, tab],
-        activeTabId: tab.id
-      };
+      set({ tabs: [...state.tabs, tab] });
     }
-    return { activeTabId: tab.id };
-  }),
+    get().setActiveTab(tab.id); // Use the logic in setActiveTab to update workspace
+  },
   
   closeTab: (id) => set((state) => {
     const newTabs = state.tabs.filter((t) => t.id !== id);
@@ -111,8 +151,11 @@ export const useAppStore = create<AppState>((set, get) => ({
       ? (newTabs.length > 0 ? newTabs[newTabs.length - 1].id : null)
       : state.activeTabId;
     
+    // We update workspace manually here because set() within closeTab is synchronous
+    // We'll let the next setActiveTab call handle it if the active tab changed
+    
     if (newTabs.length === 0) {
-      return { tabs: [], activeTabId: null, outline: [] };
+      return { tabs: [], activeTabId: null, outline: [], workspacePath: null, workspaceName: null, fileTree: [] };
     }
 
     return { 
@@ -121,10 +164,18 @@ export const useAppStore = create<AppState>((set, get) => ({
     };
   }),
 
-  updateTabId: (oldId, newId, newTitle) => set((state) => ({
-    tabs: state.tabs.map(t => t.id === oldId ? { ...t, id: newId, title: newTitle, isDirty: false } : t),
-    activeTabId: state.activeTabId === oldId ? newId : state.activeTabId
+  updateTabContent: (id, content) => set((state) => ({
+    tabs: state.tabs.map(t => t.id === id ? { ...t, content, isDirty: true } : t)
   })),
+
+  updateTabId: (oldId, newId, newTitle) => set((state) => {
+    const newTabs = state.tabs.map(t => t.id === oldId ? { ...t, id: newId, title: newTitle, isDirty: false } : t);
+    const newState = {
+      tabs: newTabs,
+      activeTabId: state.activeTabId === oldId ? newId : state.activeTabId
+    };
+    return newState;
+  }),
 
   setWorkspace: (path, name, files) => set({ 
     workspacePath: path, 
@@ -164,6 +215,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     
     set({ expandedPaths: [...new Set(newExpanded)] });
   },
+
+  scrollToHeading: (heading) => set({ 
+    navigationRequest: { heading, timestamp: Date.now() } 
+  }),
 
   toggleSidebar: () => set((state) => ({ sidebarVisible: !state.sidebarVisible })),
   toggleToolbar: () => set((state) => ({ toolbarVisible: !state.toolbarVisible })),
@@ -259,18 +314,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     const saveResult = await window.api.fs.writeFile(filePath, activeTab.content);
     if (saveResult.success) {
       if (isNewFile || saveAs) {
-        get().updateTabId(activeTab.id, filePath, filePath.split(/[/\\]/).pop() || 'Untitled');
+        await get().updateTabId(activeTab.id, filePath, filePath.split(/[/\\]/).pop() || 'Untitled');
         
-        const { workspacePath } = get();
-        if (workspacePath) {
-          get().refreshWorkspace();
-        } else {
-          const dirPath = filePath.substring(0, filePath.lastIndexOf(filePath.includes('/') ? '/' : '\\'));
-          const readResult = await window.api.fs.readDir(dirPath);
-          if (readResult.success && readResult.files) {
-            get().setWorkspace(dirPath, dirPath.split(/[/\\]/).pop() || 'Workspace', readResult.files);
-          }
-        }
+        // Let setActiveTab handle workspace refresh after ID update
+        get().setActiveTab(filePath);
       } else {
         set((state) => ({
           tabs: state.tabs.map(t => t.id === filePath ? { ...t, isDirty: false } : t)

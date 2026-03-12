@@ -14,8 +14,10 @@ declare global {
         saveImage: (activeFilePath: string, fileName: string, buffer: ArrayBuffer) => Promise<{ success: boolean; path?: string; error?: string }>;
       };
       export: {
-        pdf: (htmlContent: string, defaultPath: string) => Promise<{ success: boolean; path?: string; canceled?: boolean; error?: string }>;
-        word: (htmlContent: string, defaultPath: string) => Promise<{ success: boolean; path?: string; canceled?: boolean; error?: string }>;
+        pdf: (htmlContent: string, defaultPath: string, filePath: string) => Promise<{ success: boolean; path?: string; canceled?: boolean; error?: string }>;
+      };
+      shell: {
+        openExternal: (url: string) => Promise<void>;
       };
       events: {
         on: (channel: string, callback: (...args: any[]) => void) => void;

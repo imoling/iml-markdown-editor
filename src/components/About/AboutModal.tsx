@@ -18,7 +18,7 @@ const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    background: 'transparent', // Let Electron vibrancy show through
+    background: 'transparent',
     overflow: 'hidden',
   } : {
     position: 'fixed',
@@ -54,9 +54,16 @@ const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
     animation: 'scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
   };
 
+  const handleLinkClick = (url: string) => {
+    if (window.api && window.api.shell) {
+      window.api.shell.openExternal(url);
+    } else {
+      window.open(url, '_blank');
+    }
+  };
+
   return (
     <div style={containerStyle} onClick={onClose}>
-      {/* Draggable header for standalone window */}
       {isStandalone && (
         <div style={{
           position: 'absolute',
@@ -103,13 +110,31 @@ const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
           marginBottom: 24
         }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-              <span style={{ color: 'var(--text-secondary)' }}>开发者</span>
-              <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>imoling</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, alignItems: 'center' }}>
+              <span style={{ color: 'var(--text-secondary)' }}>Logic & Design</span>
+              <span 
+                style={{ color: 'var(--color-accent-indigo)', fontWeight: 500, cursor: 'pointer' }}
+                onClick={() => handleLinkClick('mailto:imoling.cn@gmail.com')}
+              >
+                imoling.cn@gmail.com
+              </span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, alignItems: 'center' }}>
+              <span style={{ color: 'var(--text-secondary)' }}>Developed by</span>
+              <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>Gemini</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, alignItems: 'center' }}>
               <span style={{ color: 'var(--text-secondary)' }}>发布日期</span>
               <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>2026年3月</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, alignItems: 'center' }}>
+              <span style={{ color: 'var(--text-secondary)' }}>GitHub</span>
+              <span 
+                style={{ color: 'var(--color-accent-indigo)', fontWeight: 500, cursor: 'pointer' }}
+                onClick={() => handleLinkClick('https://github.com/imoling/iml-markdown-editor')}
+              >
+                View Repository
+              </span>
             </div>
           </div>
         </div>
@@ -121,7 +146,7 @@ const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
           textAlign: 'center',
           lineHeight: 1.6
         }}>
-          &copy; 2026 iML Team. 保留所有权利。<br />
+          &copy; 2026 iML Studio. 保留所有权利。<br />
           让书写回归纯粹。
         </p>
 

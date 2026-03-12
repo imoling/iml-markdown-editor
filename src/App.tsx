@@ -1,9 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { TitleBar } from './components/TitleBar/TitleBar';
 import { Sidebar } from './components/Sidebar/Sidebar';
 import { EditorArea } from './components/Editor/EditorArea';
 import { StatusBar } from './components/StatusBar/StatusBar';
-import ShortcutsModal from './components/Help/ShortcutsModal';
 import { useAppStore } from './stores/appStore';
 import { extractHeadings } from './utils/outline';
 import './styles/layout.css';
@@ -20,14 +19,11 @@ const App: React.FC = () => {
     toggleToolbar,
     toggleStatusBar,
     createNewFile,
-    addToRecent,
     toggleFind,
     toggleReplace,
     openFile,
     openDirectory,
     saveActiveFile,
-    shortcutsVisible,
-    setShortcutsVisible
   } = useAppStore();
 
   const activeTab = tabs.find(t => t.id === activeTabId);

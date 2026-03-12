@@ -110,7 +110,7 @@ const PromptDialog: React.FC<PromptDialogProps> = ({ title, fields, onConfirm, o
 };
 
 export const TiptapEditor: React.FC = () => {
-  const { activeTabId, tabs, updateTabContent } = useAppStore();
+  const { activeTabId, tabs, updateTabContent, navigationRequest } = useAppStore();
   const activeTab = tabs.find(t => t.id === activeTabId);
   const [prompt, setPrompt] = React.useState<PromptDialogProps | null>(null);
 
@@ -206,6 +206,33 @@ export const TiptapEditor: React.FC = () => {
     }
   }, [activeTabId, editor]);
 
+  // Handle navigation requests
+  useEffect(() => {
+    if (editor && navigationRequest) {
+      const { heading } = navigationRequest;
+      let foundPos = -1;
+      
+      editor.state.doc.descendants((node, pos) => {
+        if (foundPos !== -1) return false;
+        if (node.type.name === 'heading' && node.attrs.level === heading.level && node.textContent === heading.text) {
+          foundPos = pos;
+          return false;
+        }
+        return true;
+      });
+
+      if (foundPos !== -1) {
+        editor.commands.focus(foundPos);
+        
+        // Scroll to the element
+        const element = editor.view.nodeDOM(foundPos) as HTMLElement;
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }
+    }
+  }, [editor, navigationRequest]);
+
   if (!editor || !activeTab) {
     return (
       <div style={{ padding: 40, color: 'var(--text-muted)' }}>
@@ -245,13 +272,13 @@ export const TiptapEditor: React.FC = () => {
         </div>
         
         <div className="toolbar-divider"></div>
-
+        
         <div style={{ display: 'flex', gap: 2 }}>
           <button type="button" className={`toolbar-icon-btn ${editor.isActive('orderedList') ? 'active' : ''}`} onClick={() => editor.chain().focus().toggleOrderedList().run()} title="有序列表"><ListOrdered size={16} /></button>
           <button type="button" className={`toolbar-icon-btn ${editor.isActive('bulletList') ? 'active' : ''}`} onClick={() => editor.chain().focus().toggleBulletList().run()} title="无序列表"><List size={16} /></button>
           <button type="button" className={`toolbar-icon-btn ${editor.isActive('taskList') ? 'active' : ''}`} onClick={() => editor.chain().focus().toggleTaskList().run()} title="任务列表"><SquareCheck size={16} /></button>
         </div>
-
+        
         <div className="toolbar-divider"></div>
         
         <div style={{ display: 'flex', gap: 2 }}>
@@ -305,7 +332,6 @@ export const TiptapEditor: React.FC = () => {
             <div style={{ display: 'flex', gap: 2 }}>
                <button type="button" className="toolbar-icon-btn" onClick={() => editor.chain().focus().addColumnAfter().run()} title="在右侧插入列"><Columns size={14} /><Plus size={8} style={{marginLeft: -4, marginTop: -8}} /></button>
                 <button type="button" className="toolbar-icon-btn" onClick={() => {
-                   // Fallback: if deleteColumn can't be run (last column), delete the whole table
                    if (!editor.chain().focus().deleteColumn().run()) {
                      editor.chain().focus().deleteTable().run();
                    }
@@ -313,7 +339,6 @@ export const TiptapEditor: React.FC = () => {
                <div style={{width: 1, height: 12, backgroundColor: 'var(--border-subtle)', margin: '0 2px'}}></div>
                <button type="button" className="toolbar-icon-btn" onClick={() => editor.chain().focus().addRowAfter().run()} title="在下方插入行"><Rows size={14} /><Plus size={8} style={{marginLeft: -4, marginTop: -8}} /></button>
                 <button type="button" className="toolbar-icon-btn" onClick={() => {
-                   // Fallback: if deleteRow can't be run (last row), delete the whole table
                    if (!editor.chain().focus().deleteRow().run()) {
                      editor.chain().focus().deleteTable().run();
                    }
@@ -361,12 +386,10 @@ export const TiptapEditor: React.FC = () => {
               const { selection } = state;
               const { $from } = selection;
               
-              // Show on empty paragraphs
               if ($from.parent.type.name === 'paragraph' && $from.parent.content.size === 0) {
                 return true;
               }
               
-              // Show in table cells
               if (editor.isActive('table') || editor.isActive('tableCell') || editor.isActive('tableHeader')) {
                 return true;
               }
@@ -385,7 +408,6 @@ export const TiptapEditor: React.FC = () => {
                gap: 12,
                width: 'fit-content'
              }}>
-               {/* Row 1 */}
                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                   <button onClick={() => editor.chain().focus().setParagraph().run()} className={`toolbar-icon-btn ${editor.isActive('paragraph') ? 'active' : ''}`} title="正文"><Type size={18} /></button>
                   <button onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} className={`toolbar-btn ${editor.isActive('heading', { level: 1 }) ? 'active' : ''}`}>H1</button>
@@ -395,7 +417,6 @@ export const TiptapEditor: React.FC = () => {
                   <button onClick={() => editor.chain().focus().toggleOrderedList().run()} className={`toolbar-icon-btn ${editor.isActive('orderedList') ? 'active' : ''}`} title="有序列表"><ListOrdered size={18} /></button>
                   <button onClick={() => editor.chain().focus().toggleBulletList().run()} className={`toolbar-icon-btn ${editor.isActive('bulletList') ? 'active' : ''}`} title="无序列表"><List size={18} /></button>
                </div>
-               {/* Row 2 */}
                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                   <button onClick={() => editor.chain().focus().toggleTaskList().run()} className={`toolbar-icon-btn ${editor.isActive('taskList') ? 'active' : ''}`} title="任务列表"><SquareCheck size={18} /></button>
                   <button onClick={() => editor.chain().focus().toggleCodeBlock().run()} className={`toolbar-icon-btn ${editor.isActive('codeBlock') ? 'active' : ''}`} title="代码块"><Code size={18} /></button>

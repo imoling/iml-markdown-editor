@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { useAppStore, FileNode } from '../../stores/appStore';
+import { useAppStore, FileNode, HeadingNode } from '../../stores/appStore';
 import { Folder, Search, ChevronDown, ChevronRight, FolderOpen, FileText, FileCode, FolderClosed, List, RotateCw } from 'lucide-react';
 
 const FileTreeItem: React.FC<{ node: FileNode; level: number }> = ({ node, level }) => {
-  const { addTab, updateFileNode, activeTabId, expandedPaths, setExpanded } = useAppStore();
+  const { openTab, updateFileNode, activeTabId, expandedPaths, setExpanded } = useAppStore();
   const isOpen = expandedPaths.includes(node.path);
 
   const handleToggle = async (e: React.MouseEvent) => {
@@ -19,11 +19,12 @@ const FileTreeItem: React.FC<{ node: FileNode; level: number }> = ({ node, level
     } else {
       const result = await window.api.fs.readFile(node.path);
       if (result.success && result.content !== undefined) {
-         addTab({
+         openTab({
            id: node.path,
            title: node.name,
            content: result.content,
-           isDirty: false
+           isDirty: false,
+           mode: 'word'
          });
       }
     }
@@ -75,11 +76,14 @@ const FileTreeItem: React.FC<{ node: FileNode; level: number }> = ({ node, level
   );
 };
 
-const OutlineItem: React.FC<{ node: any }> = ({ node }) => {
+const OutlineItem: React.FC<{ node: HeadingNode }> = ({ node }) => {
+  const { scrollToHeading } = useAppStore();
+  
   return (
     <div 
       className="tree-item" 
       style={{ paddingLeft: `${(node.level - 1) * 16 + 12}px`, cursor: 'pointer' }}
+      onClick={() => scrollToHeading(node)}
     >
       <span style={{ 
         color: node.level === 1 ? 'var(--text-primary)' : 'var(--text-secondary)',

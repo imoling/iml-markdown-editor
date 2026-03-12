@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, nativeImage, Menu } from 'electron';
+import { app, BrowserWindow, ipcMain, nativeImage, Menu, shell } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import { setupFileSystemIPC } from './ipc/fileSystem';
@@ -250,6 +250,10 @@ app.whenReady().then(() => {
 
   ipcMain.on('open-shortcuts', () => {
     createShortcutsWindow();
+  });
+
+  ipcMain.handle('open-url', async (_event, url: string) => {
+    await shell.openExternal(url);
   });
 
   app.on('activate', () => {

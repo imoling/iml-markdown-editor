@@ -1,5 +1,5 @@
-import React from 'react';
-import CodeMirror from '@uiw/react-codemirror';
+import React, { useEffect, useRef } from 'react';
+import CodeMirror, { ReactCodeMirrorRef } from '@uiw/react-codemirror';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { languages } from '@codemirror/language-data';
 import { EditorView } from '@codemirror/view';
@@ -8,8 +8,9 @@ import { markdownToHtml } from '../../utils/markdown';
 import '../styles/editor.css';
 
 export const MarkdownEditor: React.FC = () => {
-  const { activeTabId, tabs, updateTabContent } = useAppStore();
+  const { activeTabId, tabs, updateTabContent, navigationRequest } = useAppStore();
   const activeTab = tabs.find(t => t.id === activeTabId);
+  const editorRef = useRef<ReactCodeMirrorRef>(null);
 
   if (!activeTab) {
     return (
@@ -24,6 +25,32 @@ export const MarkdownEditor: React.FC = () => {
        updateTabContent(activeTabId, val);
     }
   };
+
+  // Handle navigation requests
+  useEffect(() => {
+    if (editorRef.current?.view && navigationRequest) {
+      const view = editorRef.current.view;
+      const { id } = navigationRequest.heading;
+      
+      // Extract line index from ID (heading-0, heading-1, etc.)
+      const match = id.match(/^heading-(\d+)$/);
+      if (match) {
+        const lineIndex = parseInt(match[1]);
+        const lineCount = view.state.doc.lines;
+        
+        // Ensure line index is within bounds
+        const safeLineIndex = Math.min(lineIndex + 1, lineCount);
+        const line = view.state.doc.line(safeLineIndex);
+        
+        view.dispatch({
+          selection: { head: line.from, anchor: line.from },
+          effects: [EditorView.scrollIntoView(line.from, { y: 'center' })]
+        });
+        
+        view.focus();
+      }
+    }
+  }, [navigationRequest]);
 
   const domHandlers = EditorView.domEventHandlers({
     drop(event, view) {
@@ -81,6 +108,7 @@ export const MarkdownEditor: React.FC = () => {
         </div>
         <div style={{ flex: 1, overflow: 'auto' }}>
           <CodeMirror
+            ref={editorRef}
             value={activeTab.content}
             height="100%"
             theme="light"
