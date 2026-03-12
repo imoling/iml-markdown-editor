@@ -51,7 +51,7 @@ npm run build:mac
 - `Cmd + N`: 新建文件
 - `Cmd + O`: 打开文件
 - `Cmd + S`: 保存文件
-- `Cmd + E`: 切换编辑模式 (Word/Markdown)
+- `Cmd + E`: 切换编辑模式
 - `Cmd + B`: 切换侧边栏显隐
 - `Cmd + /`: 查看快捷键详细说明
 

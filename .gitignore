@@ -45,3 +45,6 @@ Icon?
 .agent/
 .agents/
 .iml-markdown-editor-config
+implementation_plan.md
+task.md
+walkthrough.md
