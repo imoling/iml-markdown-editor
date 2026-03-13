@@ -91,42 +91,30 @@ export const AIWritingPanel: React.FC = () => {
       { role: 'user', content: scenario.prompt(vibe) }
     ];
 
+    const tabId = `ai-gen-${Date.now()}.md`;
+    const tabTitle = scenario.label;
+
+    // 1. 先创建一个占位 Tab
+    openTab({
+      id: tabId,
+      title: tabTitle,
+      content: '> AI 正在为您构思中...\n\n',
+      isDirty: true,
+      mode: 'word'
+    });
+
     let accumulatedContent = '';
-    let currentTabId = '';
-    
-    // Get current state to check for streaming callback
-    const { streamingCallback, openTab, updateTabContent } = useAppStore.getState();
 
     try {
       await generate(messages, (chunk) => {
+        // 2. 实时流式累加并更新该 Tab 的内容
         accumulatedContent += chunk;
-        
-        if (streamingCallback) {
-          // Contextual Generation: Stream directly into active editor
-          streamingCallback(chunk);
-        } else {
-          // Default: Create new tab if no active editor
-          if (!currentTabId) {
-            currentTabId = `ai-gen-${Date.now()}.md`;
-            openTab({
-              id: currentTabId,
-              title: scenario.label,
-              content: '> AI 正在为您构思中...\n\n',
-              isDirty: true,
-              mode: 'word'
-            });
-          }
-          updateTabContent(currentTabId, accumulatedContent);
-        }
+        updateTabContent(tabId, accumulatedContent);
       });
       // 清空输入
       setVibe('');
     } catch (err: any) {
-      if (currentTabId) {
-        updateTabContent(currentTabId, `> 生成失败: ${err.message}`);
-      } else {
-        console.error('Contextual generation failed:', err);
-      }
+      updateTabContent(tabId, `> 生成失败: ${err.message}`);
     }
   };
 
@@ -152,50 +140,19 @@ export const AIWritingPanel: React.FC = () => {
               onClick={() => setScenario(s)}
               title={`${s.label}: ${s.description}`} // Add tooltip for full text
               style={{
-                padding: '10px 14px',
-                borderRadius: 12,
+                padding: '6px 10px',
+                borderRadius: 8,
                 border: `1px solid ${scenario.id === s.id ? 'var(--color-accent-indigo)' : 'var(--border-subtle)'}`,
-                backgroundColor: scenario.id === s.id ? 'rgba(0, 122, 255, 0.03)' : 'var(--bg-card)',
-                boxShadow: scenario.id === s.id ? '0 4px 12px rgba(0, 122, 255, 0.1)' : 'none',
+                backgroundColor: scenario.id === s.id ? 'rgba(0, 122, 255, 0.05)' : 'transparent',
                 cursor: 'pointer',
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                transition: 'all 0.2s',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: 2,
-                position: 'relative',
-                overflow: 'hidden'
-              }}
-              onMouseEnter={e => {
-                if (scenario.id !== s.id) {
-                  e.currentTarget.style.borderColor = 'var(--border-strong)';
-                  e.currentTarget.style.backgroundColor = 'var(--bg-elevated)';
-                }
-              }}
-              onMouseLeave={e => {
-                if (scenario.id !== s.id) {
-                  e.currentTarget.style.borderColor = 'var(--border-subtle)';
-                  e.currentTarget.style.backgroundColor = 'var(--bg-card)';
-                }
+                gap: 1
               }}
             >
-              {scenario.id === s.id && (
-                <div style={{
-                  position: 'absolute', top: 0, left: 0, width: 3, height: '100%',
-                  backgroundColor: 'var(--color-accent-indigo)'
-                }} />
-              )}
-              <div style={{ 
-                fontSize: 13, 
-                fontWeight: 600, 
-                color: scenario.id === s.id ? 'var(--color-accent-indigo)' : 'var(--text-main)', 
-                ...ellipsisStyle 
-              }}>{s.label}</div>
-              <div style={{ 
-                fontSize: 11, 
-                color: 'var(--text-muted)', 
-                ...ellipsisStyle,
-                opacity: 0.8
-              }}>{s.description}</div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: scenario.id === s.id ? 'var(--color-accent-indigo)' : 'var(--text-main)', ...ellipsisStyle }}>{s.label}</div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', ...ellipsisStyle }}>{s.description}</div>
             </div>
           ))}
         </div>
@@ -207,26 +164,16 @@ export const AIWritingPanel: React.FC = () => {
             placeholder="输入您的愿景或想法 (Vibe)..."
             style={{
               width: '100%',
-              height: 180,
-              padding: '16px',
-              borderRadius: '16px',
+              height: 160,
+              padding: '12px',
+              borderRadius: 12,
               border: '1px solid var(--border-subtle)',
               backgroundColor: 'var(--bg-card)',
               color: 'var(--text-primary)',
-              fontSize: 14,
+              fontSize: 13,
               resize: 'none',
               outline: 'none',
-              lineHeight: 1.6,
-              transition: 'all 0.2s ease',
-              boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)'
-            }}
-            onFocus={e => {
-              e.currentTarget.style.borderColor = 'var(--color-accent-indigo)';
-              e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0, 122, 255, 0.1), inset 0 2px 4px rgba(0,0,0,0.02)';
-            }}
-            onBlur={e => {
-              e.currentTarget.style.borderColor = 'var(--border-subtle)';
-              e.currentTarget.style.boxShadow = 'inset 0 2px 4px rgba(0,0,0,0.02)';
+              lineHeight: 1.5
             }}
           />
           <button
@@ -254,10 +201,10 @@ export const AIWritingPanel: React.FC = () => {
         </div>
       </div>
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '16px 8px', borderTop: '1px solid var(--border-subtle)' }}>
-        <p style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.6, opacity: 0.8 }}>
-          <Sparkles size={11} style={{ marginRight: 6, display: 'inline', verticalAlign: 'text-top' }} color="var(--color-accent-indigo)" />
-          <strong>智能导向模式</strong>：若当前光标在文档中，AI 内容将直接原地流式录入；否则将自动创建新文档。
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '12px 4px', borderTop: '1px solid var(--border-subtle)' }}>
+        <p style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5 }}>
+          <Sparkles size={10} style={{ marginRight: 4, display: 'inline' }} />
+          支持 Vibe Coding 模式：点击发送后将自动创建新文档，并实时流式录入 AI 生成的内容。
         </p>
       </div>
     </div>

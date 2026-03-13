@@ -192,12 +192,13 @@ const StyleSelector: React.FC<StyleSelectorProps> = ({ onSelect, onCancel }) => 
 };
 
 export const TiptapEditor: React.FC = () => {
-  const { activeTabId, tabs, updateTabContent, navigationRequest, setStreamingCallback } = useAppStore();
+  const { activeTabId, tabs, updateTabContent, navigationRequest } = useAppStore();
   const activeTab = tabs.find(t => t.id === activeTabId);
   const [prompt, setPrompt] = React.useState<PromptDialogProps | null>(null);
   const { generate, loading: aiLoading } = useAI();
   const [aiGenerating, setAiGenerating] = useState(false);
   const [showStyleSelector, setShowStyleSelector] = React.useState(false);
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -277,16 +278,6 @@ export const TiptapEditor: React.FC = () => {
       }
     },
   });
-
-  // Register AI streaming callback for in-place generation
-  useEffect(() => {
-    if (editor) {
-      setStreamingCallback((chunk: string) => {
-        editor.chain().focus().insertContent(chunk).run();
-      });
-      return () => setStreamingCallback(null);
-    }
-  }, [editor, setStreamingCallback]);
 
   const handleAIAction = async (action: 'polish' | 'summarize' | 'expand', style?: string) => {
     if (!editor) return;

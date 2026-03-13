@@ -1,6 +1,6 @@
 {
   "name": "iml-markdown-editor",
-  "version": "1.0.0",
+  "version": "1.5.0",
   "description": "极简而极致的 Markdown 编辑器，支持双模编辑、PDF 导出与智能目录同步。",
   "main": "dist-electron/main.js",
   "scripts": {

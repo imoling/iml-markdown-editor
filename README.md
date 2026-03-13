@@ -1,67 +1,70 @@
-# iML Markdown Editor: Vibe Coding Studio
+# iML Markdown Editor (v1.5.0)
 
-一款追求极致简洁、专业排版与 AI 灵感驱动的 Markdown 桌面编辑器。专为“从想法到现实”的快速跨越（Vibe Coding）而生。
+一款融合 **Vibe Coding** 哲学与顶级 AI 创作能力的现代化 Markdown 桌面编辑器。专为纯粹书写、极致排版与高效构思而生。
 
-![iML Markdown Editor](./assets/logo.png)
+![iML Logo](assets/logo.png)
+
+## 🛡️ 核心哲学：书写，而非录入
+iML 不仅仅是一个编辑器，它是您在“灵感”与“工程”之间的桥梁。我们坚持极致的设计美学，让每一次敲击都是一种享受。
 
 ## ✨ 核心特性
 
-- **🪄 AI 场景灵感写作**：
-  - **灵感转 PRD**：将模糊意愿 (Vibe) 转化为标准化的产品需求文档。
-  - **AI Studio / Stitch 指令工程**：精准生成 Google AI Studio 与 Stitch 的高交互原型指令。
-  - **Nano Banana PPT 视觉增效**：集成 10 套专业模板风格模式，智能推荐 PPT 大纲与配图 Prompt。
-  - **智能导向输出**：首创“光标感知”逻辑，AI 生成内容可直接**原地流式录入**当前文档，或按需新建。
-- **🔄 双模态自由切换**：
-  - **富文本 (Word 模式)**：基于 Tiptap，提供所见即所得、极致丝滑的排版体验。
-  - **源码 (Markdown 模式)**：基于 CodeMirror 6，提供高精度的实时代码编辑与预览。
-- **💎 纯粹主义视觉设计**：
-  - **Nordic Clarity 审美**：基于 Vibe Coding 理念重构的侧边 AI 面板与状态栏。
-  - **沉浸式交互细节**：Glow 呼吸效果输入框、绿色状态呼吸灯，深度适配 macOS 原生毛玻璃背景。
-- **📝 专业排版内核**：
-  - 支持 GFM 标准表格、KaTeX 数学公式、代码高亮。
-  - 内置 AI 文本处理：一键润色、总结、深度扩写。
+### 🪄 Vibe Coding AI 驱动 (New!)
+集成深度定制的 AI 场景写作面板，支持 **双进程全链路 SSE 流式生成**，即刻实现从灵感到实体的跨越：
+- **AI 编程需求文档**：将用户灵感转化为 AI 编程需求 PRD 文档。
+- **AI Studio 验证系统**：生成 Google AI Studio 验证系统提示词。
+- **Stitch 原型设计**：生成 Stitch 高交互界面提示词。
+- **Nano Banana PPT**：定制 Nano Banana Pro 生成 PPT 提示词。
+- **职场心流复盘**：日常工作整理成极具逻辑的专业汇报。
+- **架构拆解与工程化**：生成 Vibe Coding 技术骨架并模块化拆解。
 
-  ![iML Markdown Editor Screenshot](./assets/Screenshot.png)
+### 🎨 高端视觉与交互 (UI/UX)
+- **纸张态沉浸排版**：富文本模式采用层次明晰的“白纸”交互图层，背景自适应深度增长，带来极致视网膜级的书写体验。
+- **Modern Nordic Clarity**: 继承北欧简约设计，辅以 macOS 级原生地图、毛玻璃效果、以及丝滑的微动画。
+- **极简标签管理**: 隐藏原生滚动条，支持活动标签自动居中，标签宽度根据负载智能收缩。
+- **紧凑型交互弹窗**: 重新设计的确认对话框与快捷键面板，符合苹果原生系统的克制之美。
 
-## 🚀 快速开始
+### ⌨️ 专业级编辑能力
+- **双模态无缝切换**：
+    - **富文本模式 (Rich Text)**：基于 Tiptap 2.0，支持 GFM 表格、气泡菜单引导与图片即时插入。
+    - **源码模式 (Source Code)**：基于 CodeMirror 6，集成高性能实时预览、代码高亮与数学公式。
+- **全场景安全审计**：实时追踪文档变更，针对新建文件与未保存更改提供三态（保存/不保存/取消）闭环保护。
 
-### 环境依赖
-- Node.js (推荐 v18+)
-- npm 或 yarn
+## 🚀 运行与构建
 
-### 运行开发环境
+### 开发环境
 ```bash
 # 安装依赖
 npm install
 
-# 启动开发服务器
+# 启动开发服务器 (自动开启 Electron 容器)
 npm run dev
 ```
 
-### 构建应用
+### 生产构建
 ```bash
-# 生成分发包
+# 生成 macOS 架构安装包
 npm run build:mac
 ```
 
 ## 🛠 技术架构
-- **核心框架**: React + Vite
-- **原生容器**: Electron
-- **状态管理**: Zustand
-- **编辑器内核**: Tiptap (Rich Text), CodeMirror 6 (Source)
-- **AI 引擎**: 集成 Vibe Coding 深度提示词工程
+- **Core**: React 18 + Vite + TypeScript
+- **Runtime**: Electron (Main/Renderer Process Communication Layer)
+- **State**: Zustand (Local Persistence)
+- **Engine**: Tiptap (Rich Text) / CodeMirror 6 (Markdown)
+- **Logic**: Node.js Native FS + Buffer-based SSE Streaming protocol
+- **Styling**: Modern CSS Variables & Glassmorphism Design System
 
-## ⌨️ 常用快捷键
-- `Cmd + N`: 新建文件
-- `Cmd + O`: 打开文件
-- `Cmd + S`: 保存文件
-- `Cmd + E`: 切换编辑模式
-- `Cmd + /`: 快捷键说明 (极致紧凑版，全量显示)
+## ⌨️ 核心快捷键
+| 动作 | 快捷键 |
+|---|---|
+| 新建 / 打开 / 保存 | `⌘ N` / `⌘ O` / `⌘ S` |
+| 切换编辑模式 | `⌘ E` |
+| 切换侧边栏 | `⌘ B` |
+| 快捷键全览 | `⌘ /` |
+| 另存为 | `⌘ ⇧ S` |
 
-## 🔗 项目链接
-- **GitHub**: [https://github.com/imoling/iml-markdown-editor](https://github.com/imoling/iml-markdown-editor)
+## 📄 许可证 & 愿景
+Logic & Design by [imoling.cn@gmail.com](mailto:imoling.cn@gmail.com) | Built with Gemini
 
-## 📄 许可证
-Logic & Design by [imoling.cn@gmail.com](mailto:imoling.cn@gmail.com) | Developed by Antigravity AI
-
-&copy; 2026 iML Studio. **让书写回归纯粹，让愿景触手可及。**
+&copy; 2026 iML Studio. **让书写回归纯粹，让创作充满“Vibe”。**
