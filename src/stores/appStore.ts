@@ -44,6 +44,7 @@ export interface AppState {
   sidebarTab: 'catalog' | 'files' | 'ai';
   expandedPaths: string[];
   navigationRequest: NavigationRequest | null;
+  streamingCallback: ((chunk: string) => void) | null;
   
   // Actions
   toggleMode: () => void;
@@ -57,6 +58,7 @@ export interface AppState {
   setExpanded: (path: string, expanded: boolean) => void;
   revealInSidebar: (path: string) => Promise<void>;
   scrollToHeading: (heading: HeadingNode) => void;
+  setStreamingCallback: (callback: ((chunk: string) => void) | null) => void;
   
   // UI Actions
   toggleSidebar: () => void;
@@ -93,6 +95,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   sidebarTab: 'files',
   expandedPaths: [],
   navigationRequest: null,
+  streamingCallback: null,
   tabToClose: null,
   
   setTabToClose: (id: string | null) => set({ tabToClose: id }),
@@ -216,6 +219,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   scrollToHeading: (heading: HeadingNode) => set({ 
     navigationRequest: { heading, timestamp: Date.now() } 
   }),
+  setStreamingCallback: (callback) => set({ streamingCallback: callback }),
 
   toggleSidebar: () => set((state) => ({ sidebarVisible: !state.sidebarVisible })),
   toggleToolbar: () => set((state) => ({ toolbarVisible: !state.toolbarVisible })),

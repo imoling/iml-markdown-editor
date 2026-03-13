@@ -4,10 +4,10 @@ import { useAppStore } from '../../stores/appStore';
 import { Sparkles, Send, Loader2 } from 'lucide-react';
 
 const SCENARIOS = [
-  { 
-    id: 'prd', 
-    label: '愿景转 PRD 协议', 
-    description: '将模糊的灵感（Vibe）转化为标准化的产品需求规范。',
+  {
+    id: 'prd',
+    label: 'AI 编程需求文档',
+    description: '将用户灵感转化为AI编程需求PRD文档',
     prompt: (vibe: string) => `您是一位资深的 PRD 专家。请根据以下用户的“Vibe”（模糊的灵感/原始愿景）编写一份详尽、标准化的 Markdown 格式 PRD 文档。
 请直接输出文档内容，不要有任何开场白或结束语。
 
@@ -20,26 +20,26 @@ const SCENARIOS = [
 
 用户的 Vibe 是: "${vibe}"`
   },
-  { 
-    id: 'ai-studio', 
-    label: 'AI Studio 逻辑原型', 
-    description: '生成专供 Google AI Studio 验证的系统级 Demo 指令。',
+  {
+    id: 'ai-studio',
+    label: 'AI Studio 验证系统',
+    description: '生成Google AI Studio验证系统提示词',
     prompt: (vibe: string) => `请根据用户的需求 "${vibe}"，生成一段用于 Google AI Studio 的系统级 Demo 指令（System Prompt）。
 该指令应指导 AI 表现为一个具备特定能力边界、交互规范和技术逻辑的功能原型。
 要求：使用 Markdown 格式输出。内容应包含：角色设定、能力边界、交互规范、技术偏好以及具体的视觉指导建议。直接输出系统指令内容，严禁废话。`
   },
-  { 
-    id: 'stitch', 
-    label: 'Stitch 视觉工程', 
-    description: '精准生成 Stitch 原型设计指令，一键渲染高交互界面。',
+  {
+    id: 'stitch',
+    label: 'Stitch 原型设计',
+    description: '生成Stitch高交互界面提示词',
     prompt: (vibe: string) => `请将以下设计构想 "${vibe}" 转化为专门用于 Stitch 的“视觉工程”设计指令。
 该指令应精准描述页面布局、关键交互动效、组件规格以及整体设计语言（如玻璃拟态、极简主义），以便一键渲染出高交互界面。
 使用 Markdown 格式直接输出指令，不需要任何额外解释。`
   },
-  { 
-    id: 'nanobanana', 
-    label: 'Nano Banana 视觉增效', 
-    description: '为 PPT 深度定制 Nano Banana Pro 高审美配图提示词。',
+  {
+    id: 'nanobanana',
+    label: 'Nano Banana PPT',
+    description: '定制Nano Banana Pro 生成 PPT提示词',
     prompt: (vibe: string) => `您是一位顶级的 PPT 设计顾问与视觉专家。
 请根据用户的输入内容 "${vibe}"，为您定制一套适配 Nano Banana Pro 级别的“高审美”视觉增效方案：
 
@@ -61,16 +61,16 @@ const SCENARIOS = [
 
 请使用 Markdown 格式直接输出，结构清晰，严禁任何废话。`
   },
-  { 
-    id: 'report', 
-    label: '职场心流复盘', 
-    description: '整理碎片记录，将日常点滴重构为极具逻辑的专业汇报。',
+  {
+    id: 'report',
+    label: '职场心流复盘',
+    description: '日常工作整理成极具逻辑的专业汇报',
     prompt: (vibe: string) => `请根据以下零碎、随性的工作心流记录，将其“重构”为一份正式、精美且极具逻辑的专业汇报（如周报或月报）。使用 Markdown 格式。直接输出正文，不要有任何客套话。内容：${vibe}`
   },
-  { 
-    id: 'tech', 
-    label: '架构拆解与工程化', 
-    description: '勾勒技术骨架并模块化拆解，为 Vibe Coding 提供稳健支撑。',
+  {
+    id: 'tech',
+    label: '架构拆解与工程化',
+    description: '生成Vibe Coding技术骨架并模块化拆解',
     prompt: (vibe: string) => `请为以下技术需求 "${vibe}" 编写一份详细的技术架构设计与模块化拆解文档。
 该文档应作为项目工程化的核心支撑，包含但不限于：技术选型逻辑、核心模块定义、数据流动模型以及为 Vibe Coding 提供的稳定性保障策略。
 使用 Markdown 格式。直接输出内容，排除任何辅助性说明。`
@@ -85,36 +85,48 @@ export const AIWritingPanel: React.FC = () => {
 
   const handleGenerate = async () => {
     if (!vibe.trim()) return;
-    
+
     const messages: Message[] = [
       { role: 'system', content: '您是一位专业的文档写作助手。您的任务是直接输出用户要求的结构化 Markdown 文档内容，严禁包含任何如“好的”、“收到”之类的对话式引导，也严禁包含任何非文档正文的后续行动建议。即刻开始，只输出 Markdown 本身。' },
       { role: 'user', content: scenario.prompt(vibe) }
     ];
 
-    const tabId = `ai-gen-${Date.now()}.md`;
-    const tabTitle = scenario.label;
-
-    // 1. 先创建一个占位 Tab
-    openTab({
-      id: tabId,
-      title: tabTitle,
-      content: '> AI 正在为您构思中...\n\n',
-      isDirty: true,
-      mode: 'word'
-    });
-
     let accumulatedContent = '';
+    let currentTabId = '';
+    
+    // Get current state to check for streaming callback
+    const { streamingCallback, openTab, updateTabContent } = useAppStore.getState();
 
     try {
       await generate(messages, (chunk) => {
-        // 2. 实时流式累加并更新该 Tab 的内容
         accumulatedContent += chunk;
-        updateTabContent(tabId, accumulatedContent);
+        
+        if (streamingCallback) {
+          // Contextual Generation: Stream directly into active editor
+          streamingCallback(chunk);
+        } else {
+          // Default: Create new tab if no active editor
+          if (!currentTabId) {
+            currentTabId = `ai-gen-${Date.now()}.md`;
+            openTab({
+              id: currentTabId,
+              title: scenario.label,
+              content: '> AI 正在为您构思中...\n\n',
+              isDirty: true,
+              mode: 'word'
+            });
+          }
+          updateTabContent(currentTabId, accumulatedContent);
+        }
       });
       // 清空输入
       setVibe('');
     } catch (err: any) {
-      updateTabContent(tabId, `> 生成失败: ${err.message}`);
+      if (currentTabId) {
+        updateTabContent(currentTabId, `> 生成失败: ${err.message}`);
+      } else {
+        console.error('Contextual generation failed:', err);
+      }
     }
   };
 
@@ -132,27 +144,58 @@ export const AIWritingPanel: React.FC = () => {
           <Sparkles size={16} color="var(--color-accent-indigo)" />
           <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-main)' }}>场景写作</span>
         </div>
-        
+
         <div className="scenario-grid" style={{ display: 'grid', gap: 4, marginBottom: 12 }}>
           {SCENARIOS.map(s => (
-            <div 
+            <div
               key={s.id}
               onClick={() => setScenario(s)}
               title={`${s.label}: ${s.description}`} // Add tooltip for full text
               style={{
-                padding: '6px 10px',
-                borderRadius: 8,
+                padding: '10px 14px',
+                borderRadius: 12,
                 border: `1px solid ${scenario.id === s.id ? 'var(--color-accent-indigo)' : 'var(--border-subtle)'}`,
-                backgroundColor: scenario.id === s.id ? 'rgba(0, 122, 255, 0.05)' : 'transparent',
+                backgroundColor: scenario.id === s.id ? 'rgba(0, 122, 255, 0.03)' : 'var(--bg-card)',
+                boxShadow: scenario.id === s.id ? '0 4px 12px rgba(0, 122, 255, 0.1)' : 'none',
                 cursor: 'pointer',
-                transition: 'all 0.2s',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: 1
+                gap: 2,
+                position: 'relative',
+                overflow: 'hidden'
+              }}
+              onMouseEnter={e => {
+                if (scenario.id !== s.id) {
+                  e.currentTarget.style.borderColor = 'var(--border-strong)';
+                  e.currentTarget.style.backgroundColor = 'var(--bg-elevated)';
+                }
+              }}
+              onMouseLeave={e => {
+                if (scenario.id !== s.id) {
+                  e.currentTarget.style.borderColor = 'var(--border-subtle)';
+                  e.currentTarget.style.backgroundColor = 'var(--bg-card)';
+                }
               }}
             >
-              <div style={{ fontSize: 12, fontWeight: 600, color: scenario.id === s.id ? 'var(--color-accent-indigo)' : 'var(--text-main)', ...ellipsisStyle }}>{s.label}</div>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', ...ellipsisStyle }}>{s.description}</div>
+              {scenario.id === s.id && (
+                <div style={{
+                  position: 'absolute', top: 0, left: 0, width: 3, height: '100%',
+                  backgroundColor: 'var(--color-accent-indigo)'
+                }} />
+              )}
+              <div style={{ 
+                fontSize: 13, 
+                fontWeight: 600, 
+                color: scenario.id === s.id ? 'var(--color-accent-indigo)' : 'var(--text-main)', 
+                ...ellipsisStyle 
+              }}>{s.label}</div>
+              <div style={{ 
+                fontSize: 11, 
+                color: 'var(--text-muted)', 
+                ...ellipsisStyle,
+                opacity: 0.8
+              }}>{s.description}</div>
             </div>
           ))}
         </div>
@@ -164,16 +207,26 @@ export const AIWritingPanel: React.FC = () => {
             placeholder="输入您的愿景或想法 (Vibe)..."
             style={{
               width: '100%',
-              height: 160,
-              padding: '12px',
-              borderRadius: 12,
+              height: 180,
+              padding: '16px',
+              borderRadius: '16px',
               border: '1px solid var(--border-subtle)',
               backgroundColor: 'var(--bg-card)',
               color: 'var(--text-primary)',
-              fontSize: 13,
+              fontSize: 14,
               resize: 'none',
               outline: 'none',
-              lineHeight: 1.5
+              lineHeight: 1.6,
+              transition: 'all 0.2s ease',
+              boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)'
+            }}
+            onFocus={e => {
+              e.currentTarget.style.borderColor = 'var(--color-accent-indigo)';
+              e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0, 122, 255, 0.1), inset 0 2px 4px rgba(0,0,0,0.02)';
+            }}
+            onBlur={e => {
+              e.currentTarget.style.borderColor = 'var(--border-subtle)';
+              e.currentTarget.style.boxShadow = 'inset 0 2px 4px rgba(0,0,0,0.02)';
             }}
           />
           <button
@@ -201,10 +254,10 @@ export const AIWritingPanel: React.FC = () => {
         </div>
       </div>
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '12px 4px', borderTop: '1px solid var(--border-subtle)' }}>
-        <p style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5 }}>
-          <Sparkles size={10} style={{ marginRight: 4, display: 'inline' }} />
-          支持 Vibe Coding 模式：点击发送后将自动创建新文档，并实时流式录入 AI 生成的内容。
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '16px 8px', borderTop: '1px solid var(--border-subtle)' }}>
+        <p style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.6, opacity: 0.8 }}>
+          <Sparkles size={11} style={{ marginRight: 6, display: 'inline', verticalAlign: 'text-top' }} color="var(--color-accent-indigo)" />
+          <strong>智能导向模式</strong>：若当前光标在文档中，AI 内容将直接原地流式录入；否则将自动创建新文档。
         </p>
       </div>
     </div>

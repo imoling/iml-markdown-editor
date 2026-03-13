@@ -1,23 +1,25 @@
-# iML Markdown Editor
+# iML Markdown Editor: Vibe Coding Studio
 
-一款追求极致简洁与专业排版的 Markdown 桌面编辑器，专为纯粹书写而生。
+一款追求极致简洁、专业排版与 AI 灵感驱动的 Markdown 桌面编辑器。专为“从想法到现实”的快速跨越（Vibe Coding）而生。
 
-![iML Logo](assets/logo.png)
+![iML Markdown Editor](./assets/logo.png)
 
 ## ✨ 核心特性
 
-- **双模态自由切换**：
-  - **富文本模式 (Word 模式)**：基于 Tiptap，提供所见即所得的流畅编辑体验。
-  - **源码模式 (Markdown 模式)**：基于 CodeMirror 6，支持实时预览与精准控制。
-- **现代化视觉设计**：采用 Nordic Clarity 风格，辅以 macOS 毛玻璃背景效果与细腻动画。
-- **专业排版能力**：
-  - 支持 GFM 标准表格操作。
-  - 代码高亮显示。
-  - 数学公式渲染。
-- **极致的原生体验**：
-  - 采用自定义 TitleBar，深度适配 macOS 窗口风格。
-  - 独立窗口设计的“关于”与“快捷键说明”。
-  - 高性能的文件系统响应。
+- **🪄 AI 场景灵感写作**：
+  - **灵感转 PRD**：将模糊意愿 (Vibe) 转化为标准化的产品需求文档。
+  - **AI Studio / Stitch 指令工程**：精准生成 Google AI Studio 与 Stitch 的高交互原型指令。
+  - **Nano Banana PPT 视觉增效**：集成 10 套专业模板风格模式，智能推荐 PPT 大纲与配图 Prompt。
+  - **智能导向输出**：首创“光标感知”逻辑，AI 生成内容可直接**原地流式录入**当前文档，或按需新建。
+- **🔄 双模态自由切换**：
+  - **富文本 (Word 模式)**：基于 Tiptap，提供所见即所得、极致丝滑的排版体验。
+  - **源码 (Markdown 模式)**：基于 CodeMirror 6，提供高精度的实时代码编辑与预览。
+- **💎 纯粹主义视觉设计**：
+  - **Nordic Clarity 审美**：基于 Vibe Coding 理念重构的侧边 AI 面板与状态栏。
+  - **沉浸式交互细节**：Glow 呼吸效果输入框、绿色状态呼吸灯，深度适配 macOS 原生毛玻璃背景。
+- **📝 专业排版内核**：
+  - 支持 GFM 标准表格、KaTeX 数学公式、代码高亮。
+  - 内置 AI 文本处理：一键润色、总结、深度扩写。
 
 ## 🚀 快速开始
 
@@ -45,20 +47,19 @@ npm run build:mac
 - **原生容器**: Electron
 - **状态管理**: Zustand
 - **编辑器内核**: Tiptap (Rich Text), CodeMirror 6 (Source)
-- **样式方案**: Vanilla CSS (CSS Variables)
+- **AI 引擎**: 集成 Vibe Coding 深度提示词工程
 
 ## ⌨️ 常用快捷键
 - `Cmd + N`: 新建文件
 - `Cmd + O`: 打开文件
 - `Cmd + S`: 保存文件
 - `Cmd + E`: 切换编辑模式
-- `Cmd + B`: 切换侧边栏显隐
-- `Cmd + /`: 查看快捷键详细说明
+- `Cmd + /`: 快捷键说明 (极致紧凑版，全量显示)
 
 ## 🔗 项目链接
 - **GitHub**: [https://github.com/imoling/iml-markdown-editor](https://github.com/imoling/iml-markdown-editor)
 
 ## 📄 许可证
-Logic & Design by [imoling.cn@gmail.com](mailto:imoling.cn@gmail.com) | Developed by Gemini
+Logic & Design by [imoling.cn@gmail.com](mailto:imoling.cn@gmail.com) | Developed by Antigravity AI
 
-&copy; 2026 iML Studio. 让书写回归纯粹。
+&copy; 2026 iML Studio. **让书写回归纯粹，让愿景触手可及。**

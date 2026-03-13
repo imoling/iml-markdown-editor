@@ -8,9 +8,26 @@ import { markdownToHtml } from '../../utils/markdown';
 import '../styles/editor.css';
 
 export const MarkdownEditor: React.FC = () => {
-  const { activeTabId, tabs, updateTabContent, navigationRequest } = useAppStore();
+  const { activeTabId, tabs, updateTabContent, navigationRequest, setStreamingCallback } = useAppStore();
   const activeTab = tabs.find(t => t.id === activeTabId);
   const editorRef = useRef<ReactCodeMirrorRef>(null);
+
+  // Register AI streaming callback for in-place generation
+  useEffect(() => {
+    if (editorRef.current?.view) {
+      setStreamingCallback((chunk: string) => {
+        const view = editorRef.current?.view;
+        if (view) {
+          const { from } = view.state.selection.main;
+          view.dispatch({
+            changes: { from, insert: chunk },
+            selection: { anchor: from + chunk.length, head: from + chunk.length }
+          });
+        }
+      });
+      return () => setStreamingCallback(null);
+    }
+  }, [setStreamingCallback]);
 
   if (!activeTab) return null;
 
