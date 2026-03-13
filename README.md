@@ -21,6 +21,8 @@
   - 支持 GFM 标准表格、KaTeX 数学公式、代码高亮。
   - 内置 AI 文本处理：一键润色、总结、深度扩写。
 
+  ![iML Markdown Editor Screenshot](./assets/Screenshot.png)
+
 ## 🚀 快速开始
 
 ### 环境依赖
