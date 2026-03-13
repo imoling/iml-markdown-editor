@@ -99,7 +99,7 @@ const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
           margin: '0 0 24px 0', 
           fontSize: 14, 
           color: 'var(--text-muted)' 
-        }}>Version 1.0.0 (Stable)</p>
+        }}>Version {window.api?.appVersion || '1.0.0'} (Stable)</p>
         
         <div style={{ 
           width: '100%', 

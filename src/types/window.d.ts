@@ -28,6 +28,10 @@ declare global {
         on: (channel: string, callback: (...args: any[]) => void) => void;
         send: (channel: string, ...args: any[]) => void;
       };
+      app: {
+        version: string;
+        checkUpdates: () => Promise<{ success: boolean; latestVersion?: string; releaseUrl?: string; error?: string }>;
+      };
       appVersion: string;
     };
   }

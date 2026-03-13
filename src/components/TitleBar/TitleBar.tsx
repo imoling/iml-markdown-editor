@@ -34,10 +34,14 @@ export const TitleBar: React.FC = () => {
     saveActiveFile,
     refreshWorkspace,
     tabToClose,
-    setTabToClose
+    setTabToClose,
+    updateStatus,
+    checkUpdates,
+    setUpdateStatus
   } = useAppStore();
 
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
+  
   const activeTab = tabs.find(t => t.id === activeTabId);
   const tabsRef = useRef<HTMLDivElement>(null);
 
@@ -191,6 +195,9 @@ export const TitleBar: React.FC = () => {
               }}>
                 <div className="menu-item" onClick={() => { setActiveMenu(null); window.api.events.send('open-shortcuts'); }} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', fontSize: 13, cursor: 'pointer', borderRadius: 6 }}>
                   <Layout size={14} /> 快捷键 <span style={{ marginLeft: 'auto', opacity: 0.4, fontSize: 11 }}>⌘/</span>
+                </div>
+                <div className="menu-item" onClick={() => { setActiveMenu(null); checkUpdates(); }} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', fontSize: 13, cursor: 'pointer', borderRadius: 6 }}>
+                  <RotateCw size={14} /> 检查更新
                 </div>
                 <div style={{ height: 1, backgroundColor: 'var(--border-subtle)', margin: '6px 4px' }}></div>
                 <div className="menu-item" onClick={() => { setActiveMenu(null); window.api.events.send('open-about'); }} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', fontSize: 13, cursor: 'pointer', borderRadius: 6 }}>

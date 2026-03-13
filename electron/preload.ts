@@ -50,5 +50,9 @@ contextBridge.exposeInMainWorld('api', {
       ipcRenderer.send(channel, ...args);
     }
   },
+  app: {
+    version: process.env.npm_package_version || '1.0.0',
+    checkUpdates: () => ipcRenderer.invoke('app:checkUpdates'),
+  },
   appVersion: process.env.npm_package_version || '1.0.0'
 });

@@ -144,6 +144,102 @@ const App: React.FC = () => {
           onCancel={() => setTabToClose(null)}
         />
       )}
+
+      {/* 检查更新状态弹窗 */}
+      {useAppStore.getState().updateStatus.show && (
+        <UpdateModal />
+      )}
+    </div>
+  );
+};
+
+// 提取 UpdateModal 组件以保持 App 组件整洁
+import { RotateCw, X, Layout } from 'lucide-react';
+
+const UpdateModal: React.FC = () => {
+  const { updateStatus, setUpdateStatus } = useAppStore();
+  
+  return (
+    <div style={{
+      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+      backgroundColor: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(8px)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 3000,
+      animation: 'fadeIn 0.2s ease-out'
+    }}>
+      <div style={{
+        backgroundColor: 'var(--bg-elevated)', padding: 32, borderRadius: 24,
+        width: 320, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16,
+        boxShadow: '0 20px 50px rgba(0,0,0,0.3)', border: '1px solid var(--border-subtle)',
+        animation: 'scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
+      }}>
+        {updateStatus.loading ? (
+          <>
+            <RotateCw size={32} className="animate-spin" color="var(--color-accent-indigo)" />
+            <p style={{ fontSize: 14, color: 'var(--text-primary)', margin: 0 }}>正在检查更新...</p>
+          </>
+        ) : updateStatus.error ? (
+          <>
+            <X size={32} color="var(--color-accent-coral)" />
+            <p style={{ fontSize: 14, color: 'var(--text-primary)', margin: 0 }}>{updateStatus.error}</p>
+            <button 
+              onClick={() => setUpdateStatus({ ...updateStatus, show: false })}
+              style={{ 
+                marginTop: 8, padding: '10px 24px', borderRadius: 12, border: 'none',
+                backgroundColor: 'var(--bg-surface)', color: 'var(--text-secondary)',
+                cursor: 'pointer', fontSize: 13, fontWeight: 500
+              }}
+            >
+              关闭
+            </button>
+          </>
+        ) : (() => {
+            const current = window.api.appVersion || '1.5.0';
+            const hasUpdate = updateStatus.latestVersion && updateStatus.latestVersion !== current;
+            return (
+              <>
+                <Layout size={32} color={hasUpdate ? "var(--color-accent-indigo)" : "var(--text-muted)"} />
+                <div style={{ textAlign: 'center' }}>
+                  <p style={{ fontSize: 16, fontWeight: 600, margin: '0 0 4px 0' }}>
+                    {hasUpdate ? '发现新版本！' : '已是最新版本'}
+                  </p>
+                  <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>
+                    {hasUpdate 
+                      ? `最新版本: v${updateStatus.latestVersion} (当前: v${current})` 
+                      : `当前版本 v${current} 已是最新`}
+                  </p>
+                </div>
+                <div style={{ display: 'flex', gap: 12, width: '100%', marginTop: 8 }}>
+                  <button 
+                    onClick={() => setUpdateStatus({ ...updateStatus, show: false })}
+                    style={{ 
+                      flex: 1, padding: '10px', borderRadius: 12, border: '1px solid var(--border-subtle)',
+                      backgroundColor: 'var(--bg-surface)', color: 'var(--text-secondary)',
+                      cursor: 'pointer', fontSize: 13, fontWeight: 500
+                    }}
+                  >
+                    关闭
+                  </button>
+                  {hasUpdate && (
+                    <button 
+                      onClick={() => {
+                        setUpdateStatus({ ...updateStatus, show: false });
+                        window.api.shell.openExternal('https://github.com/imoling/iml-markdown-editor/releases');
+                      }}
+                      style={{ 
+                        flex: 1, padding: '10px', borderRadius: 12, border: 'none',
+                        backgroundColor: 'var(--color-accent-indigo)', color: 'white',
+                        cursor: 'pointer', fontSize: 13, fontWeight: 600,
+                        boxShadow: '0 4px 12px var(--brand-glow)'
+                      }}
+                    >
+                      前往下载
+                    </button>
+                  )}
+                </div>
+              </>
+            );
+        })()}
+      </div>
     </div>
   );
 };

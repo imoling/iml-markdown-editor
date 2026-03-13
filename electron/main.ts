@@ -346,6 +346,33 @@ app.whenReady().then(() => {
   ipcMain.on('open-shortcuts', () => createShortcutsWindow());
   ipcMain.on('open-ai-config', () => createModelConfigWindow());
   ipcMain.handle('open-url', async (_event, url: string) => { shell.openExternal(url); });
+  
+  // App Update Check IPC
+  ipcMain.handle('app:checkUpdates', async () => {
+    try {
+      const response = await fetch('https://api.github.com/repos/imoling/iml-markdown-editor/releases/latest', {
+        headers: {
+          'Accept': 'application/vnd.github.v3+json',
+          'User-Agent': 'iML-Markdown-Editor'
+        }
+      });
+      
+      if (!response.ok) {
+        if (response.status === 404) return { success: false, error: '未发现任何发布版本' };
+        throw new Error(`GitHub API returned ${response.status}`);
+      }
+      
+      const data: any = await response.json();
+      return {
+        success: true,
+        latestVersion: data.tag_name.replace(/^v/, ''),
+        releaseUrl: data.html_url
+      };
+    } catch (err: any) {
+      console.error('Update check failed:', err);
+      return { success: false, error: '无法连接到更新服务器，请检查网络设置' };
+    }
+  });
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

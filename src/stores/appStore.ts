@@ -44,6 +44,12 @@ export interface AppState {
   sidebarTab: 'catalog' | 'files' | 'ai';
   expandedPaths: string[];
   navigationRequest: NavigationRequest | null;
+  updateStatus: {
+    show: boolean;
+    loading: boolean;
+    latestVersion: string | null;
+    error: string | null;
+  };
   
   // Actions
   toggleMode: () => void;
@@ -74,6 +80,8 @@ export interface AppState {
   tabToClose: string | null;
   setTabToClose: (id: string | null) => void;
   saveActiveFile: (saveAs?: boolean) => Promise<boolean>;
+  checkUpdates: () => Promise<void>;
+  setUpdateStatus: (status: Partial<AppState['updateStatus']>) => void;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -94,6 +102,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   expandedPaths: [],
   navigationRequest: null,
   tabToClose: null,
+  updateStatus: { show: false, loading: false, latestVersion: null, error: null },
   
   setTabToClose: (id: string | null) => set({ tabToClose: id }),
   
@@ -321,5 +330,38 @@ export const useAppStore = create<AppState>((set, get) => ({
       return true;
     }
     return false;
+  },
+
+  setUpdateStatus: (status: Partial<AppState['updateStatus']>) => set((state) => ({
+    updateStatus: { ...state.updateStatus, ...status }
+  })),
+
+  checkUpdates: async () => {
+    set({ updateStatus: { show: true, loading: true, latestVersion: null, error: null } });
+    
+    try {
+      const result = await window.api.app.checkUpdates();
+      if (!result.success) {
+        throw new Error(result.error);
+      }
+      
+      set({
+        updateStatus: {
+          show: true,
+          loading: false,
+          latestVersion: result.latestVersion || null,
+          error: null
+        }
+      });
+    } catch (err: any) {
+      set({
+        updateStatus: {
+          show: true,
+          loading: false,
+          latestVersion: null,
+          error: err.message || '检查更新失败'
+        }
+      });
+    }
   }
 }));
