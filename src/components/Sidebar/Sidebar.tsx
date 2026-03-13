@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAppStore, FileNode, HeadingNode } from '../../stores/appStore';
-import { Folder, Search, ChevronDown, ChevronRight, FolderOpen, FileText, FileCode, FolderClosed, List, RotateCw } from 'lucide-react';
+import { Folder, Search, ChevronDown, ChevronRight, FolderOpen, FileText, FileCode, FolderClosed, List, RotateCw, Sparkles } from 'lucide-react';
+import { AIWritingPanel } from '../AI/AIWritingPanel';
 
 const FileTreeItem: React.FC<{ node: FileNode; level: number }> = ({ node, level }) => {
   const { openTab, updateFileNode, activeTabId, expandedPaths, setExpanded } = useAppStore();
@@ -47,7 +48,7 @@ const FileTreeItem: React.FC<{ node: FileNode; level: number }> = ({ node, level
           </>
         ) : (
           <>
-            <span style={{width: 14, display: 'inline-block'}}></span> {/* Spacer if no chevron */}
+            <span style={{width: 14, display: 'inline-block'}}></span> 
             {isMarkdown ? (
               <FileCode size={14} color={isActive ? "var(--text-primary)" : "var(--color-accent-green)"} />
             ) : (
@@ -105,23 +106,35 @@ export const Sidebar: React.FC = () => {
     <aside className="sidebar">
       <div className="sidebar-tabs">
         <div 
+          className={`sidebar-tab ${sidebarTab === 'ai' ? 'active' : ''}`}
+          onClick={() => setSidebarTab('ai')}
+          title="智能助手"
+        >
+          <Sparkles size={14} />
+          <span>助手</span>
+        </div>
+        <div 
           className={`sidebar-tab ${sidebarTab === 'catalog' ? 'active' : ''}`}
           onClick={() => setSidebarTab('catalog')}
+          title="文档目录"
         >
           <List size={14} />
-          <span>文档目录</span>
+          <span>目录</span>
         </div>
         <div 
           className={`sidebar-tab ${sidebarTab === 'files' ? 'active' : ''}`}
           onClick={() => setSidebarTab('files')}
+          title="文件导航"
         >
           <Folder size={14} />
-          <span>文件导航</span>
+          <span>文件</span>
         </div>
       </div>
       
       <div className="sidebar-content" style={{ padding: '12px 0', overflowY: 'auto' }}>
-        {sidebarTab === 'catalog' ? (
+        {sidebarTab === 'ai' ? (
+          <AIWritingPanel />
+        ) : sidebarTab === 'catalog' ? (
           <div className="catalog-view">
             {outline.length === 0 ? (
               <div style={{ padding: '24px 16px', color: 'var(--text-muted)', fontSize: 13, textAlign: 'center' }}>

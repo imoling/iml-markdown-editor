@@ -31,29 +31,51 @@
   height: 100%;
   align-items: flex-end;
   gap: 2px;
+  overflow-x: auto;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.titlebar-tabs::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
 }
 
 .titlebar-tab {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px;
+  padding: 0 12px;
   height: 32px;
+  min-width: 100px;
+  max-width: 200px;
+  flex: 1 1 auto;
   border-radius: 6px 6px 0 0;
   cursor: pointer;
   font-size: 13px;
   color: var(--text-secondary);
   -webkit-app-region: no-drag;
+  transition: all 0.2s;
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .titlebar-tab.active {
   background-color: var(--bg-card);
   color: var(--text-primary);
   box-shadow: 0 -2px 10px rgba(0,0,0,0.03);
+  border-bottom: none;
+  font-weight: 600;
 }
 
 .titlebar-tab:hover:not(.active) {
   background-color: rgba(0, 0, 0, 0.05);
+}
+
+.tab-title {
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
 }
 
 .titlebar-spacer {
@@ -77,8 +99,8 @@
 
 .sidebar-tabs {
   display: flex;
-  padding: 16px 16px 8px 16px;
-  gap: 8px;
+  padding: 12px 12px 4px 12px;
+  gap: 4px;
 }
 
 .sidebar-tab {
@@ -86,12 +108,13 @@
   align-items: center;
   justify-content: center;
   flex: 1;
-  gap: 6px;
-  padding: 6px 10px;
+  gap: 4px;
+  padding: 6px 4px;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-secondary);
+  white-space: nowrap;
 }
 
 .sidebar-tab.active {

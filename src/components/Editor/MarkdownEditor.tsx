@@ -12,13 +12,7 @@ export const MarkdownEditor: React.FC = () => {
   const activeTab = tabs.find(t => t.id === activeTabId);
   const editorRef = useRef<ReactCodeMirrorRef>(null);
 
-  if (!activeTab) {
-    return (
-      <div style={{ padding: 40, color: 'var(--text-muted)' }}>
-        未打开任何文档，请按 Cmd+O 打开文件。
-      </div>
-    );
-  }
+  if (!activeTab) return null;
 
   const handleUpdate = (val: string) => {
     if (activeTabId) {

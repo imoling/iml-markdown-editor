@@ -5,6 +5,7 @@ import { EditorArea } from './components/Editor/EditorArea';
 import { StatusBar } from './components/StatusBar/StatusBar';
 import { useAppStore } from './stores/appStore';
 import { extractHeadings } from './utils/outline';
+import { ConfirmDialog } from './components/ConfirmDialog';
 import './styles/layout.css';
 
 const App: React.FC = () => {
@@ -24,6 +25,10 @@ const App: React.FC = () => {
     openFile,
     openDirectory,
     saveActiveFile,
+    tabToClose,
+    setTabToClose,
+    closeTab,
+    setActiveTab,
   } = useAppStore();
 
   const activeTab = tabs.find(t => t.id === activeTabId);
@@ -37,6 +42,22 @@ const App: React.FC = () => {
       setOutline([]);
     }
   }, [activeTab?.content, setOutline]);
+
+  const handleConfirmSave = async () => {
+    if (!tabToClose) return;
+    const currentActiveId = activeTabId;
+    
+    // If it's not the active tab, we need to switch to it to save
+    if (currentActiveId !== tabToClose) {
+      setActiveTab(tabToClose);
+    }
+    
+    const saved = await saveActiveFile();
+    if (saved) {
+      closeTab(tabToClose);
+      setTabToClose(null);
+    }
+  };
 
   useEffect(() => {
     const handleKeyDown = async (e: KeyboardEvent) => {
@@ -110,6 +131,19 @@ const App: React.FC = () => {
       </div>
       
       {statusBarVisible && <StatusBar />}
+
+      {tabToClose && (
+        <ConfirmDialog
+          title="保存更改？"
+          message={`文件 "${tabs.find(t => t.id === tabToClose)?.title}" 已修改，是否在关闭前保存？`}
+          onConfirm={handleConfirmSave}
+          onDiscard={() => {
+            closeTab(tabToClose);
+            setTabToClose(null);
+          }}
+          onCancel={() => setTabToClose(null)}
+        />
+      )}
     </div>
   );
 };

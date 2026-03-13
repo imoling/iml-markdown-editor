@@ -1,22 +1,35 @@
 /* Tiptap styles */
 .tiptap-container {
+  flex: 1;
+  overflow-y: auto;
+  background-color: var(--bg-surface); /* Light grey background for layering */
   width: 100%;
-  max-width: 800px;
-  margin: 0 auto;
+  display: block; /* Use block layout for better natural growth */
+}
+
+.tiptap-page {
+  width: calc(100% - 64px);
+  max-width: 820px;
+  min-height: calc(100vh - 128px);
+  margin: 32px auto; /* Centering with auto margins */
+  padding: 60px 80px;
+  background-color: var(--bg-page); /* White paper color */
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06), 0 0 0 1px var(--border-subtle);
+  border-radius: 4px;
+  cursor: text;
+  box-sizing: border-box;
+  height: auto; /* Ensure it grows with content */
+  display: block;
+  position: relative;
 }
 
 .tiptap-prosemirror {
   outline: none;
   font-family: var(--font-body);
   color: var(--text-primary);
-  line-height: 1.5;
-  min-height: 500px; /* Ensure there is a clickable area even if empty */
-}
-
-/* Ensure the ProseMirror content area itself fills the container */
-.tiptap-container .ProseMirror {
-  min-height: calc(100vh - 120px);
-  outline: none;
+  line-height: 1.6;
+  min-height: 100%;
+  height: auto;
 }
 
 .tiptap-prosemirror p.is-editor-empty:first-child::before {

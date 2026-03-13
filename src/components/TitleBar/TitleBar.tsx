@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAppStore } from '../../stores/appStore';
 import { 
   FileText, 
@@ -13,6 +13,8 @@ import {
   RotateCw
 } from 'lucide-react';
 import { markdownToHtml } from '../../utils/markdown';
+
+import { ConfirmDialog } from '../ConfirmDialog';
 
 export const TitleBar: React.FC = () => {
   const { 
@@ -30,11 +32,34 @@ export const TitleBar: React.FC = () => {
     openFile,
     openDirectory,
     saveActiveFile,
-    refreshWorkspace
+    refreshWorkspace,
+    tabToClose,
+    setTabToClose
   } = useAppStore();
 
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const activeTab = tabs.find(t => t.id === activeTabId);
+  const tabsRef = useRef<HTMLDivElement>(null);
+
+  const handleCloseTab = (id: string) => {
+    const tab = tabs.find(t => t.id === id);
+    const isTemp = id.startsWith('new-') || id.startsWith('ai-gen-');
+    if (tab && (tab.isDirty || isTemp)) {
+      setTabToClose(id);
+    } else {
+      closeTab(id);
+    }
+  };
+
+  // 自动滚动激活标签到可见区域
+  useEffect(() => {
+    if (activeTabId && tabsRef.current) {
+      const activeTabElement = tabsRef.current.querySelector('.titlebar-tab.active');
+      if (activeTabElement) {
+        activeTabElement.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+      }
+    }
+  }, [activeTabId]);
 
   return (
     <header className="titlebar" style={{ gap: 0, paddingRight: 0 }}>
@@ -135,7 +160,11 @@ export const TitleBar: React.FC = () => {
               <div className="dropdown-menu" style={{ 
                 position: 'absolute', top: 36, left: 0, backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: 10, boxShadow: '0 10px 40px rgba(0,0,0,0.12)', zIndex: 1000, minWidth: 200, padding: 6, backdropFilter: 'blur(30px)', WebkitBackdropFilter: 'blur(30px)'
               }}>
-                <div className="menu-item disabled" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', fontSize: 13, cursor: 'not-allowed', borderRadius: 6, opacity: 0.4 }}>
+                <div 
+                  className="menu-item" 
+                  onClick={() => { setActiveMenu(null); window.api.events.send('open-ai-config'); }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', fontSize: 13, cursor: 'pointer', borderRadius: 6 }}
+                >
                   <Layout size={14} /> 模型配置 <span style={{ marginLeft: 'auto', opacity: 0.4, fontSize: 11 }}>⇧⌘M</span>
                 </div>
               </div>
@@ -174,7 +203,11 @@ export const TitleBar: React.FC = () => {
       </div>
 
       {/* 标签页区域 */}
-      <div className="titlebar-tabs" style={{ flex: 1, marginLeft: 20, overflowX: 'auto', display: 'flex', alignItems: 'flex-end', height: '100%' } as React.CSSProperties}>
+      <div 
+        ref={tabsRef} 
+        className="titlebar-tabs" 
+        style={{ flex: 1, marginLeft: 20, display: 'flex', alignItems: 'flex-end', height: '100%' } as React.CSSProperties}
+      >
         {tabs.map((tab) => {
           const isActive = tab.id === activeTabId;
           return (
@@ -182,20 +215,15 @@ export const TitleBar: React.FC = () => {
               key={tab.id}
               className={`titlebar-tab ${isActive ? 'active' : ''}`}
               onClick={() => setActiveTab(tab.id)}
-              style={{ 
-                minWidth: 100, maxWidth: 200, flexShrink: 0, position: 'relative', display: 'flex', alignItems: 'center', gap: 8, padding: '0 12px', height: 32, borderBottom: isActive ? 'none' : '1px solid var(--border-subtle)', transition: 'all 0.2s', WebkitAppRegion: 'no-drag'
-              } as React.CSSProperties}
             >
               <FileCode size={14} color={isActive ? 'var(--color-accent-indigo)' : 'var(--text-muted)'} />
-              <span style={{ 
-                fontSize: 12, color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: isActive ? 600 : 400, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
-              }}>
+              <span className="tab-title">
                 {tab.title}
               </span>
               <div 
                 className="close-tab-icon"
-                onClick={(e) => { e.stopPropagation(); closeTab(tab.id); }}
-                style={{ marginLeft: 'auto', opacity: 0.6, cursor: 'pointer', pointerEvents: 'auto' }}
+                onClick={(e) => { e.stopPropagation(); handleCloseTab(tab.id); }}
+                style={{ marginLeft: 'auto', opacity: 0.6, cursor: 'pointer', pointerEvents: 'auto', display: 'flex', alignItems: 'center' }}
               >
                 <X size={12} />
               </div>

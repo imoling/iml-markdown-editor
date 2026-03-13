@@ -41,7 +41,7 @@ export interface AppState {
   outline: HeadingNode[];
   findVisible: boolean;
   replaceVisible: boolean;
-  sidebarTab: 'catalog' | 'files';
+  sidebarTab: 'catalog' | 'files' | 'ai';
   expandedPaths: string[];
   navigationRequest: NavigationRequest | null;
   
@@ -67,11 +67,13 @@ export interface AppState {
   createNewFile: () => void;
   toggleFind: () => void;
   toggleReplace: () => void;
-  setSidebarTab: (tab: 'catalog' | 'files') => void;
+  setSidebarTab: (tab: 'catalog' | 'files' | 'ai') => void;
   refreshWorkspace: () => Promise<void>;
   openFile: () => Promise<void>;
   openDirectory: () => Promise<void>;
-  saveActiveFile: (saveAs?: boolean) => Promise<void>;
+  tabToClose: string | null;
+  setTabToClose: (id: string | null) => void;
+  saveActiveFile: (saveAs?: boolean) => Promise<boolean>;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -91,23 +93,24 @@ export const useAppStore = create<AppState>((set, get) => ({
   sidebarTab: 'files',
   expandedPaths: [],
   navigationRequest: null,
+  tabToClose: null,
+  
+  setTabToClose: (id: string | null) => set({ tabToClose: id }),
   
   toggleMode: () => set((state) => ({ 
     mode: state.mode === 'word' ? 'markdown' : 'word' 
   })),
   
-  setActiveTab: async (id) => {
+  setActiveTab: async (id: string | null) => {
     set({ activeTabId: id });
     
-    // Auto-update workspace based on active tab
-    if (id && !id.startsWith('new-')) {
+    if (id && !id.startsWith('new-') && !id.startsWith('ai-gen-')) {
       const sep = id.includes('/') ? '/' : '\\';
       const lastSepIndex = id.lastIndexOf(sep);
       if (lastSepIndex !== -1) {
         const dirPath = id.substring(0, lastSepIndex);
         const dirName = dirPath.split(sep).pop() || 'Workspace';
         
-        // Only refresh if workspace actually changed or is currently null
         if (get().workspacePath !== dirPath) {
           try {
             const result = await window.api.fs.readDir(dirPath);
@@ -124,10 +127,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           }
         }
       }
-    } else if (id && id.startsWith('new-')) {
-      // For new files, we might want to clear or keep workspace. 
-      // User says: "If unsaved then empty". 
-      // This implies we should clear workspace if a new (unsaved) tab is focused.
+    } else if (id && (id.startsWith('new-') || id.startsWith('ai-gen-'))) {
       set({ workspacePath: null, workspaceName: null, fileTree: [] });
     }
 
@@ -136,23 +136,20 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
   
-  openTab: (tab) => {
+  openTab: (tab: Tab) => {
     const state = get();
     const exists = state.tabs.find((t) => t.id === tab.id);
     if (!exists) {
       set({ tabs: [...state.tabs, tab] });
     }
-    get().setActiveTab(tab.id); // Use the logic in setActiveTab to update workspace
+    get().setActiveTab(tab.id);
   },
   
-  closeTab: (id) => set((state) => {
+  closeTab: (id: string) => set((state) => {
     const newTabs = state.tabs.filter((t) => t.id !== id);
     const newActiveId = state.activeTabId === id 
       ? (newTabs.length > 0 ? newTabs[newTabs.length - 1].id : null)
       : state.activeTabId;
-    
-    // We update workspace manually here because set() within closeTab is synchronous
-    // We'll let the next setActiveTab call handle it if the active tab changed
     
     if (newTabs.length === 0) {
       return { tabs: [], activeTabId: null, outline: [], workspacePath: null, workspaceName: null, fileTree: [] };
@@ -164,11 +161,11 @@ export const useAppStore = create<AppState>((set, get) => ({
     };
   }),
 
-  updateTabContent: (id, content) => set((state) => ({
+  updateTabContent: (id: string, content: string) => set((state) => ({
     tabs: state.tabs.map(t => t.id === id ? { ...t, content, isDirty: true } : t)
   })),
 
-  updateTabId: (oldId, newId, newTitle) => set((state) => {
+  updateTabId: (oldId: string, newId: string, newTitle: string) => set((state) => {
     const newTabs = state.tabs.map(t => t.id === oldId ? { ...t, id: newId, title: newTitle, isDirty: false } : t);
     const newState = {
       tabs: newTabs,
@@ -177,14 +174,14 @@ export const useAppStore = create<AppState>((set, get) => ({
     return newState;
   }),
 
-  setWorkspace: (path, name, files) => set({ 
+  setWorkspace: (path: string, name: string, files: FileNode[]) => set({ 
     workspacePath: path, 
     workspaceName: name, 
     fileTree: files,
     expandedPaths: [path] 
   }),
 
-  updateFileNode: (path, updates) => set((state) => {
+  updateFileNode: (path: string, updates: Partial<FileNode>) => set((state) => {
     const updateRecursive = (nodes: FileNode[]): FileNode[] => {
       return nodes.map(node => {
         if (node.path === path) return { ...node, ...updates };
@@ -195,13 +192,13 @@ export const useAppStore = create<AppState>((set, get) => ({
     return { fileTree: updateRecursive(state.fileTree) };
   }),
 
-  setExpanded: (path, expanded) => set((state) => ({
+  setExpanded: (path: string, expanded: boolean) => set((state) => ({
     expandedPaths: expanded 
       ? [...new Set([...state.expandedPaths, path])]
       : state.expandedPaths.filter(p => p !== path)
   })),
 
-  revealInSidebar: async (path) => {
+  revealInSidebar: async (path: string) => {
     const parts = path.split(/[/\\]/);
     let currentPath = '';
     const newExpanded = [...get().expandedPaths];
@@ -216,7 +213,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ expandedPaths: [...new Set(newExpanded)] });
   },
 
-  scrollToHeading: (heading) => set({ 
+  scrollToHeading: (heading: HeadingNode) => set({ 
     navigationRequest: { heading, timestamp: Date.now() } 
   }),
 
@@ -224,9 +221,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   toggleToolbar: () => set((state) => ({ toolbarVisible: !state.toolbarVisible })),
   toggleStatusBar: () => set((state) => ({ statusBarVisible: !state.statusBarVisible })),
   
-  setOutline: (outline) => set({ outline }),
+  setOutline: (outline: HeadingNode[]) => set({ outline }),
   
-  addToRecent: (path) => set((state) => ({
+  addToRecent: (path: string) => set((state) => ({
     recentFiles: [path, ...state.recentFiles.filter(p => p !== path)].slice(0, 10)
   })),
 
@@ -243,7 +240,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   toggleFind: () => set((state) => ({ findVisible: !state.findVisible, replaceVisible: false })),
   toggleReplace: () => set((state) => ({ replaceVisible: !state.replaceVisible, findVisible: false })),
-  setSidebarTab: (sidebarTab) => set({ sidebarTab }),
+  setSidebarTab: (tab: 'catalog' | 'files' | 'ai') => set({ sidebarTab: tab }),
   refreshWorkspace: async () => {
     const { workspacePath } = get();
     if (!workspacePath) return;
@@ -297,32 +294,32 @@ export const useAppStore = create<AppState>((set, get) => ({
   saveActiveFile: async (saveAs = false) => {
     const { activeTabId, tabs } = get();
     const activeTab = tabs.find(t => t.id === activeTabId);
-    if (!activeTab) return;
+    if (!activeTab) return false;
 
     let filePath = activeTab.id;
-    const isNewFile = filePath.startsWith('new-');
+    const isTempFile = filePath.startsWith('new-') || filePath.startsWith('ai-gen-');
 
-    if (isNewFile || saveAs) {
+    if (isTempFile || saveAs) {
       const result = await window.api.dialog.save({
-        defaultPath: isNewFile ? 'untitled.md' : filePath,
+        defaultPath: isTempFile ? (activeTab.title === '未命名' ? 'untitled.md' : `${activeTab.title}.md`) : filePath,
         filters: [{ name: 'Markdown', extensions: ['md'] }]
       });
-      if (!result) return;
+      if (!result) return false;
       filePath = result;
     }
 
     const saveResult = await window.api.fs.writeFile(filePath, activeTab.content);
     if (saveResult.success) {
-      if (isNewFile || saveAs) {
+      if (isTempFile || saveAs) {
         await get().updateTabId(activeTab.id, filePath, filePath.split(/[/\\]/).pop() || 'Untitled');
-        
-        // Let setActiveTab handle workspace refresh after ID update
         get().setActiveTab(filePath);
       } else {
         set((state) => ({
           tabs: state.tabs.map(t => t.id === filePath ? { ...t, isDirty: false } : t)
         }));
       }
+      return true;
     }
+    return false;
   }
 }));

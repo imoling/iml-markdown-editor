@@ -14,6 +14,31 @@ contextBridge.exposeInMainWorld('api', {
   export: {
     pdf: (htmlContent: string, defaultPath: string, filePath: string) => ipcRenderer.invoke('export:pdf', htmlContent, defaultPath, filePath),
   },
+  ai: {
+    getConfig: () => ipcRenderer.invoke('ai:getConfig'),
+    saveConfig: (config: any) => ipcRenderer.invoke('ai:saveConfig', config),
+    chat: (messages: any[], onStream: (chunk: string) => void) => {
+      const requestId = Math.random().toString(36).substring(7);
+      
+      const chunkListener = (_event: any, content: string) => onStream(content);
+      
+      ipcRenderer.on(`ai:chat-chunk-${requestId}`, chunkListener);
+      
+      return new Promise((resolve, reject) => {
+        ipcRenderer.once(`ai:chat-done-${requestId}`, (_event, fullContent) => {
+          ipcRenderer.removeListener(`ai:chat-chunk-${requestId}`, chunkListener);
+          resolve(fullContent);
+        });
+        
+        ipcRenderer.once(`ai:chat-error-${requestId}`, (_event, error) => {
+          ipcRenderer.removeListener(`ai:chat-chunk-${requestId}`, chunkListener);
+          reject(new Error(error));
+        });
+        
+        ipcRenderer.send('ai:chat', { messages, requestId });
+      });
+    },
+  },
   shell: {
     openExternal: (url: string) => ipcRenderer.invoke('open-url', url),
   },

@@ -5,6 +5,31 @@ import { setupFileSystemIPC } from './ipc/fileSystem';
 
 const isDev = process.env.NODE_ENV === 'development';
 
+// Simple file-based store
+const userDataPath = app.getPath('userData');
+const configPath = path.join(userDataPath, 'ai-config.json');
+
+function getConfig() {
+  try {
+    if (fs.existsSync(configPath)) {
+      return JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    }
+  } catch (err) {
+    console.error('Failed to read config:', err);
+  }
+  return {};
+}
+
+function saveConfig(config: any) {
+  try {
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf8');
+    return { success: true };
+  } catch (err) {
+    console.error('Failed to save config:', err);
+    return { success: false, error: '写入文件失败' };
+  }
+}
+
 // Set name early
 if (isDev) {
   app.name = 'iML Markdown Editor';
@@ -14,6 +39,7 @@ app.setName('iML Markdown Editor');
 let mainWindow: BrowserWindow | null = null;
 let aboutWindow: BrowserWindow | null = null;
 let shortcutsWindow: BrowserWindow | null = null;
+let modelConfigWindow: BrowserWindow | null = null;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -22,21 +48,19 @@ function createWindow() {
     minWidth: 800,
     minHeight: 600,
     titleBarStyle: 'hiddenInset',
-    vibrancy: 'sidebar', // macOS vibrancy
+    vibrancy: 'sidebar', 
     visualEffectState: 'active',
-    backgroundColor: '#00000000', // transparent for vibrancy
+    backgroundColor: '#00000000', 
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
       contextIsolation: true,
     },
-    // Use PNG for window icon (more compatible during development)
     icon: path.join(process.cwd(), 'assets/logo.png'),
   });
 
   if (isDev) {
     mainWindow.loadURL('http://localhost:5173');
-    mainWindow.webContents.openDevTools();
   } else {
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
   }
@@ -45,6 +69,7 @@ function createWindow() {
     mainWindow = null;
     if (aboutWindow) aboutWindow.close();
     if (shortcutsWindow) shortcutsWindow.close();
+    if (modelConfigWindow) modelConfigWindow.close();
   });
 }
 
@@ -70,21 +95,12 @@ function createAboutWindow() {
   const pos = getSubWindowPosition(width, height);
 
   aboutWindow = new BrowserWindow({
-    width,
-    height,
-    x: pos.x,
-    y: pos.y,
-    resizable: false,
-    minimizable: false,
-    maximizable: false,
-    title: '关于',
-    titleBarStyle: 'hiddenInset',
-    vibrancy: 'window',
-    visualEffectState: 'active',
+    width, height, x: pos.x, y: pos.y,
+    resizable: false, minimizable: false, maximizable: false,
+    title: '关于', titleBarStyle: 'hiddenInset',
+    vibrancy: 'window', visualEffectState: 'active',
     backgroundColor: '#00000000',
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
-    },
+    webPreferences: { preload: path.join(__dirname, 'preload.js') },
     icon: path.join(process.cwd(), 'assets/logo.png'),
   });
 
@@ -94,9 +110,7 @@ function createAboutWindow() {
     aboutWindow.loadFile(path.join(__dirname, '../dist/index.html'), { query: { window: 'about' } });
   }
 
-  aboutWindow.on('closed', () => {
-    aboutWindow = null;
-  });
+  aboutWindow.on('closed', () => { aboutWindow = null; });
 }
 
 function createShortcutsWindow() {
@@ -110,19 +124,11 @@ function createShortcutsWindow() {
   const pos = getSubWindowPosition(width, height);
 
   shortcutsWindow = new BrowserWindow({
-    width,
-    height,
-    x: pos.x,
-    y: pos.y,
-    resizable: true,
-    title: '快捷键说明',
-    titleBarStyle: 'hiddenInset',
-    vibrancy: 'window',
-    visualEffectState: 'active',
-    backgroundColor: '#00000000',
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
-    },
+    width, height, x: pos.x, y: pos.y,
+    resizable: true, title: '快捷键说明',
+    titleBarStyle: 'hiddenInset', vibrancy: 'window',
+    visualEffectState: 'active', backgroundColor: '#00000000',
+    webPreferences: { preload: path.join(__dirname, 'preload.js') },
     icon: path.join(process.cwd(), 'assets/logo.png'),
   });
 
@@ -132,24 +138,51 @@ function createShortcutsWindow() {
     shortcutsWindow.loadFile(path.join(__dirname, '../dist/index.html'), { query: { window: 'shortcuts' } });
   }
 
-  shortcutsWindow.on('closed', () => {
-    shortcutsWindow = null;
+  shortcutsWindow.on('closed', () => { shortcutsWindow = null; });
+}
+
+function createModelConfigWindow() {
+  if (modelConfigWindow) {
+    modelConfigWindow.focus();
+    return;
+  }
+
+  const width = 500;
+  const height = 650;
+  const pos = getSubWindowPosition(width, height);
+
+  modelConfigWindow = new BrowserWindow({
+    width, height, x: pos.x, y: pos.y,
+    resizable: true, title: '模型配置',
+    titleBarStyle: 'hiddenInset', vibrancy: 'window',
+    visualEffectState: 'active', backgroundColor: '#00000000',
+    webPreferences: { preload: path.join(__dirname, 'preload.js') },
+    icon: path.join(process.cwd(), 'assets/logo.png'),
   });
+
+  if (isDev) {
+    modelConfigWindow.loadURL('http://localhost:5173?window=ai-config');
+  } else {
+    modelConfigWindow.loadFile(path.join(__dirname, '../dist/index.html'), { query: { window: 'ai-config' } });
+  }
+
+  modelConfigWindow.on('closed', () => { modelConfigWindow = null; });
 }
 
 app.whenReady().then(() => {
   setupFileSystemIPC();
   
+  // AI Config IPC
+  ipcMain.handle('ai:getConfig', () => getConfig());
+  ipcMain.handle('ai:saveConfig', (_event, config) => saveConfig(config));
+
   // Create standard macOS menu
   if (process.platform === 'darwin') {
     const template: Electron.MenuItemConstructorOptions[] = [
       {
         label: 'iML Markdown Editor',
         submenu: [
-          { 
-            label: '关于',
-            click: () => createAboutWindow()
-          },
+          { label: '关于', click: () => createAboutWindow() },
           { type: 'separator' },
           { role: 'services' },
           { type: 'separator' },
@@ -162,9 +195,7 @@ app.whenReady().then(() => {
       },
       {
         label: '文件',
-        submenu: [
-          { role: 'close', label: '关闭窗口' }
-        ]
+        submenu: [{ role: 'close', label: '关闭窗口' }]
       },
       {
         label: '编辑',
@@ -197,18 +228,13 @@ app.whenReady().then(() => {
         submenu: [
           {
             label: '模型配置',
-            enabled: false,
+            enabled: true,
             accelerator: 'Cmd+Shift+M',
-            click: () => {
-              // Future: show model config
-            }
+            click: () => createModelConfigWindow()
           }
         ]
       },
-      {
-        role: 'windowMenu',
-        label: '窗口'
-      },
+      { role: 'windowMenu', label: '窗口' },
       {
         role: 'help',
         label: '帮助',
@@ -219,10 +245,7 @@ app.whenReady().then(() => {
             click: () => createShortcutsWindow()
           },
           { type: 'separator' },
-          {
-            label: '关于',
-            click: () => createAboutWindow()
-          }
+          { label: '关于', click: () => createAboutWindow() }
         ]
       }
     ];
@@ -234,37 +257,101 @@ app.whenReady().then(() => {
     const rootPath = isDev ? process.cwd() : app.getAppPath();
     const pngPath = path.join(rootPath, 'assets/logo.png');
     const icnsPath = path.join(rootPath, 'assets/logo.icns');
-    
     let iconPath = fs.existsSync(pngPath) ? pngPath : icnsPath;
     const icon = nativeImage.createFromPath(iconPath);
-    if (!icon.isEmpty()) {
-      app.dock.setIcon(icon);
-    }
+    if (!icon.isEmpty()) app.dock.setIcon(icon);
   }
 
   createWindow();
 
-  ipcMain.on('open-about', () => {
-    createAboutWindow();
+  ipcMain.on('ai:chat', async (event, { messages, requestId }) => {
+    const config = getConfig();
+    const apiKey = config.apiKey;
+    const endpoint = config.endpoint;
+    const model = config.model || 'gpt-4o';
+
+    if (!apiKey || !endpoint) {
+      event.sender.send(`ai:chat-error-${requestId}`, '请检查模型配置 (API Key 或 Endpoint 缺失)');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${endpoint}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model,
+          messages,
+          stream: true,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData: any = await response.json().catch(() => ({}));
+        event.sender.send(`ai:chat-error-${requestId}`, errorData.error?.message || `API 请求失败: ${response.status}`);
+        return;
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        event.sender.send(`ai:chat-error-${requestId}`, '无法获取响应流');
+        return;
+      }
+
+      const decoder = new TextDecoder();
+      let fullContent = '';
+      let lineBuffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) {
+          event.sender.send(`ai:chat-done-${requestId}`, fullContent);
+          break;
+        }
+
+        const chunk = decoder.decode(value, { stream: true });
+        lineBuffer += chunk;
+        
+        const lines = lineBuffer.split('\n');
+        // Keep the last potentially incomplete line in the buffer
+        lineBuffer = lines.pop() || '';
+        
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || trimmed === 'data: [DONE]') continue;
+          
+          if (trimmed.startsWith('data: ')) {
+            try {
+              const json = JSON.parse(trimmed.slice(6));
+              const content = json.choices[0]?.delta?.content || '';
+              if (content) {
+                fullContent += content;
+                event.sender.send(`ai:chat-chunk-${requestId}`, content);
+              }
+            } catch (e) {
+              // Ignore partial JSON (should be handled by lineBuffer now, but defensive)
+            }
+          }
+        }
+      }
+    } catch (err: any) {
+      event.sender.send(`ai:chat-error-${requestId}`, `网络错误: ${err.message}`);
+    }
   });
 
-  ipcMain.on('open-shortcuts', () => {
-    createShortcutsWindow();
-  });
-
-  ipcMain.handle('open-url', async (_event, url: string) => {
-    await shell.openExternal(url);
-  });
+  ipcMain.on('open-about', () => createAboutWindow());
+  ipcMain.on('open-shortcuts', () => createShortcutsWindow());
+  ipcMain.on('open-ai-config', () => createModelConfigWindow());
+  ipcMain.handle('open-url', async (_event, url: string) => { shell.openExternal(url); });
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
-    }
+    if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
 });
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
+  if (process.platform !== 'darwin') app.quit();
 });

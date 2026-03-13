@@ -16,6 +16,11 @@ declare global {
       export: {
         pdf: (htmlContent: string, defaultPath: string, filePath: string) => Promise<{ success: boolean; path?: string; canceled?: boolean; error?: string }>;
       };
+      ai: {
+        getConfig: () => Promise<any>;
+        saveConfig: (config: any) => Promise<{ success: boolean; error?: string }>;
+        chat: (messages: any[], onStream: (chunk: string) => void) => Promise<string>;
+      };
       shell: {
         openExternal: (url: string) => Promise<void>;
       };
