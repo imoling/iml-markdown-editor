@@ -13,8 +13,9 @@
   justify-content: space-between;
   height: 40px;
   min-height: 40px;
-  background-color: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(10px);
+  background-color: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   -webkit-app-region: drag;
   padding: 0 16px;
   z-index: 1000;
@@ -60,10 +61,22 @@
 
 .titlebar-tab.active {
   background-color: var(--bg-card);
-  color: var(--text-primary);
+  color: var(--color-brand-indigo);
   box-shadow: 0 -2px 10px rgba(0,0,0,0.03);
   border-bottom: none;
   font-weight: 600;
+  position: relative;
+}
+
+.titlebar-tab.active::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--brand-gradient);
+  border-radius: 6px 6px 0 0;
 }
 
 .titlebar-tab:hover:not(.active) {
@@ -118,10 +131,10 @@
 }
 
 .sidebar-tab.active {
-  background-color: var(--bg-card);
-  color: var(--text-primary);
+  background: var(--brand-gradient);
+  color: white;
   font-weight: 600;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  box-shadow: 0 4px 12px var(--brand-shadow);
 }
 
 .sidebar-content {
@@ -151,7 +164,8 @@
 
 .tree-item.active {
   background-color: var(--bg-elevated);
-  color: var(--text-primary);
+  color: var(--color-brand-indigo);
+  font-weight: 500;
 }
 
 .editor-area {
@@ -211,9 +225,9 @@
 }
 
 .toolbar-btn.active {
-  background: var(--bg-card);
-  color: var(--text-primary);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  background: var(--brand-gradient);
+  color: white;
+  box-shadow: 0 2px 8px var(--brand-shadow);
 }
 
 .toolbar-icon-btn {
@@ -235,13 +249,13 @@
 }
 
 .toolbar-icon-btn.active {
-  background: var(--bg-card);
-  color: var(--text-primary);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  background: var(--brand-gradient);
+  color: white;
+  box-shadow: 0 2px 8px var(--brand-shadow);
 }
 
 .menu-item:hover {
-  background-color: var(--color-accent-indigo);
+  background: var(--brand-gradient);
   color: white;
 }
 

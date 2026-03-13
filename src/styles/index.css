@@ -1,22 +1,45 @@
 :root {
+  /* Brand Colors from Logo */
+  --color-brand-indigo: #6366F1;
+  --color-brand-purple: #8B5CF6;
+  --brand-gradient: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
+  --brand-gradient-hover: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+  --brand-shadow: rgba(99, 102, 241, 0.25);
+  --brand-glow: rgba(99, 102, 241, 0.4);
+
+  /* Neutrals */
   --bg-page: #FFFFFF;
-  --bg-surface: #F2F2F7;
+  --bg-surface: #F8F9FA;
   --bg-card: #FFFFFF;
-  --bg-elevated: #E5E5EA;
-  --text-primary: #1C1C1E;
-  --text-secondary: #3A3A3C;
+  --bg-elevated: #F2F2F7;
+  --text-primary: #1D1D1F;
+  --text-secondary: #48484A;
   --text-tertiary: #636366;
   --text-muted: #8E8E93;
-  --border-subtle: #D1D1D6;
-  --border-strong: #C7C7CC;
+  --border-subtle: #E5E5EA;
+  --border-strong: #D1D1D6;
+
+  /* Glassmorphism */
+  --glass-bg: rgba(255, 255, 255, 0.75);
+  --glass-border: rgba(255, 255, 255, 0.4);
+  
+  /* Legacy/Semantic Mapping */
+  --color-accent-indigo: var(--color-brand-indigo);
+  --color-accent-blue: var(--color-brand-purple);
   --color-accent-green: #34C759;
-  --color-accent-indigo: #007AFF;
   --color-accent-coral: #FF3B30;
-  --color-accent-orange: #FF9500;
-  --color-accent-blue: #5856D6;
+
+  /* Typography */
   --font-heading: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-code: "JetBrains Mono", "Fira Code", monospace;
+
+  /* Spacing & Borders */
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
 }
 
 * {

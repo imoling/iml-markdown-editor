@@ -44,7 +44,7 @@ const FileTreeItem: React.FC<{ node: FileNode; level: number }> = ({ node, level
         {node.isDirectory ? (
           <>
             {isOpen ? <ChevronDown size={14} color="var(--text-muted)" /> : <ChevronRight size={14} color="var(--text-muted)" />}
-            {isOpen ? <FolderOpen size={14} color="var(--color-accent-indigo)" /> : <FolderClosed size={14} color="var(--color-accent-indigo)" />}
+            {isOpen ? <FolderOpen size={14} color="var(--color-brand-indigo)" /> : <FolderClosed size={14} color="var(--color-brand-indigo)" />}
           </>
         ) : (
           <>
@@ -154,7 +154,7 @@ export const Sidebar: React.FC = () => {
           <>
             <div className="tree-item" style={{ fontWeight: 600, color: 'var(--text-primary)', paddingLeft: 8, display: 'flex', alignItems: 'center' }}>
               <ChevronDown size={14} color="var(--text-muted)" />
-              <FolderOpen size={14} color="var(--color-accent-indigo)" />
+              <FolderOpen size={14} color="var(--color-brand-indigo)" />
               <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{workspaceName}</span>
               <div 
                 onClick={(e) => { e.stopPropagation(); refreshWorkspace(); }}

@@ -129,7 +129,7 @@ export const AIWritingPanel: React.FC = () => {
     <div className="ai-writing-panel" style={{ padding: '0 8px', display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div style={{ marginBottom: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-          <Sparkles size={16} color="var(--color-accent-indigo)" />
+          <Sparkles size={16} color="var(--color-brand-indigo)" />
           <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-main)' }}>场景写作</span>
         </div>
 
@@ -140,19 +140,20 @@ export const AIWritingPanel: React.FC = () => {
               onClick={() => setScenario(s)}
               title={`${s.label}: ${s.description}`} // Add tooltip for full text
               style={{
-                padding: '6px 10px',
-                borderRadius: 8,
-                border: `1px solid ${scenario.id === s.id ? 'var(--color-accent-indigo)' : 'var(--border-subtle)'}`,
-                backgroundColor: scenario.id === s.id ? 'rgba(0, 122, 255, 0.05)' : 'transparent',
+                padding: '6px 12px',
+                borderRadius: 10,
+                border: `1px solid ${scenario.id === s.id ? 'transparent' : 'var(--border-subtle)'}`,
+                background: scenario.id === s.id ? 'var(--brand-gradient)' : 'var(--bg-card)',
+                boxShadow: scenario.id === s.id ? '0 4px 12px var(--brand-glow)' : 'none',
                 cursor: 'pointer',
-                transition: 'all 0.2s',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: 1
               }}
             >
-              <div style={{ fontSize: 12, fontWeight: 600, color: scenario.id === s.id ? 'var(--color-accent-indigo)' : 'var(--text-main)', ...ellipsisStyle }}>{s.label}</div>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', ...ellipsisStyle }}>{s.description}</div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: scenario.id === s.id ? '#fff' : 'var(--text-primary)', ...ellipsisStyle }}>{s.label}</div>
+              <div style={{ fontSize: 11, color: scenario.id === s.id ? 'rgba(255, 255, 255, 0.8)' : 'var(--text-muted)', ...ellipsisStyle }}>{s.description}</div>
             </div>
           ))}
         </div>
@@ -185,15 +186,16 @@ export const AIWritingPanel: React.FC = () => {
               right: 12,
               width: 36,
               height: 36,
-              borderRadius: 10,
-              backgroundColor: loading || !vibe.trim() ? 'var(--bg-elevated)' : 'var(--color-accent-indigo)',
+              borderRadius: 12,
+              background: loading || !vibe.trim() ? 'var(--bg-elevated)' : 'var(--brand-gradient)',
               border: 'none',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               cursor: 'pointer',
               color: '#fff',
-              boxShadow: '0 4px 12px rgba(0, 122, 255, 0.2)'
+              boxShadow: loading || !vibe.trim() ? 'none' : '0 4px 12px var(--brand-shadow)',
+              transition: 'all 0.3s'
             }}
           >
             {loading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}

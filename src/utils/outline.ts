@@ -7,10 +7,12 @@ export function extractHeadings(markdown: string): HeadingNode[] {
   lines.forEach((line, index) => {
     const match = line.match(/^(#{1,6})\s+(.+)$/);
     if (match) {
+      // Remove markdown escapes (e.g. \. becomes .) for cleaner display in the catalog
+      const cleanText = match[2].trim().replace(/\\([\\`*_{}[\]()#+-.!])/g, '$1');
       headings.push({
         level: match[1].length,
-        text: match[2].trim(),
-        id: `heading-${index}` // Simplified ID
+        text: cleanText,
+        id: `heading-${index}`
       });
     }
   });

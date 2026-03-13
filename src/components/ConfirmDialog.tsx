@@ -41,48 +41,48 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: 'var(--text-primary)' }}>{title}</h3>
         <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>{message}</p>
         
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 12 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
           <button 
             onClick={onConfirm}
+            className="clickable"
             style={{
               padding: '10px',
               borderRadius: '10px',
+              background: 'var(--brand-gradient)',
+              color: '#fff',
               border: 'none',
-              backgroundColor: 'var(--color-accent-indigo)',
-              color: 'white',
               cursor: 'pointer',
-              fontSize: 13,
+              fontSize: '13px',
               fontWeight: 600,
+              boxShadow: '0 4px 12px var(--brand-glow)',
               transition: 'all 0.2s'
             }}
-            onMouseEnter={e => e.currentTarget.style.opacity = '0.9'}
-            onMouseLeave={e => e.currentTarget.style.opacity = '1'}
           >
-            保存并关闭
+            保存并开启新旅程
           </button>
           
           <div style={{ display: 'flex', gap: 8 }}>
             <button 
               onClick={onDiscard}
+              className="clickable"
               style={{
                 flex: 1,
                 padding: '10px',
                 borderRadius: '10px',
                 border: '1px solid var(--border-subtle)',
                 backgroundColor: 'var(--bg-surface)',
-                color: 'var(--color-accent-red)',
+                color: 'var(--color-accent-coral)',
                 cursor: 'pointer',
                 fontSize: 13,
                 fontWeight: 500,
                 transition: 'all 0.2s'
               }}
-              onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--bg-elevated)'}
-              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'var(--bg-surface)'}
             >
               不保存
             </button>
             <button 
               onClick={onCancel}
+              className="clickable"
               style={{
                 flex: 1,
                 padding: '10px',
@@ -95,8 +95,6 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                 fontWeight: 500,
                 transition: 'all 0.2s'
               }}
-              onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--bg-elevated)'}
-              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'var(--bg-surface)'}
             >
               取消
             </button>

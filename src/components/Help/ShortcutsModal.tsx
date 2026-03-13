@@ -38,10 +38,12 @@ const ShortcutsModal: React.FC<ShortcutsModalProps> = ({ isOpen, onClose }) => {
   } : {
     width: 600,
     maxHeight: '95vh',
-    backgroundColor: 'var(--bg-elevated)',
+    backgroundColor: 'var(--glass-bg)',
+    backdropFilter: 'blur(30px)',
+    WebkitBackdropFilter: 'blur(30px)',
     borderRadius: '16px',
-    boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
-    border: '1px solid var(--border-subtle)',
+    boxShadow: '0 20px 60px rgba(0,0,0,0.3), 0 0 0 1px var(--glass-border)',
+    border: 'none',
     display: 'flex',
     flexDirection: 'column',
     overflow: 'hidden',
@@ -156,14 +158,14 @@ const ShortcutsModal: React.FC<ShortcutsModalProps> = ({ isOpen, onClose }) => {
                         <kbd key={kIdx} style={{
                           padding: '1px 5px',
                           borderRadius: '3px',
-                          backgroundColor: 'var(--bg-surface)',
-                          border: '1px solid var(--border-strong)',
+                          backgroundColor: 'rgba(255, 255, 255, 0.5)',
+                          border: '1px solid var(--border-subtle)',
                           fontSize: 10,
                           color: 'var(--text-primary)',
                           fontFamily: 'inherit',
                           minWidth: 18,
                           textAlign: 'center',
-                          boxShadow: '0 1px 0 var(--border-subtle)'
+                          boxShadow: '0 1px 0 rgba(0,0,0,0.1)'
                         }}>
                           {k}
                         </kbd>
