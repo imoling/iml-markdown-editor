@@ -40,6 +40,11 @@ Icon?
 .classpath
 .settings/
 
+# Debug and Test
+debug-*.js
+test-*.js
+PR/
+
 # Local configuration
 .gemini/
 .agent/
