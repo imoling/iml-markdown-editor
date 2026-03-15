@@ -1,4 +1,4 @@
-# iML Markdown Editor (v1.5.0)
+# iML Markdown Editor (v1.6.0)
 
 一款为 **Vibe Coding** 时代打造的 AI 灵感编辑器。赋予直觉以逻辑，让 AI 真正读懂你的 Vibe。
 

@@ -60,58 +60,61 @@ const App: React.FC = () => {
   };
 
   useEffect(() => {
+    const isMac = window.api.app.platform === 'darwin';
     const handleKeyDown = async (e: KeyboardEvent) => {
+      const modKey = isMac ? e.metaKey : e.ctrlKey;
+      
       // Cmd+E to toggle mode
-      if (e.metaKey && e.key === 'e') {
+      if (modKey && e.key === 'e') {
         e.preventDefault();
         toggleMode();
       }
 
       // Cmd+B to toggle sidebar
-      if (e.metaKey && e.key === 'b') {
+      if (modKey && e.key === 'b') {
         e.preventDefault();
         toggleSidebar();
       }
 
       // Cmd+N to create new file
-      if (e.metaKey && e.key === 'n') {
+      if (modKey && e.key === 'n') {
         e.preventDefault();
         createNewFile();
       }
 
       // Cmd+F to toggle find
-      if (e.metaKey && e.key === 'f') {
+      if (modKey && e.key === 'f') {
         e.preventDefault();
         toggleFind();
       }
 
       // Cmd+H to toggle replace
-      if (e.metaKey && e.key === 'h') {
+      if (modKey && e.key === 'h') {
         e.preventDefault();
         toggleReplace();
       }
       
       // Cmd+Shift+O to open directory
-      if (e.metaKey && e.shiftKey && e.key.toLowerCase() === 'o') {
+      if (modKey && e.shiftKey && e.key.toLowerCase() === 'o') {
         e.preventDefault();
         openDirectory();
         return;
       }
 
       // Cmd+O to open file
-      if (e.metaKey && !e.shiftKey && e.key.toLowerCase() === 'o') {
+      if (modKey && !e.shiftKey && e.key.toLowerCase() === 'o') {
         e.preventDefault();
         openFile();
       }
 
       // Cmd+/ to open shortcuts
-      if (e.metaKey && e.key === '/') {
+      if (modKey && e.key === '/') {
         e.preventDefault();
         window.api.events.send('open-shortcuts');
       }
       
       // Cmd+S or Cmd+Shift+S to save file
-      if (e.metaKey && e.key.toLowerCase() === 's') {
+      if (modKey && e.key.toLowerCase() === 's') {
         e.preventDefault();
         saveActiveFile(e.shiftKey);
       }
@@ -193,7 +196,7 @@ const UpdateModal: React.FC = () => {
             </button>
           </>
         ) : (() => {
-            const current = window.api.appVersion || '1.5.0';
+            const current = window.api.appVersion || '1.6.0';
             const hasUpdate = updateStatus.latestVersion && updateStatus.latestVersion !== current;
             return (
               <>

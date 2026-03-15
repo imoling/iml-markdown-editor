@@ -80,14 +80,15 @@ const SCENARIOS = [
 export const AIWritingPanel: React.FC = () => {
   const [vibe, setVibe] = useState('');
   const [scenario, setScenario] = useState(SCENARIOS[0]);
-  const { generate, loading } = useAI();
+  const [activeRequestId, setActiveRequestId] = useState<string | null>(null);
+  const { generate, stop, loading } = useAI();
   const { openTab, updateTabContent } = useAppStore();
 
   const handleGenerate = async () => {
     if (!vibe.trim()) return;
 
     const messages: Message[] = [
-      { role: 'system', content: '您是一位专业的文档写作助手。您的任务是直接输出用户要求的结构化 Markdown 文档内容，严禁包含任何如“好的”、“收到”之类的对话式引导，也严禁包含任何非文档正文的后续行动建议。即刻开始，只输出 Markdown 本身。' },
+      { role: 'system', content: '您是一位专业的文档写作助手。您的任务是直接输出用户要求的结构化 Markdown 文档内容。特别注意：在生成 Mermaid 图表时，节点标签内容若需换行请使用 <br/> 而非实际回车，且确保所有括号和括号内的特殊字符正确闭合。严禁包含任何如“好的”、“收到”之类的对话式引导，即刻开始，只输出 Markdown 本身。' },
       { role: 'user', content: scenario.prompt(vibe) }
     ];
 
@@ -102,6 +103,9 @@ export const AIWritingPanel: React.FC = () => {
       isDirty: true,
       mode: 'word'
     });
+    
+    const rid = Math.random().toString(36).substring(7);
+    setActiveRequestId(rid);
 
     let accumulatedContent = '';
 
@@ -110,11 +114,22 @@ export const AIWritingPanel: React.FC = () => {
         // 2. 实时流式累加并更新该 Tab 的内容
         accumulatedContent += chunk;
         updateTabContent(tabId, accumulatedContent);
-      });
-      // 清空输入
-      setVibe('');
+      }, rid);
     } catch (err: any) {
-      updateTabContent(tabId, `> 生成失败: ${err.message}`);
+      if (err.message === 'REQUEST_ABORTED') {
+        updateTabContent(tabId, ''); // 清空已生成内容
+      } else {
+        updateTabContent(tabId, `> 生成失败: ${err.message}`);
+      }
+    } finally {
+      setActiveRequestId(null);
+    }
+  };
+
+  const handleStop = () => {
+    if (activeRequestId) {
+      stop(activeRequestId);
+      setActiveRequestId(null);
     }
   };
 
@@ -178,8 +193,8 @@ export const AIWritingPanel: React.FC = () => {
             }}
           />
           <button
-            onClick={handleGenerate}
-            disabled={loading || !vibe.trim()}
+            onClick={loading ? handleStop : handleGenerate}
+            disabled={!loading && !vibe.trim()}
             style={{
               position: 'absolute',
               bottom: 12,
@@ -187,14 +202,16 @@ export const AIWritingPanel: React.FC = () => {
               width: 36,
               height: 36,
               borderRadius: 12,
-              background: loading || !vibe.trim() ? 'var(--bg-elevated)' : 'var(--brand-gradient)',
-              border: 'none',
+              background: loading 
+                ? 'rgba(255, 71, 87, 0.2)' 
+                : (!vibe.trim() ? 'var(--bg-elevated)' : 'var(--brand-gradient)'),
+              border: loading ? '1px solid rgba(255, 71, 87, 0.3)' : 'none',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               cursor: 'pointer',
-              color: '#fff',
-              boxShadow: loading || !vibe.trim() ? 'none' : '0 4px 12px var(--brand-shadow)',
+              color: loading ? '#ff4757' : '#fff',
+              boxShadow: loading ? 'none' : (!vibe.trim() ? 'none' : '0 4px 12px var(--brand-shadow)'),
               transition: 'all 0.3s'
             }}
           >

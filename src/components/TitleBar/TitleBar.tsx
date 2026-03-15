@@ -10,7 +10,9 @@ import {
   FileUp, 
   Sidebar as SidebarIcon, 
   Layout, 
-  RotateCw
+  RotateCw,
+  Minus,
+  Square
 } from 'lucide-react';
 import { markdownToHtml } from '../../utils/markdown';
 
@@ -65,19 +67,21 @@ export const TitleBar: React.FC = () => {
     }
   }, [activeTabId]);
 
+  const isMac = window.api.app.platform === 'darwin';
+
   return (
     <header className="titlebar" style={{ gap: 0, paddingRight: 0 }}>
-      {/* 交通灯区域占位 */}
-      <div className="titlebar-traffic-lights" style={{ width: 80, flexShrink: 0 }}></div>
-      
+      {/* Mac 交通灯区域占位 */}
+      {isMac && <div className="titlebar-traffic-lights" style={{ width: 80, flexShrink: 0 }}></div>}
+
       {/* 菜单区域 */}
-      <div className="titlebar-menus" style={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 } as React.CSSProperties}>
+      <div className="titlebar-menus" style={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0, marginLeft: isMac ? 0 : 12 } as React.CSSProperties}>
         {/* 文件菜单 */}
         <div style={{ position: 'relative' }}>
-          <button 
-            className="menu-trigger" 
+          <button
+            className="menu-trigger"
             onClick={() => setActiveMenu(activeMenu === 'file' ? null : 'file')}
-            style={{ 
+            style={{
               background: 'none', border: 'none', color: 'var(--text-secondary)', padding: '6px 12px', borderRadius: 6, fontSize: 13, cursor: 'pointer', fontWeight: 500, transition: 'background 0.2s', WebkitAppRegion: 'no-drag'
             } as React.CSSProperties}
           >

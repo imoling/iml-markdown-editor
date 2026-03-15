@@ -40,8 +40,9 @@ export function setupFileSystemIPC() {
   // Read file content
   ipcMain.handle('fs:readFile', async (_, filePath: string) => {
     try {
-      const content = await fs.promises.readFile(filePath, 'utf-8');
-      return { success: true, content, filePath };
+      const normalizedPath = path.normalize(filePath);
+      const content = await fs.promises.readFile(normalizedPath, 'utf-8');
+      return { success: true, content, filePath: normalizedPath };
     } catch (error: any) {
       console.error('Error reading file:', error);
       return { success: false, error: error.message };
@@ -55,7 +56,7 @@ export function setupFileSystemIPC() {
       if (activeFilePath.startsWith('new-')) {
         dirPath = process.cwd();
       } else {
-        dirPath = path.dirname(activeFilePath);
+        dirPath = path.dirname(path.normalize(activeFilePath));
       }
       
       const assetsDir = path.join(dirPath, 'assets');
@@ -86,8 +87,9 @@ export function setupFileSystemIPC() {
   // Write file content
   ipcMain.handle('fs:writeFile', async (_, filePath: string, content: string) => {
     try {
-      await fs.promises.writeFile(filePath, content, 'utf-8');
-      return { success: true, filePath };
+      const normalizedPath = path.normalize(filePath);
+      await fs.promises.writeFile(normalizedPath, content, 'utf-8');
+      return { success: true, filePath: normalizedPath };
     } catch (error: any) {
       console.error('Error writing file:', error);
       return { success: false, error: error.message };
@@ -162,7 +164,8 @@ export function setupFileSystemIPC() {
   // Read directory
   ipcMain.handle('fs:readDir', async (_, dirPath: string) => {
     try {
-      const dirents = await fs.promises.readdir(dirPath, { withFileTypes: true });
+      const normalizedPath = path.normalize(dirPath);
+      const dirents = await fs.promises.readdir(normalizedPath, { withFileTypes: true });
       const files = dirents.map(dirent => ({
         name: dirent.name,
         path: path.join(dirPath, dirent.name),

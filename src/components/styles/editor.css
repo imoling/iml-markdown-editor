@@ -175,9 +175,9 @@
 }
 
 .toolbar-btn.active, .toolbar-icon-btn.active {
-  background-color: var(--bg-surface);
-  color: var(--color-accent-indigo);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  background: var(--brand-gradient) !important;
+  color: white !important;
+  box-shadow: 0 2px 8px var(--brand-shadow);
 }
 
 /* Task List Styles */
@@ -355,7 +355,49 @@ ul[data-type="taskList"] li[data-checked="true"] > div {
   background-color: rgba(0, 0, 0, 0.02) !important;
 }
 
+
 .cm-selectionBackground {
   background-color: rgba(0, 122, 255, 0.2) !important;
+}
+
+/* Mermaid Diagrams */
+.mermaid-container {
+  max-width: 100%;
+  overflow-x: auto;
+  display: flex !important;
+  justify-content: center;
+  align-items: center;
+  background: var(--bg-surface);
+  border-radius: 12px;
+  border: 1px solid var(--border-subtle);
+  padding: 24px;
+  margin: 1.5em 0;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.mermaid-container:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.mermaid-container svg {
+  max-width: 100% !important;
+  height: auto !important;
+  display: block;
+  margin: 0 auto;
+}
+
+.mermaid-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 80px;
+  width: 100%;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-style: italic;
+  border: 2px dashed var(--border-subtle);
+  border-radius: 12px;
+  background: var(--bg-surface);
 }
 

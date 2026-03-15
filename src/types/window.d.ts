@@ -19,7 +19,8 @@ declare global {
       ai: {
         getConfig: () => Promise<any>;
         saveConfig: (config: any) => Promise<{ success: boolean; error?: string }>;
-        chat: (messages: any[], onStream: (chunk: string) => void) => Promise<string>;
+        chat: (messages: any[], onStream: (chunk: string) => void, requestId: string) => Promise<string>;
+        stop: (requestId: string) => void;
       };
       shell: {
         openExternal: (url: string) => Promise<void>;
@@ -31,6 +32,10 @@ declare global {
       app: {
         version: string;
         checkUpdates: () => Promise<{ success: boolean; latestVersion?: string; releaseUrl?: string; error?: string }>;
+        platform: string;
+        minimize: () => void;
+        maximize: () => void;
+        close: () => void;
       };
       appVersion: string;
     };

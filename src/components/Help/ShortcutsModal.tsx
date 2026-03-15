@@ -50,35 +50,38 @@ const ShortcutsModal: React.FC<ShortcutsModalProps> = ({ isOpen, onClose }) => {
     animation: 'fadeInScale 0.3s ease-out'
   };
 
+  const isMac = window.api.app.platform === 'darwin';
+  const modKey = isMac ? '⌘' : 'Ctrl';
+
   const shortcutGroups = [
     {
       title: '文件操作',
       shortcuts: [
-        { label: '新建文件', keys: ['⌘', 'N'] },
-        { label: '打开文件', keys: ['⌘', 'O'] },
-        { label: '打开目录', keys: ['⌘', '⇧', 'O'] },
-        { label: '保存文件', keys: ['⌘', 'S'] },
-        { label: '另存为', keys: ['⌘', '⇧', 'S'] },
+        { label: '新建文件', keys: [modKey, 'N'] },
+        { label: '打开文件', keys: [modKey, 'O'] },
+        { label: '打开目录', keys: [modKey, '⇧', 'O'] },
+        { label: '保存文件', keys: [modKey, 'S'] },
+        { label: '另存为', keys: [modKey, '⇧', 'S'] },
       ]
     },
     {
       title: '编辑器',
       shortcuts: [
-        { label: '切换编辑模式 (Word/MD)', keys: ['⌘', 'E'] },
-        { label: '切换侧边栏显隐', keys: ['⌘', 'B'] },
-        { label: '查找', keys: ['⌘', 'F'] },
-        { label: '替换', keys: ['⌘', 'H'] },
-        { label: '撤销', keys: ['⌘', 'Z'] },
-        { label: '重做', keys: ['⌘', '⇧', 'Z'] },
+        { label: '切换编辑模式 (Word/MD)', keys: [modKey, 'E'] },
+        { label: '切换侧边栏显隐', keys: [modKey, 'B'] },
+        { label: '查找', keys: [modKey, 'F'] },
+        { label: '替换', keys: [modKey, 'H'] },
+        { label: '撤销', keys: [modKey, 'Z'] },
+        { label: '重做', keys: [modKey, '⇧', 'Z'] },
       ]
     },
     {
       title: '格式化 (Word 模式)',
       shortcuts: [
-        { label: '加粗', keys: ['⌘', 'B'] },
-        { label: '斜体', keys: ['⌘', 'I'] },
-        { label: '下划线', keys: ['⌘', 'U'] },
-        { label: '插入链接', keys: ['⌘', 'K'] },
+        { label: '加粗', keys: [modKey, 'B'] },
+        { label: '斜体', keys: [modKey, 'I'] },
+        { label: '下划线', keys: [modKey, 'U'] },
+        { label: '插入链接', keys: [modKey, 'K'] },
       ]
     }
   ];

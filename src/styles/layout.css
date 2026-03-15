@@ -254,6 +254,11 @@
   box-shadow: 0 2px 8px var(--brand-shadow);
 }
 
+.toolbar-icon-btn.active svg {
+  color: white !important;
+  stroke: white !important;
+}
+
 .menu-item:hover {
   background: var(--brand-gradient);
   color: white;

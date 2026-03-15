@@ -40,6 +40,7 @@ let mainWindow: BrowserWindow | null = null;
 let aboutWindow: BrowserWindow | null = null;
 let shortcutsWindow: BrowserWindow | null = null;
 let modelConfigWindow: BrowserWindow | null = null;
+const aiAbortControllers = new Map<string, AbortController>();
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -47,7 +48,7 @@ function createWindow() {
     height: 768,
     minWidth: 800,
     minHeight: 600,
-    titleBarStyle: 'hiddenInset',
+    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden',
     vibrancy: 'sidebar', 
     visualEffectState: 'active',
     backgroundColor: '#00000000', 
@@ -60,7 +61,10 @@ function createWindow() {
   });
 
   if (isDev) {
-    mainWindow.loadURL('http://localhost:5173');
+    // 尝试载入 5173，如果失败则尝试 5174 (Vite 默认备选端口)
+    mainWindow.loadURL('http://localhost:5173').catch(() => {
+      mainWindow?.loadURL('http://localhost:5174');
+    });
   } else {
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
   }
@@ -97,7 +101,7 @@ function createAboutWindow() {
   aboutWindow = new BrowserWindow({
     width, height, x: pos.x, y: pos.y,
     resizable: false, minimizable: false, maximizable: false,
-    title: '关于', titleBarStyle: 'hiddenInset',
+    title: '关于', titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden',
     vibrancy: 'window', visualEffectState: 'active',
     backgroundColor: '#00000000',
     webPreferences: { preload: path.join(__dirname, 'preload.js') },
@@ -126,7 +130,7 @@ function createShortcutsWindow() {
   shortcutsWindow = new BrowserWindow({
     width, height, x: pos.x, y: pos.y,
     resizable: true, title: '快捷键说明',
-    titleBarStyle: 'hiddenInset', vibrancy: 'window',
+    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden', vibrancy: 'window',
     visualEffectState: 'active', backgroundColor: '#00000000',
     webPreferences: { preload: path.join(__dirname, 'preload.js') },
     icon: path.join(process.cwd(), 'assets/logo.png'),
@@ -154,7 +158,7 @@ function createModelConfigWindow() {
   modelConfigWindow = new BrowserWindow({
     width, height, x: pos.x, y: pos.y,
     resizable: true, title: '模型配置',
-    titleBarStyle: 'hiddenInset', vibrancy: 'window',
+    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden', vibrancy: 'window',
     visualEffectState: 'active', backgroundColor: '#00000000',
     webPreferences: { preload: path.join(__dirname, 'preload.js') },
     icon: path.join(process.cwd(), 'assets/logo.png'),
@@ -263,6 +267,16 @@ app.whenReady().then(() => {
   }
 
   createWindow();
+  
+  // AI Stop request
+  ipcMain.on('ai:stop', (_event, requestId: string) => {
+    const controller = aiAbortControllers.get(requestId);
+    if (controller) {
+      controller.abort();
+      aiAbortControllers.delete(requestId);
+      console.log(`[AI] Request ${requestId} aborted by user`);
+    }
+  });
 
   ipcMain.on('ai:chat', async (event, { messages, requestId }) => {
     const config = getConfig();
@@ -274,6 +288,9 @@ app.whenReady().then(() => {
       event.sender.send(`ai:chat-error-${requestId}`, '请检查模型配置 (API Key 或 Endpoint 缺失)');
       return;
     }
+
+    const controller = new AbortController();
+    aiAbortControllers.set(requestId, controller);
 
     try {
       const response = await fetch(`${endpoint}/chat/completions`, {
@@ -287,6 +304,7 @@ app.whenReady().then(() => {
           messages,
           stream: true,
         }),
+        signal: controller.signal,
       });
 
       if (!response.ok) {
@@ -338,7 +356,13 @@ app.whenReady().then(() => {
         }
       }
     } catch (err: any) {
-      event.sender.send(`ai:chat-error-${requestId}`, `网络错误: ${err.message}`);
+      if (err.name === 'AbortError') {
+        event.sender.send(`ai:chat-error-${requestId}`, 'REQUEST_ABORTED');
+      } else {
+        event.sender.send(`ai:chat-error-${requestId}`, `网络错误: ${err.message}`);
+      }
+    } finally {
+      aiAbortControllers.delete(requestId);
     }
   });
 
@@ -372,6 +396,27 @@ app.whenReady().then(() => {
       console.error('Update check failed:', err);
       return { success: false, error: '无法连接到更新服务器，请检查网络设置' };
     }
+  });
+
+  ipcMain.on('window-minimize', (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (win) win.minimize();
+  });
+
+  ipcMain.on('window-maximize', (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (win) {
+      if (win.isMaximized()) {
+        win.unmaximize();
+      } else {
+        win.maximize();
+      }
+    }
+  });
+
+  ipcMain.on('window-close', (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (win) win.close();
   });
 
   app.on('activate', () => {

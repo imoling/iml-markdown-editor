@@ -1,6 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { useEditor, EditorContent } from '@tiptap/react';
-import { BubbleMenu, FloatingMenu } from '@tiptap/react/menus';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
+import ReactDOM from 'react-dom';
+import { EditorContent, useEditor } from '@tiptap/react';
+import { BubbleMenu } from '@tiptap/react/menus';
+import { DOMSerializer } from '@tiptap/pm/model';
 import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
 import Placeholder from '@tiptap/extension-placeholder';
@@ -9,20 +11,23 @@ import { TableRow } from '@tiptap/extension-table-row';
 import { TableCell } from '@tiptap/extension-table-cell';
 import { TableHeader } from '@tiptap/extension-table-header';
 import { CodeBlockLowlight } from '@tiptap/extension-code-block-lowlight';
-import TaskList from '@tiptap/extension-task-list';
-import TaskItem from '@tiptap/extension-task-item';
+import { TaskList } from '@tiptap/extension-task-list';
+import { TaskItem } from '@tiptap/extension-task-item';
 import { all, createLowlight } from 'lowlight';
 import { 
   Bold, Italic, Underline as UnderlineIcon, Strikethrough, Code, Sigma, 
   Table as TableIcon, Image as ImageIcon, Plus, Trash2, Columns, Rows,
   Type, ListOrdered, List, SquareCheck, Quote, Minus, Link as LinkIcon,
-  Sparkles, Wand2, FileText, FastForward, Loader2
+  Sparkles, Wand2, FileText, FastForward, Loader2, BrainCircuit
 } from 'lucide-react';
 import { useAppStore } from '../../stores/appStore';
 import { markdownToHtml, htmlToMarkdown } from '../../utils/markdown';
 import { MathExtension } from '../../extensions/MathExtension';
+import { DiagramExtension } from '../../extensions/DiagramExtension';
+import { SVGExtension } from '../../extensions/SVGExtension';
 import { Editor } from '@tiptap/core';
 import { useAI } from '../../hooks/useAI';
+import { AIPalette } from '../AI/AIPalette';
 import '../styles/editor.css';
 
 const lowlight = createLowlight(all);
@@ -191,13 +196,85 @@ const StyleSelector: React.FC<StyleSelectorProps> = ({ onSelect, onCancel }) => 
   );
 };
 
+/**
+ * 对 Markdown 中同级别的编号标题/条目进行重新排序。
+ * 支持多种格式：
+ *   - "### 1. 标题"（ATX标题 + 编号）
+ *   - "1. 标题"（纯编号行，非列表上下文）
+ *   - "**1. 标题**"（加粗编号）
+ * 按照同一格式前缀的连续编号分组，重新排序。
+ */
+function renumberHeadings(md: string): string {
+  const lines = md.split('\n');
+  
+  // 编号行正则：捕获前缀（#、空白等）和数字
+  // Group 1: prefix (e.g. "### " or "**" or "")
+  // Group 2: the number
+  // Group 3: suffix after number (e.g. ". " or ". **")
+  const numberedLineRegex = /^(#{1,6}\s+|\*\*)?(\d+)(\.[\s])/;
+  
+  let i = 0;
+  while (i < lines.length) {
+    const match = lines[i].match(numberedLineRegex);
+    if (match) {
+      const prefix = match[1] || '';  // e.g. "### " or "**" or ""
+      const groupStart = i;
+      let counter = parseInt(match[2]);
+      
+      // Scan consecutive same-prefix numbered lines
+      while (i < lines.length) {
+        const m = lines[i].match(numberedLineRegex);
+        if (m && (m[1] || '') === prefix) {
+          if (i === groupStart) {
+            counter = parseInt(m[2]); // Start from the first number in the group
+          } else {
+            counter++;
+          }
+          // Replace only the number, preserving everything else
+          lines[i] = lines[i].replace(numberedLineRegex, `${prefix}${counter}$3`);
+          i++;
+          // Skip non-numbered lines (body text, lists, blank lines under this heading)
+          while (i < lines.length) {
+            const nextMatch = lines[i].match(numberedLineRegex);
+            if (nextMatch && (nextMatch[1] || '') === prefix) break; // Same-level numbered line
+            // If it's a different heading level, break out of the group
+            if (lines[i].match(/^#{1,6}\s/) && !lines[i].match(numberedLineRegex)) break;
+            i++;
+          }
+        } else {
+          break;
+        }
+      }
+    } else {
+      i++;
+    }
+  }
+  
+  const result = lines.join('\n');
+  console.log('[renumberHeadings] applied:', result !== md ? 'YES, fixed numbering' : 'no changes needed');
+  return result;
+}
+
 export const TiptapEditor: React.FC = () => {
-  const { activeTabId, tabs, updateTabContent, navigationRequest } = useAppStore();
+  const { activeTabId, tabs, updateTabContent, openTab, navigationRequest } = useAppStore();
   const activeTab = tabs.find(t => t.id === activeTabId);
   const [prompt, setPrompt] = React.useState<PromptDialogProps | null>(null);
-  const { generate, loading: aiLoading } = useAI();
+  const { generate, stop, loading: aiLoading } = useAI();
   const [aiGenerating, setAiGenerating] = useState(false);
   const [showStyleSelector, setShowStyleSelector] = React.useState(false);
+  const [showAIPalette, setShowAIPalette] = useState(false);
+  const [palettePos, setPalettePos] = useState<{ top: number; left: number } | null>(null);
+  // 触发气泡时立即缓存光标前后的文本，避免提交时编辑器失焦导致位置丢失
+  const [paletteContext, setPaletteContext] = useState<{ before: string; after: string }>({ before: '', after: '' });
+  const [docSnapshot, setDocSnapshot] = useState<string | null>(null);
+  const [activeRequestId, setActiveRequestId] = useState<string | null>(null);
+  const lastActiveTabIdRef = useRef<string | null>(null);
+  const editorRef = useRef<any>(null);
+  const activeTabIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    activeTabIdRef.current = activeTabId;
+  }, [activeTabId]);
 
   const editor = useEditor({
     extensions: [
@@ -215,6 +292,8 @@ export const TiptapEditor: React.FC = () => {
         lowlight,
       }),
       MathExtension,
+      DiagramExtension,
+      SVGExtension,
       TaskList,
       TaskItem.configure({
         nested: true,
@@ -271,13 +350,67 @@ export const TiptapEditor: React.FC = () => {
       }
     },
     onUpdate: ({ editor }) => {
-      if (activeTabId) {
+      const currentTabId = activeTabIdRef.current;
+      if (currentTabId) {
         const html = editor.getHTML();
         const markdown = htmlToMarkdown(html);
-        updateTabContent(activeTabId, markdown);
+        
+        // 安全检查：如果文档原本有内容，但转换出的 Markdown 却为空（可能是序列化逻辑异常），
+        // 则跳过本次 Store 同步，防止文档被意外“清空”。
+        // 特别是在流式生成或复杂的模式切换过程中。
+        if (!markdown && editor.state.doc.textContent.trim()) {
+          console.warn('[Tiptap] htmlToMarkdown returned empty, skipping store sync to prevent data loss.');
+          return;
+        }
+
+        updateTabContent(currentTabId, markdown);
       }
     },
   });
+
+  // 光标移动时关闭 AI 面板（生成中不关闭）
+  useEffect(() => {
+    if (!editor || !showAIPalette) return;
+    
+    const handleSelectionUpdate = () => {
+      if (aiGenerating) return; // 生成中不自动关闭
+      setShowAIPalette(false);
+      setPalettePos(null);
+    };
+    
+    editor.on('selectionUpdate', handleSelectionUpdate);
+    return () => {
+      editor.off('selectionUpdate', handleSelectionUpdate);
+    };
+  }, [editor, showAIPalette, aiGenerating]);
+
+  // 点击气泡外部或按 Escape 时关闭
+  useEffect(() => {
+    if (!showAIPalette) return;
+
+    const handleMouseDown = (e: MouseEvent) => {
+      const paletteEl = document.getElementById('ai-palette-portal');
+      if (paletteEl && !paletteEl.contains(e.target as Node)) {
+        setShowAIPalette(false);
+        setPalettePos(null);
+        editor?.chain().focus().run();
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowAIPalette(false);
+        setPalettePos(null);
+        editor?.chain().focus().run();
+      }
+    };
+
+    document.addEventListener('mousedown', handleMouseDown);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleMouseDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [showAIPalette, editor]);
 
   const handleAIAction = async (action: 'polish' | 'summarize' | 'expand', style?: string) => {
     if (!editor) return;
@@ -292,6 +425,11 @@ export const TiptapEditor: React.FC = () => {
 
     setShowStyleSelector(false);
     setAiGenerating(true);
+
+    // 开启生成前保存文档快照，以便由于“停止”时回滚
+    setDocSnapshot(editor.getHTML());
+    const rid = Math.random().toString(36).substring(7);
+    setActiveRequestId(rid);
     
     let systemPrompt = `您是一位卓越的文档编辑专家。
 您的任务是根据用户的要求处理文本。
@@ -319,34 +457,296 @@ export const TiptapEditor: React.FC = () => {
     }
 
     try {
-      const result = await generate([
+      let accumulated = '';
+      const startPos = from;
+      let currentPos = to; // 初始化为选区终点，确保首个 chunk 就能替换掉整个选区
+
+      await generate([
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }
-      ]);
-      
-      if (result) {
-        // Double check to strip any leading/trailing common phrases just in case
-        const cleanResult = result.replace(/^(.*?)(如下[:：]|结果[:：]|总结[:：]|内容[:：])|^\s*|[\s\n]*$/gi, '').trim();
+      ], (chunk) => {
+        accumulated += chunk;
+        // 清理潜在的辅助性文字
+        const cleanAccumulated = accumulated.replace(/^(.*?)(如下[:：]|结果[:：]|总结[:：]|内容[:：])|^\s*/gi, '').trim();
+        const html = markdownToHtml(cleanAccumulated);
         
-        // Both polish and summarize now replace the selection directly
-        editor.chain().focus().insertContentAt({ from, to }, cleanResult).run();
-      }
+        editor.chain()
+          .focus()
+          .insertContentAt({ from: startPos, to: currentPos }, html)
+          .run();
+        
+        // 关键：更新当前插入内容的终点位置
+        currentPos = editor.state.selection.to;
+      }, rid);
     } catch (err: any) {
       console.error('AI Action Failed:', err);
     } finally {
       setAiGenerating(false);
+      setActiveRequestId(null);
+      setDocSnapshot(null);
     }
   };
 
-  useEffect(() => {
-    if (editor && activeTab) {
-      const currentHtml = editor.getHTML();
-      const newHtml = markdownToHtml(activeTab.content);
-      if (currentHtml !== newHtml && htmlToMarkdown(currentHtml) !== activeTab.content) {
-         editor.commands.setContent(newHtml);
+  const handleAIPaletteStop = () => {
+    if (activeRequestId) {
+      stop(activeRequestId);
+      setActiveRequestId(null);
+    }
+    if (docSnapshot && editor) {
+      editor.commands.setContent(docSnapshot);
+      setDocSnapshot(null);
+    }
+    setAiGenerating(false);
+  };
+
+  const handleAIPaletteAction = async (prompt: string, useCtx: boolean = false) => {
+    if (!editor) return;
+    
+    setShowAIPalette(true); // 保持气泡开启
+    setAiGenerating(true);
+    
+    // 开启生成前保存文档快照，以便由于“停止”时回滚
+    setDocSnapshot(editor.getHTML());
+    const requestId = Math.random().toString(36).substring(7);
+    setActiveRequestId(requestId);
+
+    // 使用触发时缓存的前后文（在编辑器有焦点时已计算好，不受后续失焦影响）
+    const { before: textBefore, after: textAfter } = paletteContext;
+
+    const systemPrompt = `您是一位卓越的文档写作助手。请严格按照用户的指令，输出 Markdown 格式的内容，不要任何解释或开场白。`;
+
+    const userMessage = useCtx && (textBefore || textAfter)
+      ? `以下是我文档中光标所在位置的上下文（Markdown 格式）：
+
+【前文】
+${textBefore || '（文档开头，无前文）'}
+
+【此处需要插入内容 ↓】
+
+【后文】
+${textAfter || '（文档末尾，无后文）'}
+
+---
+
+**严格要求：**
+1. 生成的内容只能是【此处需要插入内容 ↓】处的补充，不要重复前文或后文已有的内容。
+2. 严格延续前文的编号序号（如果前文最后是 "2."，新内容应从 "3." 开始）。
+3. 严格保持前文的 Markdown 格式风格（标题层级、列表样式、缩进）。
+4. 内容需与前后文主题衔接，语气和深度保持一致。
+
+请在插入位置完成以下任务：${prompt}`
+      : prompt;
+
+    console.log('[AIPalette] useCtx:', useCtx, '| before length:', textBefore.length, '| after length:', textAfter.length);
+    if (useCtx) {
+      console.log('[AIPalette] textBefore (last 300):', textBefore.slice(-300));
+      console.log('[AIPalette] textAfter (first 200):', textAfter.slice(0, 200));
+    }
+
+    try {
+      let accumulated = '';
+      // 此时 selectionUpdate 已经重置了编辑器选区，需要先把焦点放回去
+      editor.chain().focus().run();
+      const startPos = editor.state.selection.from;
+      let currentPos = startPos;
+
+      await generate([
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userMessage }
+      ], (chunk) => {
+        accumulated += chunk;
+        const html = markdownToHtml(accumulated);
+        
+        try {
+          // 在开始之前记录当前的文档大小，用于简单修正（如果需要）
+          // 但更稳健的方法是利用 insertContentAt 后的 selection
+          
+          editor.chain()
+            .insertContentAt({ from: startPos, to: currentPos }, html)
+            .run();
+          
+          // insertContentAt 会自动将选区移动到新插入内容的末尾
+          // 我们只需要记录这个位置作为下一次替换的终点
+          currentPos = editor.state.selection.to;
+
+          // 降低写入频率，仅当积累一定长度或遇到换行时同步到 Store
+          if (accumulated.length % 20 === 0 || chunk.includes('\n')) {
+            const currentTabId = activeTabIdRef.current;
+            if (currentTabId) {
+              const currentHtml = editor.getHTML();
+              const currentMd = htmlToMarkdown(currentHtml);
+              // 极端安全检查：确保不会因为转换错误清空文档
+              if (currentMd.trim() || !editor.state.doc.textContent.trim()) {
+                updateTabContent(currentTabId, currentMd);
+              }
+            }
+          }
+        } catch (e) {
+          // 流式过程中产生无效 HTML 时忽略
+        }
+      }, requestId);
+
+      // 生成完成后，执行一次最终的显式同步
+      const finalTabId = activeTabIdRef.current;
+      if (finalTabId) {
+        updateTabContent(finalTabId, htmlToMarkdown(editor.getHTML()));
+        console.log('[AI] Final content sync completed');
       }
-    } else if (editor && !activeTab) {
-      editor.commands.setContent('');
+
+      // 生成完成后：直接在 ProseMirror 节点层面重排编号
+      // 生成完成后：在同一章节内重排连续编号标题
+      if (useCtx) {
+        const { tr } = editor.state;
+        let modified = false;
+
+        // 收集所有 heading 节点及其位置（按文档顺序）
+        type HeadingInfo = { pos: number; textPos: number; currentNum: string; level: number };
+        const allHeadings: Array<HeadingInfo | { pos: number; level: number; isBreak: true }> = [];
+        
+        editor.state.doc.descendants((node, pos) => {
+          if (node.type.name === 'heading') {
+            const text = node.textContent;
+            const match = text.match(/^(\d+)[.．、]\s*/);
+            const level = node.attrs.level as number;
+            if (match) {
+              allHeadings.push({ pos, textPos: pos + 1, currentNum: match[1], level });
+            } else {
+              // 非编号标题作为 "断点"
+              allHeadings.push({ pos, level, isBreak: true });
+            }
+          }
+        });
+
+        // 按连续的同级编号标题分组（遇到断点或不同级别则断开）
+        const runs: HeadingInfo[][] = [];
+        let currentRun: HeadingInfo[] = [];
+        let currentLevel: number | null = null;
+
+        for (const item of allHeadings) {
+          if ('isBreak' in item) {
+            if (currentRun.length > 0) { runs.push(currentRun); currentRun = []; }
+            currentLevel = null;
+          } else {
+            if (currentLevel === null || item.level === currentLevel) {
+              currentRun.push(item);
+              currentLevel = item.level;
+            } else {
+              // 级别变了 → 结束当前 run，开新 run
+              if (currentRun.length > 0) { runs.push(currentRun); }
+              currentRun = [item];
+              currentLevel = item.level;
+            }
+          }
+        }
+        if (currentRun.length > 0) { runs.push(currentRun); }
+
+        // 对每个 run 内部重排编号（从后往前修改避免偏移）
+        for (const run of runs) {
+          if (run.length < 2) continue;
+          
+          // 查找该 run 在文档中的大致起始序号。如果是新插入，可能第一个序号也是错的。
+          // 逻辑：如果这个 run 包含刚刚插入的范围，则需要更细致的处理。
+          // 简单起见：如果第一个序号是 1，则重排为 1, 2, 3...
+          // 如果第一个序号不是 1 且前文有中断，则尊重第一个序号。
+          const startNum = parseInt(run[0].currentNum);
+          
+          const reversed = [...run].reverse();
+          reversed.forEach((item, reverseIdx) => {
+            const indexInRun = run.length - 1 - reverseIdx;
+            const expectedNum = startNum + indexInRun;
+            if (item.currentNum !== String(expectedNum)) {
+              tr.replaceWith(item.textPos, item.textPos + item.currentNum.length, editor.schema.text(String(expectedNum)));
+              modified = true;
+            }
+          });
+        }
+
+        if (modified) {
+          editor.view.dispatch(tr);
+          console.log('[renumber] 已修复同章节内的局部编号');
+        }
+      }
+    } finally {
+      setAiGenerating(false);
+      setActiveRequestId(null);
+      // 生成完成后延迟清除 snapshot，防止 handleAIPaletteStop 在此时被意外触发导致回滚
+      setTimeout(() => setDocSnapshot(null), 100);
+      // 注意：根据用户需求，不关闭气泡，也不在 AI 操作成功后清除 PalettePos 缓存的坐标
+    }
+  };
+ 
+  // 统一触发 AI 面板的逻辑
+  const triggerAIPalette = useCallback(() => {
+    if (!editor) return;
+    const { from } = editor.state.selection;
+    const cursorCoords = editor.view.coordsAtPos(from);
+    
+    // 用 DOMSerializer 提取光标前后 HTML 片段，再转 Markdown，保留所有格式
+    const docSize = editor.state.doc.content.size;
+    const serializer = DOMSerializer.fromSchema(editor.schema);
+    
+    // 前文：doc.slice(0, from) → HTML → Markdown
+    const beforeFragment = editor.state.doc.slice(0, Math.min(from, docSize)).content;
+    const beforeDiv = document.createElement('div');
+    beforeDiv.appendChild(serializer.serializeFragment(beforeFragment));
+    const mdBefore = htmlToMarkdown(beforeDiv.innerHTML);
+    
+    // 后文：doc.slice(from, end) → HTML → Markdown
+    const afterFragment = editor.state.doc.slice(Math.min(from, docSize), docSize).content;
+    const afterDiv = document.createElement('div');
+    afterDiv.appendChild(serializer.serializeFragment(afterFragment));
+    const mdAfter = htmlToMarkdown(afterDiv.innerHTML);
+    
+    setPaletteContext({
+      before: mdBefore.slice(-2000), // 前文最后 2000 字
+      after: mdAfter.slice(0, 1000),  // 后文前 1000 字
+    });
+    
+    setPalettePos({ 
+      top: cursorCoords.bottom + 12, 
+      left: Math.max(cursorCoords.left, 20) 
+    });
+    setShowAIPalette(true);
+  }, [editor]);
+
+  useEffect(() => {
+    editorRef.current = editor;
+  }, [editor]);
+
+  // 组件卸载时强制同步一次最新内容到 Store
+  useEffect(() => {
+    return () => {
+      if (editorRef.current && activeTabIdRef.current) {
+        const html = editorRef.current.getHTML();
+        const markdown = htmlToMarkdown(html);
+        useAppStore.getState().updateTabContent(activeTabIdRef.current, markdown);
+        console.log('[Tiptap] Unmount sync completed');
+      }
+    };
+  }, []);
+
+  // 同步外部内容变更到编辑器（如切换标签或外部 AI 写入）
+  useEffect(() => {
+    if (!editor || !activeTab) return;
+
+    const currentHtml = editor.getHTML();
+    const newHtml = markdownToHtml(activeTab.content);
+    const isTabSwitch = activeTabId !== lastActiveTabIdRef.current;
+
+    // 如果是切换 Tab，无论如何都要强制刷新
+    if (isTabSwitch) {
+      editor.commands.setContent(newHtml);
+      lastActiveTabIdRef.current = activeTabId;
+      return;
+    }
+
+    // 非切换 Tab 时（例如侧边栏 AI 写入内容到当前 Tab）：
+    // 如果当前编辑器正获得焦点，或者 AI 正在生成内容，不接受由 store 反馈回来的同步（避免回流冲突和内容丢失）
+    if (editor.isFocused || aiGenerating) return;
+
+    // 只有在 HTML 发生实质性变化时才更新
+    if (currentHtml !== newHtml) {
+      editor.commands.setContent(newHtml, { emitUpdate: false });
     }
   }, [activeTabId, editor, activeTab?.content]);
 
@@ -378,18 +778,6 @@ export const TiptapEditor: React.FC = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%', position: 'relative' }}>
-      {aiGenerating && (
-        <div style={{ 
-          position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, 
-          backgroundColor: 'rgba(255, 255, 255, 0.4)', 
-          backdropFilter: 'blur(4px)',
-          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          zIndex: 50, gap: 12
-        }}>
-          <Loader2 size={32} className="animate-spin" color="var(--color-accent-indigo)" />
-          <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-main)' }}>AI 正在构思中...</span>
-        </div>
-      )}
 
       {/* Format Toolbar */}
       <div className="tiptap-toolbar" style={{ 
@@ -485,12 +873,41 @@ export const TiptapEditor: React.FC = () => {
             onCancel={() => setShowStyleSelector(false)} 
           />
         )}
+        {showAIPalette && palettePos && ReactDOM.createPortal(
+          <div 
+            id="ai-palette-portal"
+            style={{ 
+              position: 'fixed', 
+              top: palettePos.top, 
+              left: palettePos.left,
+              zIndex: 9999 
+            }}
+          >
+            <AIPalette 
+              onClose={() => { 
+                setShowAIPalette(false); 
+                setPalettePos(null); 
+                editor?.chain().focus().run(); 
+              }} 
+              onAction={(p, useCtx) => handleAIPaletteAction(p, useCtx)}
+              onStop={handleAIPaletteStop}
+              loading={aiGenerating}
+            />
+          </div>,
+          document.body
+        )}
         
         <div className="tiptap-page" onClick={() => editor.chain().focus().run()}>
           {editor && (
             <BubbleMenu 
               editor={editor} 
-              shouldShow={({ state }) => !state.selection.empty}
+              shouldShow={({ state, editor }) => {
+                if (state.selection.empty) return false;
+                // Don't show for custom block nodes
+                const { selection } = state;
+                const isCustomBlock = editor.isActive('diagram') || editor.isActive('svgBlock');
+                return !isCustomBlock;
+              }}
             >
               <div className="bubble-menu" style={{ 
                 display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-elevated)', 
@@ -523,7 +940,67 @@ export const TiptapEditor: React.FC = () => {
             </BubbleMenu>
           )}
 
-          <EditorContent editor={editor} />
+        {aiGenerating && (
+          <div className="ai-status-indicator" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Loader2 size={14} className="animate-spin" />
+              <span>AI 正在全力输出中...</span>
+            </div>
+            <button 
+              onClick={handleAIPaletteStop}
+              style={{
+                padding: '2px 8px',
+                borderRadius: 6,
+                backgroundColor: 'rgba(255, 71, 87, 0.15)',
+                color: '#ff4757',
+                border: '1px solid rgba(255, 71, 87, 0.2)',
+                fontSize: 11,
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 71, 87, 0.25)'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 71, 87, 0.15)'}
+            >
+              停止生成
+            </button>
+          </div>
+        )}
+
+        <EditorContent 
+            editor={editor} 
+            onKeyDown={(e) => {
+                const { selection, doc } = editor.state;
+                if (!selection.empty || aiGenerating) return;
+
+                // 触发判定
+                const { $from } = selection;
+                const isAtStart = $from.parentOffset === 0;
+                const isEmptyLine = $from.parent.textContent.trim() === '';
+
+                // 1. 空格触发 (仅限行首且该行原本为空)
+                if (e.key === ' ' && isAtStart && isEmptyLine && !showAIPalette) {
+                    e.preventDefault();
+                    triggerAIPalette();
+                    return;
+                }
+
+                // 2. 斜杠触发 (仅限行首)
+                if (e.key === '/' && isAtStart && !showAIPalette) {
+                    // 我们不preventDefault，让 '/' 输入进去，或者也可以拦截它
+                    // 这里选择拦截并在显示面板后手动处理，或者让面板自己带一个 '/'
+                    e.preventDefault();
+                    triggerAIPalette();
+                    return;
+                }
+
+                // 3. Esc 关闭
+                if (e.key === 'Escape' && showAIPalette) {
+                    setShowAIPalette(false);
+                    setPalettePos(null);
+                }
+            }}
+          />
         </div>
       </div>
     </div>

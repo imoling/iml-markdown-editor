@@ -1,12 +1,14 @@
 {
   "name": "iml-markdown-editor",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "description": "极简而极致的 Markdown 编辑器，支持双模编辑、PDF 导出与智能目录同步。",
   "main": "dist-electron/main.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "concurrently \"vite\" \"tsc -p electron/tsconfig.json -w\" \"wait-on tcp:5173 && cross-env NODE_ENV=development electron .\"",
-    "build": "tsc && vite build && tsc -p electron/tsconfig.json && electron-builder"
+    "dev": "concurrently \"vite\" \"tsc -p electron/tsconfig.json -w\" \"(wait-on tcp:5173 || wait-on tcp:5174) && cross-env NODE_ENV=development electron .\"",
+    "build": "tsc && vite build && tsc -p electron/tsconfig.json && electron-builder",
+    "build:mac": "tsc && vite build && tsc -p electron/tsconfig.json && electron-builder --mac",
+    "build:win": "tsc && vite build && tsc -p electron/tsconfig.json && electron-builder --win"
   },
   "keywords": [
     "markdown",
@@ -41,6 +43,7 @@
     "lowlight": "^3.3.0",
     "lucide-react": "^0.577.0",
     "marked": "^17.0.4",
+    "mermaid": "^11.13.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "turndown": "^7.2.2",
@@ -73,7 +76,7 @@
       "category": "public.app-category.productivity"
     },
     "win": {
-      "icon": "assets/logo.icns",
+      "icon": "assets/logo.png",
       "target": "nsis"
     }
   }

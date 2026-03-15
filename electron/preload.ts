@@ -17,8 +17,7 @@ contextBridge.exposeInMainWorld('api', {
   ai: {
     getConfig: () => ipcRenderer.invoke('ai:getConfig'),
     saveConfig: (config: any) => ipcRenderer.invoke('ai:saveConfig', config),
-    chat: (messages: any[], onStream: (chunk: string) => void) => {
-      const requestId = Math.random().toString(36).substring(7);
+    chat: (messages: any[], onStream: (chunk: string) => void, requestId: string) => {
       
       const chunkListener = (_event: any, content: string) => onStream(content);
       
@@ -38,6 +37,7 @@ contextBridge.exposeInMainWorld('api', {
         ipcRenderer.send('ai:chat', { messages, requestId });
       });
     },
+    stop: (requestId: string) => ipcRenderer.send('ai:stop', requestId),
   },
   shell: {
     openExternal: (url: string) => ipcRenderer.invoke('open-url', url),
@@ -53,6 +53,10 @@ contextBridge.exposeInMainWorld('api', {
   app: {
     version: process.env.npm_package_version || '1.0.0',
     checkUpdates: () => ipcRenderer.invoke('app:checkUpdates'),
+    platform: process.platform,
+    minimize: () => ipcRenderer.send('window-minimize'),
+    maximize: () => ipcRenderer.send('window-maximize'),
+    close: () => ipcRenderer.send('window-close'),
   },
   appVersion: process.env.npm_package_version || '1.0.0'
 });

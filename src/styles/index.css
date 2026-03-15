@@ -27,6 +27,7 @@
   --color-accent-indigo: var(--color-brand-indigo);
   --color-accent-blue: var(--color-brand-purple);
   --color-accent-green: #34C759;
+  --color-accent-orange: #FF9500;
   --color-accent-coral: #FF3B30;
 
   /* Typography */
@@ -74,4 +75,43 @@ body {
 /* Ensure all buttons, inputs, links, and clickable divs bypass window dragging on macOS */
 button, a, input, select, textarea, [role="button"], .clickable {
   -webkit-app-region: no-drag;
+}
+
+/* Custom Scrollbar for a premium cross-platform feel */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 6px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+  transition: background 0.2s;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+/* Hide scrollbar by default in some areas if needed, but provide custom look for scrollable areas */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.2);
 }
