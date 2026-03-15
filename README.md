@@ -90,6 +90,15 @@ npm run build:mac
 | 另存为 | `⌘ ⇧ S` |
 
 ## 📄 许可证 & 愿景
+
+[![CC BY-NC 4.0](https://licensebuttons.net/l/by-nc/4.0/88x31.png)](https://creativecommons.org/licenses/by-nc/4.0/)
+
+本项目采用 [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4./) 许可证。
+
+- **非商业使用自由**：您可以自由分享和使用本项目
+- **署名**：您必须给予适当的credit，提供许可证链接，并说明是否做了更改
+- **禁止商业使用**：未经授权，禁止将本项目用于任何商业目的
+
 Logic & Design by [imoling.cn@gmail.com](mailto:imoling.cn@gmail.com) | Built with Gemini
 
 &copy; 2026 iML Studio. **捕捉创作潜意识，让 AI 读懂你的 Vibe。**
