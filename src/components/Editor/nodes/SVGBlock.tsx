@@ -12,6 +12,9 @@ export const SVGBlock: React.FC<NodeViewProps> = ({ node, updateAttributes, sele
   const [isEditing, setIsEditing] = useState(false); // 代码区是否激活
   const [extensions, setExtensions] = useState<any[]>([EditorView.lineWrapping]);
   const editorRef = useRef<ReactCodeMirrorRef>(null);
+  const previewRef = useRef<HTMLDivElement>(null);
+  const [isResizing, setIsResizing] = useState(false);
+  const [currentHeight, setCurrentHeight] = useState<string>(node.attrs.height || 'auto');
 
   // Sync state with node attributes
   useEffect(() => {
@@ -19,6 +22,12 @@ export const SVGBlock: React.FC<NodeViewProps> = ({ node, updateAttributes, sele
       setCode(node.attrs.code);
     }
   }, [node.attrs.code]);
+
+  useEffect(() => {
+    if (node.attrs.height !== currentHeight) {
+      setCurrentHeight(node.attrs.height || 'auto');
+    }
+  }, [node.attrs.height]);
 
   useEffect(() => {
     const htmlLang = languages.find(l => l.name === 'HTML' || l.alias.includes('html'));
@@ -122,6 +131,36 @@ export const SVGBlock: React.FC<NodeViewProps> = ({ node, updateAttributes, sele
       }
     }
   }, [editor, getPos]);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsResizing(true);
+    
+    const startY = e.clientY;
+    const startHeight = previewRef.current?.offsetHeight || 0;
+
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      const deltaY = moveEvent.clientY - startY;
+      const newHeight = Math.max(120, startHeight + deltaY);
+      setCurrentHeight(`${newHeight}px`);
+    };
+
+    const onMouseUp = () => {
+      setIsResizing(false);
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+      
+      const resizer = previewRef.current;
+      if (resizer) {
+        const finalHeight = `${resizer.offsetHeight}px`;
+        updateAttributes({ height: finalHeight });
+      }
+    };
+
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  }, [updateAttributes]);
 
   return (
     <NodeViewWrapper className="svg-block-wrapper">
@@ -229,30 +268,62 @@ export const SVGBlock: React.FC<NodeViewProps> = ({ node, updateAttributes, sele
               />
             </div>
           ) : (
-            <div 
-              className="svg-preview-container custom-scrollbar"
-              style={{
-                padding: '32px',
-                minHeight: '120px',
-                maxHeight: '600px',
-                backgroundColor: 'var(--bg-elevated)', 
-                overflow: 'auto',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-            >
-              {code.trim() && !error ? (
-                <div 
+            <div style={{ position: 'relative', width: '100%' }}>
+              <div 
+                ref={previewRef}
+                className="svg-preview-container custom-scrollbar"
+                style={{
+                  padding: '12px',
+                  minHeight: '120px',
+                  height: currentHeight,
+                  maxHeight: isResizing ? 'none' : '2000px',
+                  backgroundColor: 'var(--bg-elevated)', 
+                  overflow: 'auto',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: isResizing ? 'none' : 'height 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
+                }}
+              >
+                {code.trim() && !error ? (
+                  <div 
                   className="svg-render-wrapper"
-                  style={{ width: '100%' }}
+                  style={{ width: '100%', height: '100%' }}
                   dangerouslySetInnerHTML={{ __html: code }} 
                 />
-              ) : (
-                <div style={{ color: 'var(--text-muted)', fontSize: '12px', opacity: 0.6 }}>
-                  {error || '等待输入内容...'}
-                </div>
-              )}
+                ) : (
+                  <div style={{ color: 'var(--text-muted)', fontSize: '12px', opacity: 0.6 }}>
+                    {error || '等待输入内容...'}
+                  </div>
+                )}
+              </div>
+
+              {/* Resize Handle */}
+              <div
+                onMouseDown={handleMouseDown}
+                style={{
+                  position: 'absolute',
+                  bottom: -4,
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  width: '40px',
+                  height: '8px',
+                  cursor: 'ns-resize',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  zIndex: 20,
+                }}
+              >
+                <div style={{
+                  width: '24px',
+                  height: '3px',
+                  borderRadius: '2px',
+                  backgroundColor: isResizing ? 'var(--color-accent-indigo)' : 'var(--border-strong)',
+                  opacity: isResizing ? 1 : 0.4,
+                  transition: 'all 0.2s'
+                }} />
+              </div>
             </div>
           )}
         </div>

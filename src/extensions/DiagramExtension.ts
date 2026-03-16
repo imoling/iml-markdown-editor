@@ -12,6 +12,13 @@ export const DiagramExtension = Node.create({
 
   addAttributes() {
     return {
+      height: {
+        default: 'auto',
+        parseHTML: (element: HTMLElement) => element.getAttribute('data-height') || 'auto',
+        renderHTML: (attributes: Record<string, any>) => ({
+          'data-height': attributes.height,
+        }),
+      },
       code: {
         default: 'graph TD\n  Start --> End',
         parseHTML: (element: HTMLElement) => {

@@ -57,7 +57,11 @@ export const MarkdownEditor: React.FC = () => {
           securityLevel: 'loose',
           fontFamily: 'var(--font-body)',
           // @ts-ignore
-          flowchart: { useMaxWidth: false, htmlLabels: true }
+          flowchart: { useMaxWidth: true, htmlLabels: true },
+          // @ts-ignore
+          sequence: { useMaxWidth: true },
+          // @ts-ignore
+          gantt: { useMaxWidth: true }
         });
         
         // Find all mermaid divs in the preview and render them

@@ -17,15 +17,14 @@ mermaid.initialize({
     nodePadding: 20, // 增加节点内边距缓冲区
   },
   flowchart: {
-    useMaxWidth: false,
+    useMaxWidth: true,
     htmlLabels: true,
     curve: 'basis',
     nodeSpacing: 50,
     rankSpacing: 50,
   },
   gantt: {
-    useMaxWidth: false,
-    useWidth: 1200, 
+    useMaxWidth: true,
     topPadding: 50,
     barGap: 4,
     barHeight: 20,
@@ -41,7 +40,10 @@ export const MermaidBlock: React.FC<NodeViewProps> = ({ node, updateAttributes, 
   const [isEditing, setIsEditing] = useState(false); // 代码区是否激活
   const renderCount = useRef(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  const previewRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<ReactCodeMirrorRef>(null);
+  const [isResizing, setIsResizing] = useState(false);
+  const [currentHeight, setCurrentHeight] = useState<string>(node.attrs.height || 'auto');
 
   // Sync state with node attributes
   useEffect(() => {
@@ -49,6 +51,12 @@ export const MermaidBlock: React.FC<NodeViewProps> = ({ node, updateAttributes, 
       setCode(node.attrs.code);
     }
   }, [node.attrs.code]);
+
+  useEffect(() => {
+    if (node.attrs.height !== currentHeight) {
+      setCurrentHeight(node.attrs.height || 'auto');
+    }
+  }, [node.attrs.height]);
 
   const renderMermaid = async (text: string) => {
     const cleanText = text.trim();
@@ -111,7 +119,7 @@ export const MermaidBlock: React.FC<NodeViewProps> = ({ node, updateAttributes, 
         // NOTE: Removed max-width: 100% to allow horizontal scrolling for wide diagrams (like Gantt)
         const responsiveSvg = renderedSvg.replace(
           /<svg/, 
-          '<svg style="height: auto; display: block; margin: auto;"'
+          '<svg style="height: 100%; width: 100%; display: block; margin: auto;"'
         );
         setSvg(responsiveSvg);
         setError(null);
@@ -219,6 +227,36 @@ export const MermaidBlock: React.FC<NodeViewProps> = ({ node, updateAttributes, 
       }
     }
   }, [editor, getPos]);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsResizing(true);
+    
+    const startY = e.clientY;
+    const startHeight = previewRef.current?.offsetHeight || 0;
+
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      const deltaY = moveEvent.clientY - startY;
+      const newHeight = Math.max(120, startHeight + deltaY);
+      setCurrentHeight(`${newHeight}px`);
+    };
+
+    const onMouseUp = () => {
+      setIsResizing(false);
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+      
+      const resizer = previewRef.current;
+      if (resizer) {
+        const finalHeight = `${resizer.offsetHeight}px`;
+        updateAttributes({ height: finalHeight });
+      }
+    };
+
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  }, [updateAttributes]);
 
   return (
     <NodeViewWrapper className="mermaid-block-wrapper">
@@ -331,29 +369,63 @@ export const MermaidBlock: React.FC<NodeViewProps> = ({ node, updateAttributes, 
             </div>
           ) : (
             <div 
-              ref={containerRef}
-              className="mermaid-preview-container custom-scrollbar"
-              style={{
-                padding: '32px',
-                minHeight: '120px',
-                maxHeight: '600px',
-                backgroundColor: 'var(--bg-elevated)',
-                overflow: 'auto',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center'
-              }}
+              style={{ position: 'relative', width: '100%' }}
             >
               <div 
-                style={{ 
-                  margin: 'auto',
+                ref={previewRef}
+                className="mermaid-preview-container custom-scrollbar"
+                style={{
+                  padding: '12px',
+                  minHeight: '120px',
+                  height: currentHeight,
+                  maxHeight: isResizing ? 'none' : '2000px',
+                  backgroundColor: 'var(--bg-elevated)',
+                  overflow: 'auto',
                   display: 'flex',
-                  justifyContent: 'center',
+                  flexDirection: 'column',
                   alignItems: 'center',
-                  width: 'fit-content'
+                  transition: isResizing ? 'none' : 'height 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
                 }}
-                dangerouslySetInnerHTML={{ __html: svg || '<div style="color:var(--text-muted);font-size:12px;opacity:0.6">等待输入内容...</div>' }}
-              />
+              >
+                <div 
+                  style={{ 
+                    margin: 'auto',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    width: '100%',
+                    height: '100%'
+                  }}
+                  dangerouslySetInnerHTML={{ __html: svg || '<div style="color:var(--text-muted);font-size:12px;opacity:0.6">等待输入内容...</div>' }}
+                />
+              </div>
+
+              {/* Resize Handle */}
+              <div
+                onMouseDown={handleMouseDown}
+                style={{
+                  position: 'absolute',
+                  bottom: -4,
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  width: '40px',
+                  height: '8px',
+                  cursor: 'ns-resize',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  zIndex: 20,
+                }}
+              >
+                <div style={{
+                  width: '24px',
+                  height: '3px',
+                  borderRadius: '2px',
+                  backgroundColor: isResizing ? 'var(--color-accent-indigo)' : 'var(--border-strong)',
+                  opacity: isResizing ? 1 : 0.4,
+                  transition: 'all 0.2s'
+                }} />
+              </div>
             </div>
           )}
         </div>

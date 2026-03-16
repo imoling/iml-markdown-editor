@@ -1,5 +1,6 @@
 import { marked } from 'marked';
 import TurndownService from 'turndown';
+import mermaid from 'mermaid';
 // @ts-ignore
 import { tables } from 'turndown-plugin-gfm';
 
@@ -180,6 +181,92 @@ export const markdownToHtml = (markdownContent: string, inlineActual: boolean = 
   });
 
   return htmlResult;
+};
+
+/**
+ * 异步将 Markdown 转换为带静态渲染组件的 HTML
+ * 主要用于 PDF 导出，此时需要将 Mermaid 等代码块预先转换为静态 SVG
+ */
+export const markdownToStaticHtml = async (markdownContent: string): Promise<string> => {
+  if (!markdownContent) return '';
+
+  mermaid.initialize({
+    startOnLoad: false,
+    theme: 'neutral',
+    securityLevel: 'loose',
+    fontFamily: 'var(--font-body)',
+  });
+
+  // 1. 采集并替换占位符
+  const mermaidCodes: string[] = [];
+  const svgCodes: string[] = [];
+  
+  const mermaidRegex = /```mermaid\s*([\s\S]*?)(?:```|$)/g;
+  const svgRegex = /```svg\s*([\s\S]*?)(?:```|$)/g;
+
+  // 使用显式的 HTML 块标签作为占位符，防止被 marked 误处理
+  let processed = markdownContent.replace(mermaidRegex, (_, code) => {
+    const index = mermaidCodes.length;
+    mermaidCodes.push(code.trim());
+    return `\n\n<div data-mermaid-static-index="${index}"></div>\n\n`;
+  });
+
+  processed = processed.replace(svgRegex, (_, code) => {
+    const index = svgCodes.length;
+    svgCodes.push(code.trim());
+    return `\n\n<div data-svg-static-index="${index}"></div>\n\n`;
+  });
+
+  // 2. 执行 Markdown 解析
+  const htmlResult = await marked.parse(processed, { async: true }) as string;
+  
+  // 3. 使用 DOMParser 精准回填
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(htmlResult, 'text/html');
+
+  const restoreNodes = async (selector: string, contentArray: string[], type: 'mermaid' | 'svg') => {
+    const placeholders = Array.from(doc.querySelectorAll(selector));
+    for (const placeholder of placeholders) {
+      const idxStr = placeholder.getAttribute(`data-${type}-static-index`);
+      if (idxStr === null) continue;
+      const index = parseInt(idxStr);
+      const rawContent = contentArray[index];
+      
+      let finalHtml = '';
+      if (type === 'mermaid') {
+        try {
+          const id = `mermaid-static-${index}-${Math.random().toString(36).substring(7)}`;
+          const { svg } = await mermaid.render(id, rawContent);
+          finalHtml = `<div class="mermaid-static-rendered">${svg}</div>`;
+        } catch (err) {
+          console.error('Static mermaid render error:', err);
+          finalHtml = `<pre class="mermaid-error">${rawContent}</pre>`;
+        }
+      } else {
+        finalHtml = `<div class="svg-static-rendered">${rawContent}</div>`;
+      }
+
+      // 脱壳逻辑：解析器可能会将我们的 <div> 包裹在 <p>, <pre> 或 <code> 中
+      let target: Element = placeholder;
+      while (target.parentElement && 
+             (target.parentElement.tagName === 'P' || 
+              target.parentElement.tagName === 'PRE' || 
+              target.parentElement.tagName === 'CODE')) {
+        target = target.parentElement;
+      }
+      
+      const tempDoc = parser.parseFromString(finalHtml, 'text/html');
+      const fragment = tempDoc.body.firstChild;
+      if (fragment) {
+        target.replaceWith(doc.importNode(fragment, true));
+      }
+    }
+  };
+
+  await restoreNodes('div[data-mermaid-static-index]', mermaidCodes, 'mermaid');
+  await restoreNodes('div[data-svg-static-index]', svgCodes, 'svg');
+
+  return doc.body.innerHTML;
 };
 
 export const htmlToMarkdown = (htmlContent: string): string => {

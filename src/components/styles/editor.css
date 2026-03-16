@@ -411,11 +411,23 @@ ul[data-type="taskList"] li[data-checked="true"] > div {
   min-height: 100px;
 }
 
-.mermaid-container svg, .mermaid-preview-container svg, .svg-preview-container svg {
+.mermaid-container svg, .md-editor-preview-container svg {
   max-width: 100% !important;
+  max-height: 80vh !important;
   height: auto !important;
   display: block;
   margin: 0 auto;
+  object-fit: contain;
+}
+
+.mermaid-preview-container svg, .svg-preview-container svg {
+  max-width: 100% !important;
+  max-height: 100% !important;
+  width: auto !important;
+  height: 100% !important;
+  display: block;
+  margin: 0 auto;
+  object-fit: contain;
 }
 
 /* Ensure foreignObject (HTML labels) doesn't clip content if height is slightly off */

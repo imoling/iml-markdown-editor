@@ -12,6 +12,13 @@ export const SVGExtension = Node.create({
 
   addAttributes() {
     return {
+      height: {
+        default: 'auto',
+        parseHTML: (element: HTMLElement) => element.getAttribute('data-height') || 'auto',
+        renderHTML: (attributes: Record<string, any>) => ({
+          'data-height': attributes.height,
+        }),
+      },
       code: {
         default: '<svg width="100" height="100" viewBox="0 0 100 100">\n  <circle cx="50" cy="50" r="40" stroke="green" stroke-width="4" fill="yellow" />\n</svg>',
         parseHTML: (element: HTMLElement) => {
