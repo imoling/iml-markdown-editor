@@ -96,10 +96,19 @@ const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
         }}>iML Markdown Editor</h1>
         
         <p style={{ 
-          margin: '0 0 24px 0', 
+          margin: '0 0 4px 0', 
           fontSize: 14, 
-          color: 'var(--text-muted)' 
-        }}>Version {window.api?.appVersion || '1.0.0'} (Stable)</p>
+          color: 'var(--text-muted)',
+          fontWeight: 500
+        }}>Version {window.api?.appVersion || '1.6.0'}</p>
+        
+        <p style={{ 
+          margin: '0 0 24px 0', 
+          fontSize: 13, 
+          color: 'var(--color-accent-indigo)',
+          letterSpacing: '0.1em',
+          opacity: 0.8
+        }}>极简其表 &middot; 极致内核</p>
         
         <div style={{ 
           width: '100%', 
@@ -120,8 +129,8 @@ const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
               </span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, alignItems: 'center' }}>
-              <span style={{ color: 'var(--text-secondary)' }}>Developed by</span>
-              <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>Gemini</span>
+              <span style={{ color: 'var(--text-secondary)' }}>Architected by</span>
+              <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>Antigravity AI</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, alignItems: 'center' }}>
               <span style={{ color: 'var(--text-secondary)' }}>发布日期</span>

@@ -1,32 +1,32 @@
 # iML Markdown Editor (v1.6.0)
 
-一款为 **Vibe Coding** 时代打造的 AI 灵感编辑器。赋予直觉以逻辑，让 AI 真正读懂你的 Vibe。
+一款为 **Vibe Coding** 时代打造的 AI 灵感编辑器。
+**极简其表 &middot; 极致内核** (Minimalist Surface, Maximalist Core).
 
-![iML Logo](assets/logo.png)
+![iML Main Interface](screenshots/ScreenShot_2026-03-17_034853_908.png)
 
 ## 🛡️ 核心哲学：让灵感被 AI 精准理解
 iML Markdown Editor 的诞生初衷，是让 **Vibe Coding 的第一步变得前所未有的简单**。
 
-在 AI 编程时代，最大的挑战往往不是代码编写，而是如何将脑海中模糊的“灵感（Vibe）”转化为 AI 能够无损理解的“指令”。iML 旨在成为您与 AI 之间的最优接口，通过极致的编辑器体验与结构化 AI 场景，让您的想象力能够毫无障碍地传递给 AI 编程工具，从而更加轻松地实现您的数字化想象。
+在 AI 编程时代，最大的挑战往往不是代码编写，而是如何将脑海中模糊的“灵感（Vibe）”转化为 AI 能够无损理解的“指令”。iML 旨在成为您与 AI 之间的最优接口，通过极致的编辑器体验与 **指令级 AI 助手**，让您的想象力能够毫无障碍地传递给 AI 编程工具。
 
 当然，作为一款根植于本地系统的编辑器，iML 也是您处理本地 Markdown（.md）文件的得力助手。它提供了极速的文件系统响应、专业的排版渲染以及丝滑的编辑体验，确保无论是在深度 AI 创作还是日常文字记录中，都能让您得心应手。
 
 ## ✨ 核心特性
 
 ### 🪄 Vibe Coding AI 驱动 (The First Step)
-集成深度定制的 AI 场景写作面板，支持 **双进程全链路 SSE 流式生成**，即刻实现从灵感到实体的跨越：
-- **AI 编程需求文档**：将用户灵感转化为 AI 编程需求 PRD 文档。
-- **AI Studio 验证系统**：生成 Google AI Studio 验证系统提示词。
-- **Stitch 原型设计**：生成 Stitch 高交互界面提示词。
-- **Nano Banana PPT**：定制 Nano Banana Pro 生成 PPT 提示词。
-- **职场心流复盘**：日常工作整理成极具逻辑的专业汇报。
-- **架构拆解与工程化**：生成 Vibe Coding 技术骨架并模块化拆解。
+集成极致精简的 **指令级 AI 面板**，支持全链路流式生成，即刻实现从灵感到实体的跨越：
+- **常驻发送指令**：重新设计的 AI 气泡，具备实体感按钮与常驻发送确认，优化盲操体验。
+- **结合上下文**：一键切换是否引入当前文档全量上下文进行精准生成。
+- **AI 场景化写作**：PRD 文档、Google AI Studio Prompts、Stitch 原型、Nano Banana PPT 模板等深度集成。
+- **工程化解构**：自动化将 Vibe Coding 创意拆解为标准技术骨架与模块化文档。
 
 ### 🎨 高端视觉与交互 (UI/UX)
 - **纸张态沉浸排版**：富文本模式采用层次明晰的“白纸”交互图层，背景自适应深度增长，带来极致视网膜级的书写体验。
 - **Modern Nordic Clarity**: 继承北欧简约设计，辅以 macOS 级原生地图、毛玻璃效果、以及丝滑的微动画。
 - **极简标签管理**: 隐藏原生滚动条，支持活动标签自动居中，标签宽度根据负载智能收缩。
-- **紧凑型交互弹窗**: 重新设计的确认对话框与快捷键面板，符合苹果原生系统的克制之美。
+- **紧凑型交互弹窗**: 分页式快捷键详情（Shortcuts Modal），消除滚动条，按功能逻辑动态分布。
+- **响应式图形预览**: 集成 Mermaid 与 SVG 实时渲染，支持 **拖拽式自由拉伸缩放** 与等比放大呈现。
 
 ### ⌨️ 专业级编辑能力
 - **双模态无缝切换**：
@@ -90,15 +90,10 @@ npm run build:mac
 | 另存为 | `⌘ ⇧ S` |
 
 ## 📄 许可证 & 愿景
+本项目采用 [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4./) 许可证，未经授权，禁止将本项目用于任何商业目的。
+
+Logic & Design by [imoling.cn@gmail.com](mailto:imoling.cn@gmail.com) | Architected with Antigravity AI
+
+&copy; 2026 iML Studio. **极简其表，极致内核。让 AI 真正读懂你的 Vibe。**
 
 [![CC BY-NC 4.0](https://licensebuttons.net/l/by-nc/4.0/88x31.png)](https://creativecommons.org/licenses/by-nc/4.0/)
-
-本项目采用 [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4./) 许可证。
-
-- **非商业使用自由**：您可以自由分享和使用本项目
-- **署名**：您必须给予适当的credit，提供许可证链接，并说明是否做了更改
-- **禁止商业使用**：未经授权，禁止将本项目用于任何商业目的
-
-Logic & Design by [imoling.cn@gmail.com](mailto:imoling.cn@gmail.com) | Built with Gemini
-
-&copy; 2026 iML Studio. **捕捉创作潜意识，让 AI 读懂你的 Vibe。**
