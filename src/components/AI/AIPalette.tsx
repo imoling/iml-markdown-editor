@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Sparkles, Send, Loader2, BookOpen } from 'lucide-react';
+import { Sparkles, Send, Loader2, BookOpen, Activity, FileCode } from 'lucide-react';
 
 interface AIPaletteProps {
   onClose: () => void;
-  onAction: (prompt: string, useContext: boolean) => void;
+  onAction: (prompt: string, useContext: boolean, mode: 'text' | 'mermaid' | 'svg') => void;
   onStop?: () => void;
   loading?: boolean;
 }
@@ -11,6 +11,7 @@ interface AIPaletteProps {
 export const AIPalette: React.FC<AIPaletteProps> = ({ onClose, onAction, onStop, loading }) => {
   const [input, setInput] = useState('');
   const [useContext, setUseContext] = useState(false);
+  const [activeMode, setActiveMode] = useState<'text' | 'mermaid' | 'svg'>('text');
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -21,7 +22,7 @@ export const AIPalette: React.FC<AIPaletteProps> = ({ onClose, onAction, onStop,
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       if (input.trim() && !loading) {
-        onAction(input, useContext);
+        onAction(input, useContext, activeMode);
       }
     } else if (e.key === 'Escape') {
       onClose();
@@ -64,13 +65,16 @@ export const AIPalette: React.FC<AIPaletteProps> = ({ onClose, onAction, onStop,
             }}
           />
         </div>
-
         <div style={{ 
-          padding: '8px 12px', borderTop: '1px solid var(--border-subtle)', 
-          backgroundColor: 'var(--bg-card)', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          gap: 8
+          backgroundColor: 'var(--bg-card)', display: 'flex', flexDirection: 'column',
+          gap: 0
         }}>
-          {/* 左侧：快捷键 + 结合上下文按钮 */}
+
+          <div style={{ 
+            padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            gap: 8
+          }}>
+            {/* 左侧：快捷键 + 结合上下文按钮 */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ fontSize: 11, color: 'var(--text-tertiary)', display: 'flex', gap: 10 }}>
               <span><kbd style={{ padding: '2px 4px', border: '1px solid var(--border-subtle)', borderRadius: 4, marginRight: 4 }}>↵</kbd>执行</span>
@@ -93,12 +97,48 @@ export const AIPalette: React.FC<AIPaletteProps> = ({ onClose, onAction, onStop,
               <BookOpen size={11} />
               结合上下文
             </button>
+
+            <div style={{ width: 1, height: 12, backgroundColor: 'var(--border-subtle)', margin: '0 2px' }} />
+
+            {/* Mermaid 模式按钮 */}
+            <button
+              onClick={() => setActiveMode(activeMode === 'mermaid' ? 'text' : 'mermaid')}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 4,
+                padding: '3px 8px', borderRadius: 6, border: 'none', cursor: 'pointer',
+                fontSize: 11, fontWeight: 500,
+                backgroundColor: activeMode === 'mermaid' ? 'var(--color-accent-indigo)' : 'transparent',
+                color: activeMode === 'mermaid' ? '#fff' : 'var(--text-tertiary)',
+                outline: activeMode === 'mermaid' ? 'none' : '1px solid var(--border-subtle)',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <Activity size={11} />
+              Mermaid
+            </button>
+
+            {/* SVG 模式按钮 */}
+            <button
+              onClick={() => setActiveMode(activeMode === 'svg' ? 'text' : 'svg')}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 4,
+                padding: '3px 8px', borderRadius: 6, border: 'none', cursor: 'pointer',
+                fontSize: 11, fontWeight: 500,
+                backgroundColor: activeMode === 'svg' ? 'var(--color-accent-orange)' : 'transparent',
+                color: activeMode === 'svg' ? '#fff' : 'var(--text-tertiary)',
+                outline: activeMode === 'svg' ? 'none' : '1px solid var(--border-subtle)',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <FileCode size={11} />
+              SVG
+            </button>
           </div>
 
           {/* 右侧：发送 / 生成中 */}
           {input.trim() && !loading ? (
             <div 
-              onClick={() => onAction(input, useContext)}
+              onClick={() => onAction(input, useContext, activeMode)}
               style={{ 
                 cursor: 'pointer', padding: '6px 10px', borderRadius: 8, backgroundColor: 'var(--color-brand-indigo)',
                 color: '#fff', display: 'flex', alignItems: 'center', gap: 6,
@@ -131,6 +171,7 @@ export const AIPalette: React.FC<AIPaletteProps> = ({ onClose, onAction, onStop,
             </div>
           ) : null}
         </div>
+      </div>
     </div>
   );
 };

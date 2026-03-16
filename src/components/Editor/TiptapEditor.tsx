@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import ReactDOM from 'react-dom';
-import { EditorContent, useEditor } from '@tiptap/react';
-import { BubbleMenu } from '@tiptap/react/menus';
+import { EditorContent, useEditor, BubbleMenu, FloatingMenu } from '@tiptap/react';
 import { DOMSerializer } from '@tiptap/pm/model';
 import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
@@ -13,12 +12,17 @@ import { TableHeader } from '@tiptap/extension-table-header';
 import { CodeBlockLowlight } from '@tiptap/extension-code-block-lowlight';
 import { TaskList } from '@tiptap/extension-task-list';
 import { TaskItem } from '@tiptap/extension-task-item';
+import { Underline } from '@tiptap/extension-underline';
+import { Link } from '@tiptap/extension-link';
+import { TextAlign } from '@tiptap/extension-text-align';
 import { all, createLowlight } from 'lowlight';
 import { 
   Bold, Italic, Underline as UnderlineIcon, Strikethrough, Code, Sigma, 
-  Table as TableIcon, Image as ImageIcon, Plus, Trash2, Columns, Rows,
+  Table as TableIcon, Image as ImageIcon, Plus, Trash2, Columns, Rows, LayoutGrid,
   Type, ListOrdered, List, SquareCheck, Quote, Minus, Link as LinkIcon,
-  Sparkles, Wand2, FileText, FastForward, Loader2, BrainCircuit
+  Sparkles, Wand2, FileText, FastForward, Loader2, BrainCircuit,
+  Activity, FileCode, Send, BookOpen,
+  Trophy, AlignLeft, AlignCenter, AlignRight
 } from 'lucide-react';
 import { useAppStore } from '../../stores/appStore';
 import { markdownToHtml, htmlToMarkdown } from '../../utils/markdown';
@@ -256,7 +260,9 @@ function renumberHeadings(md: string): string {
 }
 
 export const TiptapEditor: React.FC = () => {
-  const { activeTabId, tabs, updateTabContent, openTab, navigationRequest } = useAppStore();
+  const { 
+    activeTabId, tabs, updateTabContent, openTab, navigationRequest, setAIStatus, zoom 
+  } = useAppStore();
   const activeTab = tabs.find(t => t.id === activeTabId);
   const [prompt, setPrompt] = React.useState<PromptDialogProps | null>(null);
   const { generate, stop, loading: aiLoading } = useAI();
@@ -297,6 +303,13 @@ export const TiptapEditor: React.FC = () => {
       TaskList,
       TaskItem.configure({
         nested: true,
+      }),
+      Underline,
+      Link.configure({
+        openOnClick: false,
+      }),
+      TextAlign.configure({
+        types: ['heading', 'paragraph', 'tableCell', 'tableHeader'],
       }),
       Placeholder.configure({
         placeholder: '在此开始你的写作...',
@@ -425,6 +438,7 @@ export const TiptapEditor: React.FC = () => {
 
     setShowStyleSelector(false);
     setAiGenerating(true);
+    setAIStatus({ generating: true, onStop: handleAIPaletteStop });
 
     // 开启生成前保存文档快照，以便由于“停止”时回滚
     setDocSnapshot(editor.getHTML());
@@ -482,6 +496,7 @@ export const TiptapEditor: React.FC = () => {
       console.error('AI Action Failed:', err);
     } finally {
       setAiGenerating(false);
+      setAIStatus({ generating: false, onStop: null });
       setActiveRequestId(null);
       setDocSnapshot(null);
     }
@@ -497,13 +512,39 @@ export const TiptapEditor: React.FC = () => {
       setDocSnapshot(null);
     }
     setAiGenerating(false);
+    setAIStatus({ generating: false, onStop: null });
   };
 
-  const handleAIPaletteAction = async (prompt: string, useCtx: boolean = false) => {
+  const insertMermaid = () => {
+    if (!editor) return;
+    editor.chain().focus().insertContent({
+      type: 'diagram',
+      attrs: {
+        code: 'graph TD\n  A[开始] --> B{选择}\n  B -->|选项1| C[结果1]\n  B -->|选项2| D[结果2]'
+      }
+    }).run();
+    setShowAIPalette(false);
+    setPalettePos(null);
+  };
+
+  const insertSVG = () => {
+    if (!editor) return;
+    editor.chain().focus().insertContent({
+      type: 'svgBlock',
+      attrs: {
+        code: '<svg width="100" height="100" viewBox="0 0 100 100">\n  <circle cx="50" cy="50" r="40" stroke="var(--color-brand-indigo)" stroke-width="3" fill="var(--bg-elevated)" />\n  <text x="50" y="55" font-size="12" text-anchor="middle" fill="var(--text-main)">SVG</text>\n</svg>'
+      }
+    }).run();
+    setShowAIPalette(false);
+    setPalettePos(null);
+  };
+
+  const handleAIPaletteAction = async (prompt: string, useCtx: boolean = false, mode: 'text' | 'mermaid' | 'svg' = 'text') => {
     if (!editor) return;
     
     setShowAIPalette(true); // 保持气泡开启
     setAiGenerating(true);
+    setAIStatus({ generating: true, onStop: handleAIPaletteStop });
     
     // 开启生成前保存文档快照，以便由于“停止”时回滚
     setDocSnapshot(editor.getHTML());
@@ -513,7 +554,21 @@ export const TiptapEditor: React.FC = () => {
     // 使用触发时缓存的前后文（在编辑器有焦点时已计算好，不受后续失焦影响）
     const { before: textBefore, after: textAfter } = paletteContext;
 
-    const systemPrompt = `您是一位卓越的文档写作助手。请严格按照用户的指令，输出 Markdown 格式的内容，不要任何解释或开场白。`;
+    let systemPrompt = `您是一位卓越的文档写作助手。请严格按照用户的指令，输出 Markdown 格式的内容，不要任何解释或开场白。`;
+
+    if (mode === 'mermaid') {
+      systemPrompt = `您是一位 Mermaid 图表专家。请根据用户指令生成标准的 Mermaid 代码块。
+**严格要求：**
+1. 必须且只能输出一个 \`\`\`mermaid ... \`\`\` 代码块。
+2. 内部代码必须是有效的 Mermaid 语法。
+3. 不要包含任何解释性文字、Markdown 标题或开场白。`;
+    } else if (mode === 'svg') {
+      systemPrompt = `您是一位 SVG 绘图专家。请根据用户指令生成标准的 SVG 代码块。
+**严格要求：**
+1. 必须且只能输出一个 \`\`\`svg ... \`\`\` 代码块，内部包含标准的 <svg> 标签。
+2. 确保 SVG 具有合适的 viewBox 属性，以便自适应尺寸。
+3. 不要包含任何解释性文字或开场白。`;
+    }
 
     const userMessage = useCtx && (textBefore || textAfter)
       ? `以下是我文档中光标所在位置的上下文（Markdown 格式）：
@@ -547,27 +602,38 @@ ${textAfter || '（文档末尾，无后文）'}
       let accumulated = '';
       // 此时 selectionUpdate 已经重置了编辑器选区，需要先把焦点放回去
       editor.chain().focus().run();
-      const startPos = editor.state.selection.from;
-      let currentPos = startPos;
+      const initialFrom = editor.state.selection.from;
+      const initialTo = editor.state.selection.to;
+      const $pos = editor.state.doc.resolve(initialFrom);
+      const parentNode = $pos.parent;
+      
+      // 核心优化：锁定起始位置。如果是空段落，则直接替换整个段落节点
+      const finalStartPos = (parentNode.type.name === 'paragraph' && parentNode.textContent.trim() === '') 
+        ? $pos.before() 
+        : initialFrom;
+        
+      let currentEndPos = (parentNode.type.name === 'paragraph' && parentNode.textContent.trim() === '')
+        ? $pos.after()
+        : initialTo;
 
       await generate([
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userMessage }
       ], (chunk) => {
         accumulated += chunk;
-        const html = markdownToHtml(accumulated);
+        // 头部清洗：移除 AI 可能输出的起始换行符
+        const processedMarkdown = accumulated.trimStart();
+        if (!processedMarkdown) return;
+        
+        const html = markdownToHtml(processedMarkdown);
         
         try {
-          // 在开始之前记录当前的文档大小，用于简单修正（如果需要）
-          // 但更稳健的方法是利用 insertContentAt 后的 selection
-          
           editor.chain()
-            .insertContentAt({ from: startPos, to: currentPos }, html)
+            .insertContentAt({ from: finalStartPos, to: currentEndPos }, html)
             .run();
           
-          // insertContentAt 会自动将选区移动到新插入内容的末尾
-          // 我们只需要记录这个位置作为下一次替换的终点
-          currentPos = editor.state.selection.to;
+          // 更新下一步替换的结束位置（即当前内容的末尾）
+          currentEndPos = editor.state.selection.to;
 
           // 降低写入频率，仅当积累一定长度或遇到换行时同步到 Store
           if (accumulated.length % 20 === 0 || chunk.includes('\n')) {
@@ -585,6 +651,9 @@ ${textAfter || '（文档末尾，无后文）'}
           // 流式过程中产生无效 HTML 时忽略
         }
       }, requestId);
+
+      setAiGenerating(false);
+      setAIStatus({ generating: false, onStop: null });
 
       // 生成完成后，执行一次最终的显式同步
       const finalTabId = activeTabIdRef.current;
@@ -645,7 +714,6 @@ ${textAfter || '（文档末尾，无后文）'}
           if (run.length < 2) continue;
           
           // 查找该 run 在文档中的大致起始序号。如果是新插入，可能第一个序号也是错的。
-          // 逻辑：如果这个 run 包含刚刚插入的范围，则需要更细致的处理。
           // 简单起见：如果第一个序号是 1，则重排为 1, 2, 3...
           // 如果第一个序号不是 1 且前文有中断，则尊重第一个序号。
           const startNum = parseInt(run[0].currentNum);
@@ -731,22 +799,17 @@ ${textAfter || '（文档末尾，无后文）'}
 
     const currentHtml = editor.getHTML();
     const newHtml = markdownToHtml(activeTab.content);
-    const isTabSwitch = activeTabId !== lastActiveTabIdRef.current;
-
-    // 如果是切换 Tab，无论如何都要强制刷新
-    if (isTabSwitch) {
-      editor.commands.setContent(newHtml);
-      lastActiveTabIdRef.current = activeTabId;
-      return;
-    }
-
     // 非切换 Tab 时（例如侧边栏 AI 写入内容到当前 Tab）：
     // 如果当前编辑器正获得焦点，或者 AI 正在生成内容，不接受由 store 反馈回来的同步（避免回流冲突和内容丢失）
     if (editor.isFocused || aiGenerating) return;
 
     // 只有在 HTML 发生实质性变化时才更新
+    // 增加一层清理逻辑，消除由于 Tiptap 内部自动修复导致的微小 HTML 差异（如空的 colgroup）
     if (currentHtml !== newHtml) {
-      editor.commands.setContent(newHtml, { emitUpdate: false });
+      // 如果只有空白符差异，不更新
+      if (currentHtml.replace(/\s/g, '') === newHtml.replace(/\s/g, '')) return;
+      
+      editor.commands.setContent(newHtml, false);
     }
   }, [activeTabId, editor, activeTab?.content]);
 
@@ -785,7 +848,8 @@ ${textAfter || '（文档末尾，无后文）'}
         borderBottom: '1px solid var(--border-subtle)',
         alignItems: 'center', padding: '0 20px', gap: 8,
         backgroundColor: 'var(--bg-page)', WebkitAppRegion: 'no-drag',
-        pointerEvents: 'auto'
+        pointerEvents: 'auto',
+        justifyContent: 'center'
       } as React.CSSProperties}>
         <div style={{ display: 'flex', gap: 2 }}>
           <button type="button" className={`toolbar-icon-btn ${editor.isActive('paragraph') ? 'active' : ''}`} onClick={() => editor.chain().focus().setParagraph().run()} title="正文"><Type size={16} /></button>
@@ -862,6 +926,9 @@ ${textAfter || '（文档末尾，无后文）'}
               onCancel: () => setPrompt(null)
             });
           }} title="插入链接"><LinkIcon size={16} /></button>
+          <div className="toolbar-divider"></div>
+          <button type="button" className={`toolbar-icon-btn`} onClick={insertMermaid} title="插入 Mermaid 图表"><Activity size={16} color="var(--color-accent-indigo)" /></button>
+          <button type="button" className={`toolbar-icon-btn`} onClick={insertSVG} title="插入 SVG 组件"><FileCode size={16} color="var(--color-accent-orange)" /></button>
         </div>
       </div>
 
@@ -889,7 +956,7 @@ ${textAfter || '（文档末尾，无后文）'}
                 setPalettePos(null); 
                 editor?.chain().focus().run(); 
               }} 
-              onAction={(p, useCtx) => handleAIPaletteAction(p, useCtx)}
+              onAction={(p, useCtx, mode) => handleAIPaletteAction(p, useCtx, mode)}
               onStop={handleAIPaletteStop}
               loading={aiGenerating}
             />
@@ -897,7 +964,9 @@ ${textAfter || '（文档末尾，无后文）'}
           document.body
         )}
         
-        <div className="tiptap-page" onClick={() => editor.chain().focus().run()}>
+        <div className="tiptap-page" onClick={() => editor.chain().focus().run()} style={{
+          transform: `scale(${zoom / 100})`
+        }}>
           {editor && (
             <BubbleMenu 
               editor={editor} 
@@ -936,36 +1005,27 @@ ${textAfter || '（文档末尾，无后文）'}
                   <button onClick={() => handleAIAction('summarize')} className="toolbar-icon-btn" title="AI 总结" disabled={aiGenerating}><FileText size={16} color="var(--color-accent-green)" /></button>
                   <button onClick={() => handleAIAction('expand')} className="toolbar-icon-btn" title="AI 扩写" disabled={aiGenerating}><Sparkles size={16} color="var(--color-accent-orange)" /></button>
                 </div>
+                {editor.isActive('table') && (
+                  <>
+                    <div style={{ height: 1, backgroundColor: 'var(--border-subtle)', margin: '4px 0' }}></div>
+                    <div style={{ display: 'flex', gap: 4, alignItems: 'center', whiteSpace: 'nowrap' }}>
+                      <button onClick={() => editor.chain().focus().addColumnAfter().run()} className="toolbar-icon-btn" title="在右侧增加列"><Columns size={16} /><Plus size={10} style={{ marginLeft: -4, marginTop: -8 }} /></button>
+                      <button onClick={() => editor.chain().focus().addRowAfter().run()} className="toolbar-icon-btn" title="在下方增加行"><Rows size={16} /><Plus size={10} style={{ marginLeft: -4, marginTop: -8 }} /></button>
+                      <div className="toolbar-divider"></div>
+                      <button onClick={() => editor.chain().focus().setTextAlign('left').run()} className={`toolbar-icon-btn ${editor.isActive({ textAlign: 'left' }) ? 'active' : ''}`} title="靠左对齐"><AlignLeft size={16} /></button>
+                      <button onClick={() => editor.chain().focus().setTextAlign('center').run()} className={`toolbar-icon-btn ${editor.isActive({ textAlign: 'center' }) ? 'active' : ''}`} title="居中对齐"><AlignCenter size={16} /></button>
+                      <button onClick={() => editor.chain().focus().setTextAlign('right').run()} className={`toolbar-icon-btn ${editor.isActive({ textAlign: 'right' }) ? 'active' : ''}`} title="靠右对齐"><AlignRight size={16} /></button>
+                      <div className="toolbar-divider"></div>
+                      <button onClick={() => editor.chain().focus().deleteColumn().run()} className="toolbar-icon-btn" title="删除当前列"><Columns size={16} style={{ opacity: 0.5 }} /><Trash2 size={10} style={{ marginLeft: -10, marginTop: 6, color: 'var(--color-accent-red)' }} /></button>
+                      <button onClick={() => editor.chain().focus().deleteRow().run()} className="toolbar-icon-btn" title="删除当前行"><Rows size={16} style={{ opacity: 0.5 }} /><Trash2 size={10} style={{ marginLeft: -10, marginTop: 6, color: 'var(--color-accent-red)' }} /></button>
+                      <button onClick={() => editor.chain().focus().deleteTable().run()} className="toolbar-icon-btn" title="删除整个表格"><LayoutGrid size={16} style={{ opacity: 0.3 }} /><Trash2 size={10} style={{ marginLeft: -10, marginTop: 6, color: 'var(--color-accent-red)' }} /></button>
+                    </div>
+                  </>
+                )}
               </div>
             </BubbleMenu>
           )}
 
-        {aiGenerating && (
-          <div className="ai-status-indicator" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Loader2 size={14} className="animate-spin" />
-              <span>AI 正在全力输出中...</span>
-            </div>
-            <button 
-              onClick={handleAIPaletteStop}
-              style={{
-                padding: '2px 8px',
-                borderRadius: 6,
-                backgroundColor: 'rgba(255, 71, 87, 0.15)',
-                color: '#ff4757',
-                border: '1px solid rgba(255, 71, 87, 0.2)',
-                fontSize: 11,
-                fontWeight: 600,
-                cursor: 'pointer',
-                transition: 'all 0.2s'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 71, 87, 0.25)'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 71, 87, 0.15)'}
-            >
-              停止生成
-            </button>
-          </div>
-        )}
 
         <EditorContent 
             editor={editor} 

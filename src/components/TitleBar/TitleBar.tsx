@@ -107,7 +107,7 @@ export const TitleBar: React.FC = () => {
                   <Save size={14} /> 另存为... <span style={{ marginLeft: 'auto', opacity: 0.4, fontSize: 11 }}>⇧⌘S</span>
                 </div>
                 <div style={{ height: 1, backgroundColor: 'var(--border-subtle)', margin: '6px 4px' }}></div>
-                <div className="menu-item" onClick={async () => { if (activeTab) await window.api.export.pdf(markdownToHtml(activeTab.content), activeTab.title, activeTab.id); setActiveMenu(null); }} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', fontSize: 13, cursor: 'pointer', borderRadius: 6, opacity: activeTab ? 1 : 0.4 }}>
+                <div className="menu-item" onClick={async () => { if (activeTab) await window.api.export.pdf(markdownToHtml(activeTab.content, true), activeTab.title, activeTab.id); setActiveMenu(null); }} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', fontSize: 13, cursor: 'pointer', borderRadius: 6, opacity: activeTab ? 1 : 0.4 }}>
                   <FileDown size={14} /> 导出为 PDF
                 </div>
               </div>

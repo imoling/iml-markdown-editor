@@ -10,6 +10,7 @@ coverage/
 dist/
 dist-electron/
 release/
+post-to-wechat
 *.editorconfig
 
 # Logs

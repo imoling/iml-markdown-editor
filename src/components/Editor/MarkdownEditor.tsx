@@ -5,6 +5,7 @@ import { languages } from '@codemirror/language-data';
 import { EditorView } from '@codemirror/view';
 import { useAppStore } from '../../stores/appStore';
 import { markdownToHtml } from '../../utils/markdown';
+import mermaid from 'mermaid';
 import '../styles/editor.css';
 
 export const MarkdownEditor: React.FC = () => {
@@ -45,6 +46,37 @@ export const MarkdownEditor: React.FC = () => {
       }
     }
   }, [navigationRequest]);
+
+  // Handle Mermaid rendering in preview
+  useEffect(() => {
+    const renderMermaid = async () => {
+      try {
+        mermaid.initialize({
+          startOnLoad: false,
+          theme: 'neutral',
+          securityLevel: 'loose',
+          fontFamily: 'var(--font-body)',
+          // @ts-ignore
+          flowchart: { useMaxWidth: false, htmlLabels: true }
+        });
+        
+        // Find all mermaid divs in the preview and render them
+        const diagrams = document.querySelectorAll('.md-editor-preview-container .mermaid-diagram');
+        if (diagrams.length > 0) {
+          // Force a re-run of mermaid
+          await mermaid.run({
+            nodes: Array.from(diagrams) as HTMLElement[]
+          });
+        }
+      } catch (err) {
+        console.error('Mermaid rendering failed in MD preview:', err);
+      }
+    };
+
+    // Use a small delay to ensure DOM is updated
+    const timer = setTimeout(renderMermaid, 50);
+    return () => clearTimeout(timer);
+  }, [activeTab.content]);
 
   const domHandlers = EditorView.domEventHandlers({
     drop(event, view) {
@@ -91,16 +123,33 @@ export const MarkdownEditor: React.FC = () => {
     }
   });
 
-  const previewHtml = markdownToHtml(activeTab.content);
+  // Render markdown to HTML with static components for MD preview mode
+  const previewHtml = markdownToHtml(activeTab.content, true);
 
   return (
-    <div style={{ display: 'flex', flex: 1, height: '100%', width: '100%' }}>
+    <div 
+      style={{ 
+        display: 'flex', 
+        flex: 1, 
+        height: '100%', 
+        width: '100%',
+        overflow: 'hidden' /* Disable global horizontal scroll */
+      }}
+    >
       {/* Source Code Panel */}
-      <div style={{ flex: 1, borderRight: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <div style={{ 
+        flex: '1 1 50%', 
+        width: '50%',
+        maxWidth: '50%',
+        borderRight: '1px solid var(--border-subtle)', 
+        display: 'flex', 
+        flexDirection: 'column', 
+        height: '100%' 
+      }}>
         <div style={{ height: 44, minHeight: 44, borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', padding: '0 24px' }}>
-          <span style={{color: 'var(--text-secondary)', fontWeight: 600, fontSize: 13}}>Source Code</span>
+          <span style={{color: 'var(--text-secondary)', fontWeight: 600, fontSize: 13, letterSpacing: '0.02em'}}>SOURCE CODE</span>
         </div>
-        <div style={{ flex: 1, overflow: 'auto' }}>
+        <div style={{ flex: 1, overflow: 'auto' }} className="md-editor-source">
           <CodeMirror
             ref={editorRef}
             value={activeTab.content}
@@ -119,13 +168,25 @@ export const MarkdownEditor: React.FC = () => {
       </div>
       
       {/* Preview Panel */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: 'var(--bg-surface)' }}>
+      <div style={{ 
+        flex: '1 1 50%', 
+        width: '50%',
+        maxWidth: '50%',
+        display: 'flex', 
+        flexDirection: 'column', 
+        height: '100%', 
+        backgroundColor: 'var(--bg-surface)' 
+      }}>
         <div style={{ height: 44, minHeight: 44, borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', padding: '0 24px' }}>
-          <span style={{color: 'var(--text-secondary)', fontWeight: 600, fontSize: 13}}>Preview</span>
+          <span style={{color: 'var(--text-secondary)', fontWeight: 600, fontSize: 13, letterSpacing: '0.02em'}}>PREVIEW</span>
         </div>
-        <div style={{ flex: 1, overflow: 'auto', padding: '24px 40px' }}>
+        <div 
+          className="custom-scrollbar md-editor-preview-container"
+          style={{ flex: 1, overflowX: 'auto', overflowY: 'auto', padding: '24px 40px' }}
+        >
            <div 
-             className="tiptap-prosemirror" 
+             className="tiptap-prosemirror markdown-body" 
+             style={{ minWidth: 'min-content' }}
              dangerouslySetInnerHTML={{ __html: previewHtml }} 
            />
         </div>

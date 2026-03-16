@@ -50,6 +50,11 @@ export interface AppState {
     latestVersion: string | null;
     error: string | null;
   };
+  aiStatus: {
+    generating: boolean;
+    onStop: (() => void) | null;
+  };
+  zoom: number;
   
   // Actions
   toggleMode: () => void;
@@ -82,6 +87,8 @@ export interface AppState {
   saveActiveFile: (saveAs?: boolean) => Promise<boolean>;
   checkUpdates: () => Promise<void>;
   setUpdateStatus: (status: Partial<AppState['updateStatus']>) => void;
+  setAIStatus: (status: Partial<AppState['aiStatus']>) => void;
+  setZoom: (zoom: number) => void;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -103,6 +110,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   navigationRequest: null,
   tabToClose: null,
   updateStatus: { show: false, loading: false, latestVersion: null, error: null },
+  aiStatus: { generating: false, onStop: null },
+  zoom: 100,
   
   setTabToClose: (id: string | null) => set({ tabToClose: id }),
   
@@ -335,6 +344,12 @@ export const useAppStore = create<AppState>((set, get) => ({
   setUpdateStatus: (status: Partial<AppState['updateStatus']>) => set((state) => ({
     updateStatus: { ...state.updateStatus, ...status }
   })),
+
+  setAIStatus: (status: Partial<AppState['aiStatus']>) => set((state) => ({
+    aiStatus: { ...state.aiStatus, ...status }
+  })),
+  
+  setZoom: (zoom: number) => set({ zoom }),
 
   checkUpdates: async () => {
     set({ updateStatus: { show: true, loading: true, latestVersion: null, error: null } });

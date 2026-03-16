@@ -5,11 +5,20 @@ import { setupFileSystemIPC } from './ipc/fileSystem';
 
 const isDev = process.env.NODE_ENV === 'development';
 
-// Simple file-based store
-const userDataPath = app.getPath('userData');
-const configPath = path.join(userDataPath, 'ai-config.json');
+// Simple file-based store - defer initialization
+let _userDataPath: string;
+let _configPath: string;
+
+function getPaths() {
+  if (!_userDataPath) {
+    _userDataPath = app.getPath('userData');
+    _configPath = path.join(_userDataPath, 'ai-config.json');
+  }
+  return { userDataPath: _userDataPath, configPath: _configPath };
+}
 
 function getConfig() {
+  const { configPath } = getPaths();
   try {
     if (fs.existsSync(configPath)) {
       return JSON.parse(fs.readFileSync(configPath, 'utf8'));
@@ -21,6 +30,7 @@ function getConfig() {
 }
 
 function saveConfig(config: any) {
+  const { configPath } = getPaths();
   try {
     fs.writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf8');
     return { success: true };
@@ -30,12 +40,7 @@ function saveConfig(config: any) {
   }
 }
 
-// Set name early
-if (isDev) {
-  app.name = 'iML Markdown Editor';
-}
-app.setName('iML Markdown Editor');
-
+// Global state
 let mainWindow: BrowserWindow | null = null;
 let aboutWindow: BrowserWindow | null = null;
 let shortcutsWindow: BrowserWindow | null = null;
@@ -174,6 +179,12 @@ function createModelConfigWindow() {
 }
 
 app.whenReady().then(() => {
+  // Set name within ready state
+  if (isDev) {
+    app.name = 'iML Markdown Editor';
+  }
+  app.setName('iML Markdown Editor');
+
   setupFileSystemIPC();
   
   // AI Config IPC
