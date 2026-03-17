@@ -75,13 +75,40 @@
     "directories": {
       "output": "release"
     },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "assets/**/*"
+    ],
     "mac": {
       "icon": "assets/logo.icns",
       "category": "public.app-category.productivity"
     },
     "win": {
-      "icon": "assets/logo.png",
-      "target": "nsis"
+      "icon": "assets/logo.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": true,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "assets/logo.ico",
+      "uninstallerIcon": "assets/logo.ico",
+      "installerHeaderIcon": "assets/logo.ico",
+      "installerSidebar": "assets/installerSidebar.png",
+      "installerHeader": "assets/installerHeader.png",
+      "createDesktopShortcut": "always",
+      "shortcutName": "iML Markdown Editor",
+      "allowElevation": true,
+      "runAfterFinish": true
     }
   }
 }

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { X } from 'lucide-react';
 
 interface AIConfig {
   endpoint: string;
@@ -22,6 +23,7 @@ const ModelConfigModal: React.FC<ModelConfigModalProps> = ({ isOpen, onClose }) 
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
   const isStandalone = new URLSearchParams(window.location.search).get('window') === 'ai-config';
+  const isMac = window.api.app.platform === 'darwin';
 
   useEffect(() => {
     const loadConfig = async () => {
@@ -104,8 +106,33 @@ const ModelConfigModal: React.FC<ModelConfigModalProps> = ({ isOpen, onClose }) 
       {isStandalone && (
         <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 40, WebkitAppRegion: 'drag', zIndex: 10 } as any} />
       )}
-      <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
-        <header style={{ marginBottom: 32 }}>
+        <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
+          {(!isStandalone || !isMac) && (
+            <button 
+              onClick={onClose}
+              style={{
+                position: 'absolute',
+                top: 20,
+                right: 20,
+                background: 'none',
+                border: 'none',
+                color: 'var(--text-muted)',
+                cursor: 'pointer',
+                padding: 8,
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.2s',
+                zIndex: 100
+              }}
+              onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.05)'}
+              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+            >
+              <X size={20} />
+            </button>
+          )}
+          <header style={{ marginBottom: 32 }}>
           <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700, color: 'var(--text-main)' }}>模型配置</h1>
           <p style={{ margin: '8px 0 0 0', fontSize: 13, color: 'var(--text-muted)' }}>
             配置您的 AI 服务提供商，开启智能写作新纪元。
@@ -116,7 +143,7 @@ const ModelConfigModal: React.FC<ModelConfigModalProps> = ({ isOpen, onClose }) 
           <div style={{ display: 'flex', justifyContent: 'center', padding: 40, color: 'var(--text-muted)' }}>加载中...</div>
         ) : (
           <div style={{ flex: 1, overflowY: 'auto' }}>
-            <label style={labelStyle}>API Endpoint</label>
+            <label style={labelStyle}>BASE URL</label>
             <input 
               style={inputStyle} 
               value={config.endpoint} 
@@ -124,7 +151,7 @@ const ModelConfigModal: React.FC<ModelConfigModalProps> = ({ isOpen, onClose }) 
               placeholder="https://api.openai.com/v1"
             />
 
-            <label style={labelStyle}>API Key</label>
+            <label style={labelStyle}>API KEY</label>
             <input 
               style={inputStyle} 
               type="password"
@@ -133,7 +160,7 @@ const ModelConfigModal: React.FC<ModelConfigModalProps> = ({ isOpen, onClose }) 
               placeholder="sk-..."
             />
 
-            <label style={labelStyle}>Model Name</label>
+            <label style={labelStyle}>MODEL NAME</label>
             <input 
               style={inputStyle} 
               value={config.model} 
@@ -143,15 +170,15 @@ const ModelConfigModal: React.FC<ModelConfigModalProps> = ({ isOpen, onClose }) 
 
             <div style={{ 
               marginTop: 10, 
-              padding: '12px 16px', 
+              padding: '16px 20px', 
               borderRadius: 12, 
-              backgroundColor: 'rgba(99, 102, 241, 0.05)', 
-              border: '1px solid rgba(99, 102, 241, 0.1)',
-              fontSize: 12,
-              lineHeight: 1.5,
-              color: 'var(--text-secondary)'
+              backgroundColor: '#f5f7ff', 
+              border: '1px solid #ebf0ff',
+              fontSize: 13,
+              lineHeight: 1.6,
+              color: '#4b5563'
             }}>
-              💡 <b>注意</b>: 您的 API 密钥将仅加密保存在本地设备上，iML Studio 不会上传任何数据。
+              💡 <b>注意</b>：您的 API 密钥将仅加密保存在本地设备上，iML Studio 不会上传任何数据。
             </div>
           </div>
         )}
@@ -198,16 +225,19 @@ const ModelConfigModal: React.FC<ModelConfigModalProps> = ({ isOpen, onClose }) 
         {message && (
           <div style={{
             position: 'absolute',
-            bottom: 20,
-            left: 40,
-            right: 40,
-            padding: '10px 16px',
-            borderRadius: 10,
-            backgroundColor: message.type === 'success' ? '#059669' : '#dc2626',
+            top: 80,
+            left: 32,
+            right: 32,
+            padding: '12px 16px',
+            borderRadius: 12,
+            backgroundColor: message.type === 'success' ? '#10b981' : '#ef4444',
             color: '#fff',
-            fontSize: 13,
+            fontSize: 14,
+            fontWeight: 500,
             textAlign: 'center',
-            animation: 'fadeInUp 0.3s ease-out'
+            boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+            zIndex: 100,
+            animation: 'fadeInDown 0.3s ease-out'
           }}>
             {message.text}
           </div>

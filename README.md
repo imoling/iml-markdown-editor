@@ -27,6 +27,9 @@ iML Markdown Editor 的诞生初衷，是让 **Vibe Coding 的第一步变得前
 - **极简标签管理**: 隐藏原生滚动条，支持活动标签自动居中，标签宽度根据负载智能收缩。
 - **紧凑型交互弹窗**: 分页式快捷键详情（Shortcuts Modal），消除滚动条，按功能逻辑动态分布。
 - **响应式图形预览**: 集成 Mermaid 与 SVG 实时渲染，支持 **拖拽式自由拉伸缩放** 与等比放大呈现。
+- **全平台原生体验 (Cross-Platform)**: 
+    - **macOS**: 完美适配 Apple Silicon (arm64)，具备原生交通灯控件与毛玻璃效果。
+    - **Windows**: 提供深度定制的安装向导，支持 x64 与 arm64 双架构，并新增了原生感知的窗口控制按钮。
 
 ### ⌨️ 专业级编辑能力
 - **双模态无缝切换**：
@@ -68,8 +71,11 @@ npm run dev
 
 ### 生产构建
 ```bash
-# 生成 macOS 架构安装包
+# 生成 macOS (arm64) 安装包
 npm run build:mac
+
+# 生成 Windows (x64/arm64) 安装包
+npm run build:win
 ```
 
 ## 🛠 技术架构

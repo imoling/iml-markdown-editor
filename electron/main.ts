@@ -62,7 +62,7 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
     },
-    icon: path.join(process.cwd(), 'assets/logo.png'),
+    icon: path.join(__dirname, '../assets/logo.png'),
   });
 
   if (isDev) {
@@ -110,7 +110,7 @@ function createAboutWindow() {
     vibrancy: 'window', visualEffectState: 'active',
     backgroundColor: '#00000000',
     webPreferences: { preload: path.join(__dirname, 'preload.js') },
-    icon: path.join(process.cwd(), 'assets/logo.png'),
+    icon: path.join(__dirname, '../assets/logo.png'),
   });
 
   if (isDev) {
@@ -138,7 +138,7 @@ function createShortcutsWindow() {
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden', vibrancy: 'window',
     visualEffectState: 'active', backgroundColor: '#00000000',
     webPreferences: { preload: path.join(__dirname, 'preload.js') },
-    icon: path.join(process.cwd(), 'assets/logo.png'),
+    icon: path.join(__dirname, '../assets/logo.png'),
   });
 
   if (isDev) {
@@ -166,7 +166,7 @@ function createModelConfigWindow() {
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden', vibrancy: 'window',
     visualEffectState: 'active', backgroundColor: '#00000000',
     webPreferences: { preload: path.join(__dirname, 'preload.js') },
-    icon: path.join(process.cwd(), 'assets/logo.png'),
+    icon: path.join(__dirname, '../assets/logo.png'),
   });
 
   if (isDev) {

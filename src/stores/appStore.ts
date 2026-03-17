@@ -86,6 +86,7 @@ export interface AppState {
   setTabToClose: (id: string | null) => void;
   saveActiveFile: (saveAs?: boolean) => Promise<boolean>;
   checkUpdates: () => Promise<void>;
+  autoCheckUpdates: () => Promise<void>;
   setUpdateStatus: (status: Partial<AppState['updateStatus']>) => void;
   setAIStatus: (status: Partial<AppState['aiStatus']>) => void;
   setZoom: (zoom: number) => void;
@@ -377,6 +378,28 @@ export const useAppStore = create<AppState>((set, get) => ({
           error: err.message || '检查更新失败'
         }
       });
+    }
+  },
+
+  autoCheckUpdates: async () => {
+    // Only set loading if we want to show it, but for autoCheck we do it silently
+    try {
+      const result = await window.api.app.checkUpdates();
+      if (result.success && result.latestVersion) {
+        const currentVersion = window.api.appVersion || '1.6.0';
+        if (result.latestVersion !== currentVersion) {
+          set({
+            updateStatus: {
+              show: true,
+              loading: false,
+              latestVersion: result.latestVersion,
+              error: null
+            }
+          });
+        }
+      }
+    } catch (err) {
+      console.error('Auto update check failed:', err);
     }
   }
 }));

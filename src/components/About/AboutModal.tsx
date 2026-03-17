@@ -1,4 +1,5 @@
 import React from 'react';
+import { X } from 'lucide-react';
 import logo from '../../assets/logo.png';
 
 interface AboutModalProps {
@@ -61,6 +62,8 @@ const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
       window.open(url, '_blank');
     }
   };
+
+  const isMac = window.api.app.platform === 'darwin';
 
   return (
     <div style={containerStyle} onClick={onClose}>
@@ -159,17 +162,29 @@ const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
           让书写回归纯粹。
         </p>
 
-        {!isStandalone && (
+        {(!isStandalone || !isMac) && (
           <button 
             onClick={onClose}
             style={{
               position: 'absolute',
               top: 20,
               right: 20,
-              background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4
+              background: 'none',
+              border: 'none',
+              color: 'var(--text-muted)',
+              cursor: 'pointer',
+              padding: 8,
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s',
+              zIndex: 100
             }}
+            onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.05)'}
+            onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
           >
-            关闭
+            <X size={20} />
           </button>
         )}
       </div>

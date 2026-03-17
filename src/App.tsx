@@ -29,6 +29,7 @@ const App: React.FC = () => {
     setTabToClose,
     closeTab,
     setActiveTab,
+    autoCheckUpdates,
   } = useAppStore();
 
   const activeTab = tabs.find(t => t.id === activeTabId);
@@ -123,6 +124,15 @@ const App: React.FC = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [toggleMode, openFile, openDirectory, saveActiveFile, toggleSidebar, toggleToolbar, toggleStatusBar, createNewFile, toggleFind, toggleReplace]);
+
+  // Handle auto-update check on mount
+  useEffect(() => {
+    // Only auto-check after a short delay to not block initial rendering and show it as a premium background task
+    const timer = setTimeout(() => {
+      autoCheckUpdates();
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [autoCheckUpdates]);
 
   return (
     <div className="app-layout" id="app">

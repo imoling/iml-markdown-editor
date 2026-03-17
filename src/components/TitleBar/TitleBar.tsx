@@ -41,6 +41,9 @@ export const TitleBar: React.FC = () => {
     checkUpdates,
     setUpdateStatus
   } = useAppStore();
+  
+  const currentVersion = window.api.appVersion || '1.6.0';
+  const hasUpdate = updateStatus.latestVersion && updateStatus.latestVersion !== currentVersion;
 
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   
@@ -196,6 +199,7 @@ export const TitleBar: React.FC = () => {
             } as React.CSSProperties}
           >
             帮助
+            {hasUpdate && <div className="notification-dot" />}
           </button>
           {activeMenu === 'help' && (
             <>
@@ -208,6 +212,7 @@ export const TitleBar: React.FC = () => {
                 </div>
                 <div className="menu-item" onClick={() => { setActiveMenu(null); checkUpdates(); }} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', fontSize: 13, cursor: 'pointer', borderRadius: 6 }}>
                   <RotateCw size={14} /> 检查更新
+                  {hasUpdate && <div className="notification-dot" />}
                 </div>
                 <div style={{ height: 1, backgroundColor: 'var(--border-subtle)', margin: '6px 4px' }}></div>
                 <div className="menu-item" onClick={() => { setActiveMenu(null); window.api.events.send('open-about'); }} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', fontSize: 13, cursor: 'pointer', borderRadius: 6 }}>
@@ -249,7 +254,32 @@ export const TitleBar: React.FC = () => {
         })}
       </div>
 
-      <div style={{ width: 40, flexShrink: 0 }}></div>
+      {/* Windows 窗口控制按钮 */}
+      {!isMac && (
+        <div className="window-controls">
+          <button 
+            className="window-control-btn minimize" 
+            onClick={() => window.api.app.minimize()}
+            title="最小化"
+          >
+            <Minus size={14} />
+          </button>
+          <button 
+            className="window-control-btn maximize" 
+            onClick={() => window.api.app.maximize()}
+            title="最大化/还原"
+          >
+            <Square size={12} />
+          </button>
+          <button 
+            className="window-control-btn close" 
+            onClick={() => window.api.app.close()}
+            title="关闭"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
     </header>
   );
 };

@@ -161,7 +161,7 @@ const ShortcutsModal: React.FC<ShortcutsModalProps> = ({ isOpen, onClose }) => {
             </div>
             <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: 'var(--text-main)' }}>快捷键说明</h2>
           </div>
-          {!isStandalone && (
+          {(!isStandalone || !isMac) && (
             <button 
               onClick={onClose}
               style={{
