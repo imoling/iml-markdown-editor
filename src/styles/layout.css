@@ -80,7 +80,7 @@
 }
 
 .titlebar-tab:hover:not(.active) {
-  background-color: rgba(0, 0, 0, 0.05);
+  background-color: var(--bg-hover-editor);
 }
 
 .tab-title {
@@ -159,7 +159,7 @@
 }
 
 .tree-item:hover {
-  background-color: rgba(0, 0, 0, 0.04);
+  background-color: var(--bg-hover-editor);
 }
 
 .tree-item.active {
@@ -220,7 +220,7 @@
 }
 
 .toolbar-btn:hover {
-  background: rgba(0, 0, 0, 0.05);
+  background: var(--bg-hover-editor);
   color: var(--text-primary);
 }
 
@@ -244,7 +244,7 @@
 }
 
 .toolbar-icon-btn:hover {
-  background: rgba(0, 0, 0, 0.05);
+  background: var(--bg-hover-editor);
   color: var(--text-primary);
 }
 
@@ -265,7 +265,7 @@
 }
 
 .menu-trigger:hover {
-  background-color: rgba(0, 0, 0, 0.05) !important;
+  background-color: var(--bg-hover-editor) !important;
   color: var(--text-primary) !important;
 }
 
@@ -291,7 +291,7 @@
 }
 
 .window-control-btn:hover {
-  background-color: rgba(0, 0, 0, 0.05);
+  background-color: var(--bg-hover-editor);
   color: var(--text-primary);
 }
 

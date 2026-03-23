@@ -3,6 +3,9 @@ import TurndownService from 'turndown';
 import mermaid from 'mermaid';
 // @ts-ignore
 import { tables } from 'turndown-plugin-gfm';
+import { all, createLowlight } from 'lowlight';
+
+const localLowlight = createLowlight(all);
 
 export const turndownService = new TurndownService({
   headingStyle: 'atx',
@@ -110,6 +113,23 @@ turndownService.addRule('math', {
   }
 });
 
+// Custom rule for task items to ensure they convert back to Markdown checkboxes
+turndownService.addRule('taskList', {
+  filter: (node) => {
+    return node.nodeName === 'LI' && (node as HTMLElement).getAttribute('data-type') === 'taskItem';
+  },
+  replacement: (content, node) => {
+    const el = node as HTMLElement;
+    const isChecked = el.getAttribute('data-checked') === 'true';
+    const checkbox = isChecked ? '[x] ' : '[ ] ';
+    
+    // Tiptap puts content in a div inside the li, which can cause extra newlines. 
+    // We trim to get the clean text.
+    const cleanContent = content.trim().replace(/\n/g, ' '); 
+    return '\n- ' + checkbox + cleanContent + '\n';
+  }
+});
+
 export const markdownToHtml = (markdownContent: string, inlineActual: boolean = false): string => {
   if (!markdownContent) return '';
 
@@ -158,6 +178,46 @@ export const markdownToHtml = (markdownContent: string, inlineActual: boolean = 
   });
 
   // 3. Parse with marked
+  // Helper to convert lowlight HAST tree to HTML string
+  const hastToHtml = (nodes: any[]): string => {
+    return nodes.map(node => {
+      if (node.type === 'text') return node.value;
+      if (node.type === 'element') {
+        const attrs = node.properties ? Object.entries(node.properties).map(([k, v]) => `${k}="${v}"`).join(' ') : '';
+        return `<span class="${node.properties?.className?.join(' ') || ''}" ${attrs}>${hastToHtml(node.children)}</span>`;
+      }
+      return '';
+    }).join('');
+  };
+
+  const renderer = new marked.Renderer();
+  renderer.code = ({ text, lang }: { text: string, lang?: string }) => {
+    const language = lang || 'plaintext';
+    let highlighted = text;
+    
+    try {
+      if (language !== 'plaintext' && localLowlight.registered(language)) {
+        const tree = localLowlight.highlight(language, text);
+        highlighted = hastToHtml(tree.children);
+      }
+    } catch (e) {
+      console.warn('Highlighting failed in preview:', e);
+    }
+    
+    return `<pre><code class="hljs language-${language}">${highlighted}</code></pre>`;
+  };
+
+  renderer.codespan = ({ text }: { text: string }) => {
+    return `<code class="inline-code">${text}</code>`;
+  };
+
+  marked.setOptions({
+    // @ts-ignore
+    renderer: renderer,
+    gfm: true,
+    breaks: true,
+  });
+
   let htmlResult = marked.parse(processed, { async: false }) as string;
   
   // 4. Restore Mermaid blocks
@@ -180,7 +240,56 @@ export const markdownToHtml = (markdownContent: string, inlineActual: boolean = 
     }
   });
 
-  return htmlResult;
+  // 6. Tiptap TaskList compatibility: Convert GFM checkboxes to data-type structures
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(htmlResult, 'text/html');
+  
+  doc.querySelectorAll('li').forEach(li => {
+    // 1. Try finding an input checkbox (GFM standard)
+    const checkbox = li.querySelector('input[type="checkbox"]') as HTMLInputElement;
+    
+    // 2. Try finding [ ] or [x] text pattern (if marked failed to parse it as input)
+    const textContent = li.textContent?.trim() || '';
+    const hasTextCheck = textContent.startsWith('[ ]') || textContent.startsWith('[x]') || textContent.startsWith('[X]');
+
+    if (checkbox || hasTextCheck) {
+      // Find the parent UL
+      let parent = li.parentElement;
+      while (parent && parent.tagName !== 'UL' && parent.tagName !== 'OL') {
+        parent = parent.parentElement;
+      }
+      
+      if (parent && parent.tagName === 'UL') {
+        parent.setAttribute('data-type', 'taskList');
+        parent.style.listStyle = 'none';
+        parent.style.paddingLeft = '0';
+      }
+      
+      li.setAttribute('data-type', 'taskItem');
+      
+      let isChecked = false;
+      if (checkbox) {
+        isChecked = checkbox.checked;
+        checkbox.remove();
+      } else {
+        isChecked = textContent.startsWith('[x]') || textContent.startsWith('[X]');
+        // Use a more precise replacement on the innerHTML to preserve nested tags like <strong>
+        li.innerHTML = li.innerHTML.replace(/^(\s*<p>\s*)?\[\s*[xX ]\s*\]\s*/, '$1');
+      }
+      
+      // Tiptap's TaskItem structure: content should be wrapped in a div if not already structured
+      // But avoid double-wrapping
+      if (!li.querySelector('div[data-type="taskItem-content"]') && !li.querySelector('div')) {
+        const div = doc.createElement('div');
+        while (li.firstChild) div.appendChild(li.firstChild);
+        li.appendChild(div);
+      }
+      
+      li.setAttribute('data-checked', isChecked ? 'true' : 'false');
+    }
+  });
+
+  return doc.body.innerHTML;
 };
 
 /**

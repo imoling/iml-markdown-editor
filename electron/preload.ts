@@ -57,6 +57,8 @@ contextBridge.exposeInMainWorld('api', {
     minimize: () => ipcRenderer.send('window-minimize'),
     maximize: () => ipcRenderer.send('window-maximize'),
     close: () => ipcRenderer.send('window-close'),
+    getSettings: () => ipcRenderer.invoke('app:getSettings'),
+    saveSettings: (settings: any) => ipcRenderer.invoke('app:saveSettings', settings),
   },
   appVersion: process.env.npm_package_version || '1.0.0'
 });

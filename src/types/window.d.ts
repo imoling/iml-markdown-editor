@@ -36,6 +36,8 @@ declare global {
         minimize: () => void;
         maximize: () => void;
         close: () => void;
+        getSettings: () => Promise<any>;
+        saveSettings: (settings: any) => Promise<{ success: boolean; error?: string }>;
       };
       appVersion: string;
     };

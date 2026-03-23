@@ -261,7 +261,10 @@ function renumberHeadings(md: string): string {
 
 export const TiptapEditor: React.FC = () => {
   const { 
-    activeTabId, tabs, updateTabContent, openTab, navigationRequest, setAIStatus, zoom 
+    activeTabId, tabs, updateTabContent, openTab, navigationRequest, setAIStatus, zoom,
+    sidebarTab, 
+    setSidebarTab,
+    outline,
   } = useAppStore();
   const activeTab = tabs.find(t => t.id === activeTabId);
   const [prompt, setPrompt] = React.useState<PromptDialogProps | null>(null);
@@ -570,9 +573,16 @@ export const TiptapEditor: React.FC = () => {
 3. 不要包含任何解释性文字或开场白。`;
     }
 
-    const userMessage = useCtx && (textBefore || textAfter)
+    const outlineText = outline.length > 0
+      ? `【全文大纲结构】
+${outline.map(h => `${'  '.repeat(h.level - 1)}- ${h.text}`).join('\n')}
+`
+      : '';
+
+    const contextInstruction = useCtx && (textBefore || textAfter)
       ? `以下是我文档中光标所在位置的上下文（Markdown 格式）：
 
+${outlineText}
 【前文】
 ${textBefore || '（文档开头，无前文）'}
 
@@ -588,9 +598,12 @@ ${textAfter || '（文档末尾，无后文）'}
 2. 严格延续前文的编号序号（如果前文最后是 "2."，新内容应从 "3." 开始）。
 3. 严格保持前文的 Markdown 格式风格（标题层级、列表样式、缩进）。
 4. 内容需与前后文主题衔接，语气和深度保持一致。
+5. 参考【全文大纲结构】以确保生成的段落逻辑正确融入整体架构。
 
 请在插入位置完成以下任务：${prompt}`
       : prompt;
+
+    const userMessage = contextInstruction;
 
     console.log('[AIPalette] useCtx:', useCtx, '| before length:', textBefore.length, '| after length:', textAfter.length);
     if (useCtx) {
@@ -777,6 +790,36 @@ ${textAfter || '（文档末尾，无后文）'}
     setShowAIPalette(true);
   }, [editor]);
 
+  const toggleSmartCodeBlock = useCallback(() => {
+    if (!editor) return;
+    const { from, to } = editor.state.selection;
+    const isCodeBlock = editor.isActive('codeBlock');
+    
+    if (isCodeBlock) {
+      editor.chain().focus().toggleCodeBlock().run();
+      return;
+    }
+
+    // Not a code block yet. Let's try to join if multi-line is selected.
+    // Use textBetween to get the actual text including internal newlines between blocks
+    const text = editor.state.doc.textBetween(from, to, '\n');
+    
+    if (text.includes('\n')) {
+      // If multi-line, replace the entire selection with one single code block
+      editor.chain()
+        .focus()
+        .deleteSelection()
+        .insertContent({
+          type: 'codeBlock',
+          content: [{ type: 'text', text }]
+        })
+        .run();
+    } else {
+      // Simple toggle for single line or word
+      editor.chain().focus().toggleCodeBlock().run();
+    }
+  }, [editor]);
+
   useEffect(() => {
     editorRef.current = editor;
   }, [editor]);
@@ -872,6 +915,7 @@ ${textAfter || '（文档末尾，无后文）'}
         <div className="toolbar-divider"></div>
         <div style={{ display: 'flex', gap: 2 }}>
           <button type="button" className={`toolbar-icon-btn ${editor.isActive('code') ? 'active' : ''}`} onClick={() => editor.chain().focus().toggleCode().run()} title="行内代码"><Code size={16} /></button>
+          <button type="button" className={`toolbar-icon-btn ${editor.isActive('codeBlock') ? 'active' : ''}`} onClick={() => toggleSmartCodeBlock()} title="代码块"><FileCode size={16} /></button>
           <button type="button" className={`toolbar-icon-btn ${editor.isActive('blockquote') ? 'active' : ''}`} onClick={() => editor.chain().focus().toggleBlockquote().run()} title="引用"><Quote size={16} /></button>
           <button type="button" className={`toolbar-icon-btn`} onClick={() => editor.chain().focus().insertContent('$x = y^2$').run()} title="数学公式"><Sigma size={16} /></button>
           <button type="button" className={`toolbar-icon-btn ${editor.isActive('table') ? 'active' : ''}`} onClick={() => {
@@ -970,6 +1014,11 @@ ${textAfter || '（文档末尾，无后文）'}
           {editor && (
             <BubbleMenu 
               editor={editor} 
+              tippyOptions={{ 
+                interactive: true, 
+                hideOnClick: false,
+                duration: [150, 150]
+              }}
               shouldShow={({ state, editor }) => {
                 if (state.selection.empty) return false;
                 // Don't show for custom block nodes
@@ -999,12 +1048,54 @@ ${textAfter || '（文档末尾，无后文）'}
                   <button onClick={() => editor.chain().focus().toggleItalic().run()} className={`toolbar-icon-btn ${editor.isActive('italic') ? 'active' : ''}`} title="倾斜"><Italic size={16} /></button>
                   <button onClick={() => editor.chain().focus().toggleUnderline().run()} className={`toolbar-icon-btn ${editor.isActive('underline') ? 'active' : ''}`} title="下划线"><UnderlineIcon size={16} /></button>
                   <button onClick={() => editor.chain().focus().toggleCode().run()} className={`toolbar-icon-btn ${editor.isActive('code') ? 'active' : ''}`} title="行内代码"><Code size={16} /></button>
+                  <button onClick={() => toggleSmartCodeBlock()} className={`toolbar-icon-btn ${editor.isActive('codeBlock') ? 'active' : ''}`} title="代码块"><FileCode size={16} /></button>
                   <button onClick={() => editor.chain().focus().toggleBlockquote().run()} className={`toolbar-icon-btn ${editor.isActive('blockquote') ? 'active' : ''}`} title="引用"><Quote size={16} /></button>
                   <div className="toolbar-divider"></div>
                   <button onClick={() => handleAIAction('polish')} className="toolbar-icon-btn" title="AI 润色" disabled={aiGenerating}><Wand2 size={16} color="var(--color-accent-indigo)" /></button>
                   <button onClick={() => handleAIAction('summarize')} className="toolbar-icon-btn" title="AI 总结" disabled={aiGenerating}><FileText size={16} color="var(--color-accent-green)" /></button>
                   <button onClick={() => handleAIAction('expand')} className="toolbar-icon-btn" title="AI 扩写" disabled={aiGenerating}><Sparkles size={16} color="var(--color-accent-orange)" /></button>
                 </div>
+                {editor.isActive('codeBlock') && (
+                  <>
+                    <div style={{ height: 1, backgroundColor: 'var(--border-subtle)', margin: '4px 0' }}></div>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '0 4px' }}>
+                      <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>语言：</span>
+                      <select 
+                        value={editor.getAttributes('codeBlock').language || ''}
+                        onMouseDown={e => e.stopPropagation()}
+                        onClick={e => e.stopPropagation()}
+                        onChange={e => {
+                          e.stopPropagation();
+                          editor.chain().focus().updateAttributes('codeBlock', { language: e.target.value }).run();
+                        }}
+                        style={{
+                          background: 'var(--bg-surface)',
+                          color: 'var(--text-primary)',
+                          border: '1px solid var(--border-subtle)',
+                          borderRadius: '6px',
+                          padding: '3px 8px',
+                          fontSize: '11px',
+                          outline: 'none',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <option value="">自动检测</option>
+                        <option value="javascript">JavaScript</option>
+                        <option value="typescript">TypeScript</option>
+                        <option value="python">Python</option>
+                        <option value="java">Java</option>
+                        <option value="html">HTML</option>
+                        <option value="css">CSS</option>
+                        <option value="json">JSON</option>
+                        <option value="markdown">Markdown</option>
+                        <option value="bash">Bash</option>
+                        <option value="sql">SQL</option>
+                        <option value="cpp">C++</option>
+                        <option value="rust">Rust</option>
+                      </select>
+                    </div>
+                  </>
+                )}
                 {editor.isActive('table') && (
                   <>
                     <div style={{ height: 1, backgroundColor: 'var(--border-subtle)', margin: '4px 0' }}></div>

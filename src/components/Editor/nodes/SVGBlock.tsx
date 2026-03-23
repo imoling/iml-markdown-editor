@@ -162,6 +162,33 @@ export const SVGBlock: React.FC<NodeViewProps> = ({ node, updateAttributes, sele
     window.addEventListener('mouseup', onMouseUp);
   }, [updateAttributes]);
 
+  const handlePreviewClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    const target = e.target as HTMLElement;
+    
+    // 尝试从点击的元素或其父级获取文本/ID
+    const labelText = target.textContent?.trim() || target.getAttribute('id') || '';
+    if (!labelText || labelText.length < 2) return;
+
+    // 在代码中搜索该文本
+    const index = code.indexOf(labelText);
+    if (index !== -1) {
+      setViewMode('code');
+      setIsEditing(true);
+      
+      requestAnimationFrame(() => {
+        if (editorRef.current?.view) {
+          const view = editorRef.current.view;
+          view.focus();
+          view.dispatch({
+            selection: { anchor: index, head: index + labelText.length },
+            scrollIntoView: true
+          });
+        }
+      });
+    }
+  }, [code]);
+
   return (
     <NodeViewWrapper className="svg-block-wrapper">
       <div 
@@ -286,9 +313,11 @@ export const SVGBlock: React.FC<NodeViewProps> = ({ node, updateAttributes, sele
                 }}
               >
                 {code.trim() && !error ? (
-                  <div 
+                <div 
                   className="svg-render-wrapper"
-                  style={{ width: '100%', height: '100%' }}
+                  onDoubleClick={handlePreviewClick}
+                  style={{ width: '100%', height: '100%', cursor: 'pointer' }}
+                  title="双击元素以定位源码"
                   dangerouslySetInnerHTML={{ __html: code }} 
                 />
                 ) : (

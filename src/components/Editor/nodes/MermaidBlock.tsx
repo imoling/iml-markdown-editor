@@ -258,6 +258,37 @@ export const MermaidBlock: React.FC<NodeViewProps> = ({ node, updateAttributes, 
     window.addEventListener('mouseup', onMouseUp);
   }, [updateAttributes]);
 
+  const handlePreviewClick = useCallback((e: React.MouseEvent) => {
+    // 查找最近的 mermaid 节点
+    const target = e.target as HTMLElement;
+    const nodeElement = target.closest('.node');
+    if (!nodeElement) return;
+
+    // 获取节点文本
+    const textElement = nodeElement.querySelector('.label') || nodeElement.querySelector('text') || nodeElement;
+    const labelText = textElement.textContent?.trim();
+    if (!labelText) return;
+
+    // 在代码中搜索该文本
+    const index = code.indexOf(labelText);
+    if (index !== -1) {
+      // 切换到代码模式并选中
+      setViewMode('code');
+      setIsEditing(true);
+      
+      requestAnimationFrame(() => {
+        if (editorRef.current?.view) {
+          const view = editorRef.current.view;
+          view.focus();
+          view.dispatch({
+            selection: { anchor: index, head: index + labelText.length },
+            scrollIntoView: true
+          });
+        }
+      });
+    }
+  }, [code]);
+
   return (
     <NodeViewWrapper className="mermaid-block-wrapper">
       <div 
@@ -388,14 +419,17 @@ export const MermaidBlock: React.FC<NodeViewProps> = ({ node, updateAttributes, 
                 }}
               >
                 <div 
+                  onDoubleClick={handlePreviewClick}
                   style={{ 
                     margin: 'auto',
                     display: 'flex',
                     justifyContent: 'center',
                     alignItems: 'center',
                     width: '100%',
-                    height: '100%'
+                    height: '100%',
+                    cursor: 'pointer'
                   }}
+                  title="双击节点以定位源码"
                   dangerouslySetInnerHTML={{ __html: svg || '<div style="color:var(--text-muted);font-size:12px;opacity:0.6">等待输入内容...</div>' }}
                 />
               </div>

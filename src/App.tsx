@@ -6,6 +6,7 @@ import { StatusBar } from './components/StatusBar/StatusBar';
 import { useAppStore } from './stores/appStore';
 import { extractHeadings } from './utils/outline';
 import { ConfirmDialog } from './components/ConfirmDialog';
+import { SettingsModal } from './components/Settings/SettingsModal';
 import './styles/layout.css';
 
 const App: React.FC = () => {
@@ -30,6 +31,11 @@ const App: React.FC = () => {
     closeTab,
     setActiveTab,
     autoCheckUpdates,
+    theme,
+    setTheme,
+    loadSettings,
+    appearanceMode,
+    applyAppearance,
   } = useAppStore();
 
   const activeTab = tabs.find(t => t.id === activeTabId);
@@ -101,9 +107,9 @@ const App: React.FC = () => {
         openDirectory();
         return;
       }
-
-      // Cmd+O to open file
-      if (modKey && !e.shiftKey && e.key.toLowerCase() === 'o') {
+      
+      // Cmd+O to open file (or Ctrl+O on Mac if user specifically expects it)
+      if ((modKey || e.ctrlKey) && !e.shiftKey && e.key.toLowerCase() === 'o') {
         e.preventDefault();
         openFile();
       }
@@ -134,6 +140,22 @@ const App: React.FC = () => {
     return () => clearTimeout(timer);
   }, [autoCheckUpdates]);
 
+  // Apply theme on mount and load settings
+  useEffect(() => {
+    setTheme(theme.id);
+    loadSettings();
+  }, []);
+
+  // Listen for system theme changes
+  useEffect(() => {
+    if (appearanceMode === 'system') {
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      const handleChange = () => applyAppearance('system');
+      mediaQuery.addEventListener('change', handleChange);
+      return () => mediaQuery.removeEventListener('change', handleChange);
+    }
+  }, [appearanceMode, applyAppearance]);
+
   return (
     <div className="app-layout" id="app">
       <TitleBar />
@@ -162,6 +184,9 @@ const App: React.FC = () => {
       {useAppStore.getState().updateStatus.show && (
         <UpdateModal />
       )}
+
+      {/* 全局设置弹窗 */}
+      <SettingsModal />
     </div>
   );
 };

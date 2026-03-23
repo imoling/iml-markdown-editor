@@ -12,7 +12,8 @@ import {
   Layout, 
   RotateCw,
   Minus,
-  Square
+  Square,
+  Settings
 } from 'lucide-react';
 import { markdownToHtml, markdownToStaticHtml } from '../../utils/markdown';
 
@@ -39,7 +40,8 @@ export const TitleBar: React.FC = () => {
     setTabToClose,
     updateStatus,
     checkUpdates,
-    setUpdateStatus
+    setUpdateStatus,
+    setSettingsModalOpen
   } = useAppStore();
   
   const currentVersion = window.api.appVersion || '1.6.0';
@@ -213,6 +215,9 @@ export const TitleBar: React.FC = () => {
                 <div className="menu-item" onClick={() => { setActiveMenu(null); checkUpdates(); }} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', fontSize: 13, cursor: 'pointer', borderRadius: 6 }}>
                   <RotateCw size={14} /> 检查更新
                   {hasUpdate && <div className="notification-dot" />}
+                </div>
+                <div className="menu-item" onClick={() => { setActiveMenu(null); setSettingsModalOpen(true); }} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', fontSize: 13, cursor: 'pointer', borderRadius: 6 }}>
+                  <Settings size={14} /> 设置
                 </div>
                 <div style={{ height: 1, backgroundColor: 'var(--border-subtle)', margin: '6px 4px' }}></div>
                 <div className="menu-item" onClick={() => { setActiveMenu(null); window.api.events.send('open-about'); }} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', fontSize: 13, cursor: 'pointer', borderRadius: 6 }}>

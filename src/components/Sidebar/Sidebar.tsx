@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useAppStore, FileNode, HeadingNode } from '../../stores/appStore';
+import { useAppStore, FileNode, HeadingNode, THEME_PRESETS } from '../../stores/appStore';
 import { Folder, Search, ChevronDown, ChevronRight, FolderOpen, FileText, FileCode, FolderClosed, List, RotateCw, Sparkles } from 'lucide-react';
 import { AIWritingPanel } from '../AI/AIWritingPanel';
 
@@ -97,6 +97,94 @@ const OutlineItem: React.FC<{ node: HeadingNode }> = ({ node }) => {
   );
 };
 
+const ThemeSwitcher: React.FC = () => {
+  const { theme, setTheme } = useAppStore();
+  const [showPicker, setShowPicker] = useState(false);
+
+  return (
+    <div className="sidebar-footer" style={{ 
+      padding: '12px', 
+      borderTop: '1px solid var(--border-subtle)',
+      position: 'relative',
+      userSelect: 'none',
+      backgroundColor: 'var(--bg-page)'
+    }}>
+      <div 
+        onClick={() => setShowPicker(!showPicker)}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          padding: '8px 12px',
+          borderRadius: '10px',
+          cursor: 'pointer',
+          backgroundColor: 'var(--bg-surface)',
+          transition: 'all 0.2s',
+          border: '1px solid var(--border-subtle)',
+        }}
+        className="hover-bg"
+      >
+        <div style={{
+          width: 14,
+          height: 14,
+          borderRadius: '50%',
+          background: theme.gradient,
+          boxShadow: `0 0 8px ${theme.shadow}`
+        }} />
+        <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', flex: 1 }}>{theme.name}</span>
+      </div>
+
+      {showPicker && (
+        <>
+          <div 
+            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 90 }} 
+            onClick={() => setShowPicker(false)}
+          />
+          <div style={{
+            position: 'absolute',
+            bottom: 'calc(100% + 8px)',
+            left: '12px',
+            right: '12px',
+            backgroundColor: 'var(--bg-elevated)',
+            borderRadius: '16px',
+            padding: '8px',
+            boxShadow: '0 -10px 30px rgba(0,0,0,0.15), 0 10px 20px rgba(0,0,0,0.05)',
+            border: '1px solid var(--border-subtle)',
+            zIndex: 100,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '4px',
+            animation: 'fadeIn 0.2s ease-out'
+          }}>
+            <div style={{ padding: '6px 12px 8px 12px', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>主题实验室</div>
+            {THEME_PRESETS.map(p => (
+              <div 
+                key={p.id}
+                onClick={() => { setTheme(p.id); setShowPicker(false); }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  padding: '8px 12px',
+                  borderRadius: '10px',
+                  cursor: 'pointer',
+                  backgroundColor: theme.id === p.id ? 'var(--bg-surface)' : 'transparent',
+                  transition: 'all 0.2s',
+                  border: theme.id === p.id ? '1px solid var(--border-subtle)' : '1px solid transparent'
+                }}
+                className="hover-bg"
+              >
+                <div style={{ width: 14, height: 14, borderRadius: '50%', background: p.gradient }} />
+                <span style={{ fontSize: 13, color: theme.id === p.id ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: theme.id === p.id ? 600 : 400 }}>{p.name}</span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
 export const Sidebar: React.FC = () => {
   const { fileTree, workspaceName, sidebarVisible, outline, sidebarTab, setSidebarTab, refreshWorkspace } = useAppStore();
 
@@ -178,6 +266,7 @@ export const Sidebar: React.FC = () => {
           </>
         )}
       </div>
+      <ThemeSwitcher />
     </aside>
   );
 };

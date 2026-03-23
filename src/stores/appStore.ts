@@ -22,6 +22,58 @@ export interface HeadingNode {
   id: string;
 }
 
+export interface ThemeConfig {
+  id: string;
+  name: string;
+  primary: string;
+  secondary: string;
+  gradient: string;
+  shadow: string;
+}
+
+export const THEME_PRESETS: ThemeConfig[] = [
+  {
+    id: 'indigo',
+    name: '经典靛紫',
+    primary: '#6366F1',
+    secondary: '#8B5CF6',
+    gradient: 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)',
+    shadow: 'rgba(99, 102, 241, 0.2)',
+  },
+  {
+    id: 'ocean',
+    name: '深海极客',
+    primary: '#0EA5E9',
+    secondary: '#6366F1',
+    gradient: 'linear-gradient(135deg, #0EA5E9 0%, #6366F1 100%)',
+    shadow: 'rgba(14, 165, 233, 0.2)',
+  },
+  {
+    id: 'mint',
+    name: '清新薄荷',
+    primary: '#10B981',
+    secondary: '#3B82F6',
+    gradient: 'linear-gradient(135deg, #10B981 0%, #3B82F6 100%)',
+    shadow: 'rgba(16, 185, 129, 0.2)',
+  },
+  {
+    id: 'rose',
+    name: '落日玫瑰',
+    primary: '#F43F5E',
+    secondary: '#FB923C',
+    gradient: 'linear-gradient(135deg, #F43F5E 0%, #FB923C 100%)',
+    shadow: 'rgba(244, 63, 94, 0.2)',
+  },
+  {
+    id: 'obsidian',
+    name: '曜石黑金',
+    primary: '#334155',
+    secondary: '#94A3B8',
+    gradient: 'linear-gradient(135deg, #334155 0%, #94A3B8 100%)',
+    shadow: 'rgba(51, 65, 85, 0.2)',
+  }
+];
+
 export interface NavigationRequest {
   heading: HeadingNode;
   timestamp: number;
@@ -55,6 +107,10 @@ export interface AppState {
     onStop: (() => void) | null;
   };
   zoom: number;
+  theme: ThemeConfig;
+  isSettingsModalOpen: boolean;
+  appearanceMode: 'light' | 'dark' | 'system';
+  defaultWorkspacePath: string | null;
   
   // Actions
   toggleMode: () => void;
@@ -90,6 +146,13 @@ export interface AppState {
   setUpdateStatus: (status: Partial<AppState['updateStatus']>) => void;
   setAIStatus: (status: Partial<AppState['aiStatus']>) => void;
   setZoom: (zoom: number) => void;
+  setTheme: (themeId: string) => void;
+  setSettingsModalOpen: (open: boolean) => void;
+  setAppearanceMode: (mode: 'light' | 'dark' | 'system') => void;
+  setDefaultWorkspacePath: (path: string | null) => void;
+  loadSettings: () => Promise<void>;
+  saveSettings: () => Promise<void>;
+  applyAppearance: (mode: 'light' | 'dark' | 'system') => void;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -113,6 +176,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   updateStatus: { show: false, loading: false, latestVersion: null, error: null },
   aiStatus: { generating: false, onStop: null },
   zoom: 100,
+  theme: THEME_PRESETS[0],
+  isSettingsModalOpen: false,
+  appearanceMode: 'light',
+  defaultWorkspacePath: null,
   
   setTabToClose: (id: string | null) => set({ tabToClose: id }),
   
@@ -351,6 +418,71 @@ export const useAppStore = create<AppState>((set, get) => ({
   })),
   
   setZoom: (zoom: number) => set({ zoom }),
+  
+  setTheme: (themeId: string) => {
+    const theme = THEME_PRESETS.find(t => t.id === themeId) || THEME_PRESETS[0];
+    set({ theme });
+    
+    // 动态应用 CSS 变量到 Root
+    const root = document.documentElement;
+    root.style.setProperty('--color-brand-indigo', theme.primary);
+    root.style.setProperty('--color-brand-purple', theme.secondary);
+    root.style.setProperty('--brand-gradient', theme.gradient);
+    root.style.setProperty('--brand-shadow', theme.shadow);
+    root.style.setProperty('--brand-glow', theme.shadow.replace('0.2', '0.4'));
+    root.style.setProperty('--color-accent-indigo', theme.primary);
+    root.style.setProperty('--color-accent-blue', theme.secondary);
+  },
+
+  setSettingsModalOpen: (open: boolean) => set({ isSettingsModalOpen: open }),
+  
+  setAppearanceMode: (mode: 'light' | 'dark' | 'system') => {
+    set({ appearanceMode: mode });
+    get().applyAppearance(mode);
+    get().saveSettings();
+  },
+
+  setDefaultWorkspacePath: (path: string | null) => {
+    set({ defaultWorkspacePath: path });
+    get().saveSettings();
+  },
+
+  applyAppearance: (mode: 'light' | 'dark' | 'system') => {
+    const isDark = mode === 'dark' || (mode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+  },
+
+  loadSettings: async () => {
+    try {
+      const settings = await window.api.app.getSettings();
+      if (settings) {
+        set({ 
+          appearanceMode: settings.appearanceMode || 'light',
+          defaultWorkspacePath: settings.defaultWorkspacePath || null
+        });
+        get().applyAppearance(settings.appearanceMode || 'light');
+        
+        // 如果开启了默认目录，且当前没有打开目录，则尝试自动打开
+        if (settings.defaultWorkspacePath && !get().workspacePath) {
+          const readResult = await window.api.fs.readDir(settings.defaultWorkspacePath);
+          if (readResult.success && readResult.files) {
+            get().setWorkspace(
+              settings.defaultWorkspacePath, 
+              settings.defaultWorkspacePath.split(/[/\\]/).pop() || 'Workspace', 
+              readResult.files
+            );
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load settings:', error);
+    }
+  },
+
+  saveSettings: async () => {
+    const { appearanceMode, defaultWorkspacePath } = get();
+    await window.api.app.saveSettings({ appearanceMode, defaultWorkspacePath });
+  },
 
   checkUpdates: async () => {
     set({ updateStatus: { show: true, loading: true, latestVersion: null, error: null } });

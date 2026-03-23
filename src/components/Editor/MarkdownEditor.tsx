@@ -9,9 +9,11 @@ import mermaid from 'mermaid';
 import '../styles/editor.css';
 
 export const MarkdownEditor: React.FC = () => {
-  const { activeTabId, tabs, updateTabContent, navigationRequest } = useAppStore();
+  const { activeTabId, tabs, updateTabContent, navigationRequest, appearanceMode } = useAppStore();
   const activeTab = tabs.find(t => t.id === activeTabId);
   const editorRef = useRef<ReactCodeMirrorRef>(null);
+
+  const isDark = appearanceMode === 'dark' || (appearanceMode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
   if (!activeTab) return null;
 
@@ -53,7 +55,7 @@ export const MarkdownEditor: React.FC = () => {
       try {
         mermaid.initialize({
           startOnLoad: false,
-          theme: 'neutral',
+          theme: isDark ? 'dark' : 'neutral',
           securityLevel: 'loose',
           fontFamily: 'var(--font-body)',
           // @ts-ignore
@@ -158,7 +160,7 @@ export const MarkdownEditor: React.FC = () => {
             ref={editorRef}
             value={activeTab.content}
             height="100%"
-            theme="light"
+            theme={isDark ? 'dark' : 'light'}
             className="cm-theme-override"
             extensions={[markdown({ base: markdownLanguage, codeLanguages: languages }), domHandlers]}
             onChange={handleUpdate}

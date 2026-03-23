@@ -41,6 +41,54 @@
   --radius-md: 12px;
   --radius-lg: 16px;
   --radius-xl: 24px;
+
+  /* Editor Specifics */
+  --bg-hover-editor: rgba(0, 0, 0, 0.05);
+  --bg-zebra-editor: rgba(0, 0, 0, 0.02);
+  --selection-bg-editor: rgba(99, 102, 241, 0.15);
+  --bg-code-inline: rgba(99, 102, 241, 0.07);
+  --bg-code-block: #F2F2F7;
+  
+  /* Syntax Highlighting Light */
+  --sh-comment: #8e908c;
+  --sh-variable: #c82829;
+  --sh-number: #f5871f;
+  --sh-attribute: #eab700;
+  --sh-string: #718c00;
+  --sh-keyword: #8959a8;
+  --sh-title: #4271ae;
+}
+
+/* Dark Mode Overrides */
+[data-theme='dark'] {
+  --bg-page: #1C1C1E;
+  --bg-surface: #2C2C2E;
+  --bg-card: #3A3A3C;
+  --bg-elevated: #444446;
+  --text-primary: #F2F2F7;
+  --text-secondary: #E5E5EA;
+  --text-tertiary: #D1D1D6;
+  --text-muted: #8E8E93;
+  --border-subtle: #38383A;
+  --border-strong: #48484A;
+  --glass-bg: rgba(28, 28, 30, 0.85);
+  --glass-border: rgba(255, 255, 255, 0.1);
+
+  /* Editor Specifics Dark */
+  --bg-hover-editor: rgba(255, 255, 255, 0.1);
+  --bg-zebra-editor: rgba(255, 255, 255, 0.04);
+  --selection-bg-editor: rgba(99, 102, 241, 0.35);
+  --bg-code-inline: rgba(99, 102, 241, 0.15);
+  --bg-code-block: #121214;
+  
+  /* Syntax Highlighting Dark (Atom One Dark style) */
+  --sh-comment: #5c6370;
+  --sh-variable: #e06c75;
+  --sh-number: #d19a66;
+  --sh-attribute: #e5c07b;
+  --sh-string: #98c379;
+  --sh-keyword: #c678dd;
+  --sh-title: #61afef;
 }
 
 * {

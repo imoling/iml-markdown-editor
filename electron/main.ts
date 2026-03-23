@@ -40,6 +40,34 @@ function saveConfig(config: any) {
   }
 }
 
+function getAppSettings() {
+  const { userDataPath } = getPaths();
+  const settingsPath = path.join(userDataPath, 'app-settings.json');
+  try {
+    if (fs.existsSync(settingsPath)) {
+      return JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+    }
+  } catch (err) {
+    console.error('Failed to read settings:', err);
+  }
+  return {
+    appearanceMode: 'light',
+    defaultWorkspacePath: null
+  };
+}
+
+function saveAppSettings(settings: any) {
+  const { userDataPath } = getPaths();
+  const settingsPath = path.join(userDataPath, 'app-settings.json');
+  try {
+    fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf8');
+    return { success: true };
+  } catch (err) {
+    console.error('Failed to save settings:', err);
+    return { success: false, error: '写入设置失败' };
+  }
+}
+
 // Global state
 let mainWindow: BrowserWindow | null = null;
 let aboutWindow: BrowserWindow | null = null;
@@ -179,17 +207,26 @@ function createModelConfigWindow() {
 }
 
 app.whenReady().then(() => {
-  // Set name within ready state
-  if (isDev) {
-    app.name = 'iML Markdown Editor';
+  // 1. 注册核心 IPC 句柄 (优先由于 UI 依赖它们进行初始化)
+  try {
+    setupFileSystemIPC();
+  } catch (err) {
+    console.error('Failed to setup FileSystem IPC:', err);
   }
-  app.setName('iML Markdown Editor');
-
-  setupFileSystemIPC();
   
   // AI Config IPC
   ipcMain.handle('ai:getConfig', () => getConfig());
   ipcMain.handle('ai:saveConfig', (_event, config) => saveConfig(config));
+  
+  // App Settings IPC
+  ipcMain.handle('app:getSettings', () => getAppSettings());
+  ipcMain.handle('app:saveSettings', (_event, settings) => saveAppSettings(settings));
+
+  // 2. 环境设置
+  if (isDev) {
+    app.name = 'iML Markdown Editor';
+  }
+  app.setName('iML Markdown Editor');
 
   // Create standard macOS menu
   if (process.platform === 'darwin') {
