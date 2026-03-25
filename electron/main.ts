@@ -43,17 +43,33 @@ function saveConfig(config: any) {
 function getAppSettings() {
   const { userDataPath } = getPaths();
   const settingsPath = path.join(userDataPath, 'app-settings.json');
+  let settings: any = {
+    appearanceMode: 'light',
+    startupBehavior: 'restore',
+    autoSave: true
+  };
+  
   try {
     if (fs.existsSync(settingsPath)) {
-      return JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+      settings = { ...settings, ...JSON.parse(fs.readFileSync(settingsPath, 'utf8')) };
     }
   } catch (err) {
     console.error('Failed to read settings:', err);
   }
-  return {
-    appearanceMode: 'light',
-    defaultWorkspacePath: null
-  };
+
+  if (!settings.defaultLibraryPath) {
+    try {
+      const defaultLib = path.join(app.getPath('documents'), 'iML Notes');
+      if (!fs.existsSync(defaultLib)) {
+        fs.mkdirSync(defaultLib, { recursive: true });
+      }
+      settings.defaultLibraryPath = defaultLib;
+    } catch (e) {
+      console.error('Failed to init default library path:', e);
+    }
+  }
+
+  return settings;
 }
 
 function saveAppSettings(settings: any) {

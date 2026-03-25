@@ -110,8 +110,16 @@ export interface AppState {
   theme: ThemeConfig;
   isSettingsModalOpen: boolean;
   appearanceMode: 'light' | 'dark' | 'system';
-  defaultWorkspacePath: string | null;
+  startupBehavior: 'restore' | 'dashboard';
+  autoSave: boolean;
+  defaultLibraryPath: string;
+  starredFiles: string[];
   
+  // File Management State
+  selectedNodePath: string | null;
+  renamingPath: string | null;
+  contextMenu: { visible: boolean; x: number; y: number; node: FileNode | null };
+
   // Actions
   toggleMode: () => void;
   setActiveTab: (id: string | null) => void;
@@ -140,7 +148,7 @@ export interface AppState {
   openDirectory: () => Promise<void>;
   tabToClose: string | null;
   setTabToClose: (id: string | null) => void;
-  saveActiveFile: (saveAs?: boolean) => Promise<boolean>;
+  saveActiveFile: (saveAs?: boolean, isAutoSave?: boolean) => Promise<boolean>;
   checkUpdates: () => Promise<void>;
   autoCheckUpdates: () => Promise<void>;
   setUpdateStatus: (status: Partial<AppState['updateStatus']>) => void;
@@ -149,10 +157,22 @@ export interface AppState {
   setTheme: (themeId: string) => void;
   setSettingsModalOpen: (open: boolean) => void;
   setAppearanceMode: (mode: 'light' | 'dark' | 'system') => void;
-  setDefaultWorkspacePath: (path: string | null) => void;
+  setStartupBehavior: (behavior: 'restore' | 'dashboard') => void;
+  setAutoSave: (autoSave: boolean) => void;
+  setDefaultLibraryPath: (path: string) => void;
+  loadSession: () => Promise<boolean>;
   loadSettings: () => Promise<void>;
   saveSettings: () => Promise<void>;
   applyAppearance: (mode: 'light' | 'dark' | 'system') => void;
+  toggleStar: (path: string) => void;
+
+  // File Management Actions
+  setSelectedNodePath: (path: string | null) => void;
+  setRenamingPath: (path: string | null) => void;
+  setContextMenu: (contextMenu: Partial<AppState['contextMenu']>) => void;
+  renameFile: (oldPath: string, newName: string) => Promise<boolean>;
+  deleteFile: (path: string) => Promise<boolean>;
+  duplicateFile: (path: string) => Promise<boolean>;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -173,14 +193,29 @@ export const useAppStore = create<AppState>((set, get) => ({
   expandedPaths: [],
   navigationRequest: null,
   tabToClose: null,
+  
+  // File Management Default State
+  selectedNodePath: null,
+  renamingPath: null,
+  contextMenu: { visible: false, x: 0, y: 0, node: null },
+  
   updateStatus: { show: false, loading: false, latestVersion: null, error: null },
   aiStatus: { generating: false, onStop: null },
   zoom: 100,
   theme: THEME_PRESETS[0],
   isSettingsModalOpen: false,
   appearanceMode: 'light',
-  defaultWorkspacePath: null,
+  startupBehavior: 'restore',
+  autoSave: true,
+  defaultLibraryPath: '',
+  starredFiles: [],
   
+  toggleStar: (path: string) => set((state) => ({
+    starredFiles: state.starredFiles.includes(path) 
+      ? state.starredFiles.filter(p => p !== path)
+      : [...state.starredFiles, path]
+  })),
+
   setTabToClose: (id: string | null) => set({ tabToClose: id }),
   
   toggleMode: () => set((state) => ({ 
@@ -191,6 +226,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ activeTabId: id });
     
     if (id && !id.startsWith('new-') && !id.startsWith('ai-gen-')) {
+      get().addToRecent(id);
       const sep = id.includes('/') ? '/' : '\\';
       const lastSepIndex = id.lastIndexOf(sep);
       if (lastSepIndex !== -1) {
@@ -377,7 +413,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
 
-  saveActiveFile: async (saveAs = false) => {
+  saveActiveFile: async (saveAs = false, isAutoSave = false) => {
     const { activeTabId, tabs } = get();
     const activeTab = tabs.find(t => t.id === activeTabId);
     if (!activeTab) return false;
@@ -386,19 +422,46 @@ export const useAppStore = create<AppState>((set, get) => ({
     const isTempFile = filePath.startsWith('new-') || filePath.startsWith('ai-gen-');
 
     if (isTempFile || saveAs) {
-      const result = await window.api.dialog.save({
-        defaultPath: isTempFile ? (activeTab.title === '未命名' ? 'untitled.md' : `${activeTab.title}.md`) : filePath,
-        filters: [{ name: 'Markdown', extensions: ['md'] }]
-      });
-      if (!result) return false;
-      filePath = result;
+      if (isTempFile && isAutoSave) {
+        // 完全无感静默创建新文件
+        const date = new Date();
+        const timeStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}-${String(date.getMinutes()).padStart(2, '0')}-${String(date.getSeconds()).padStart(2, '0')}`;
+        
+        let titleStr = timeStr;
+        const firstLine = activeTab.content.split('\\n').find(l => l.trim().length > 0);
+        if (firstLine) {
+          const cleanTitle = firstLine.replace(/^#+\\s*/, '').replace(/[\\\\/:*?"<>|]/g, '').trim().substring(0, 30);
+          if (cleanTitle) titleStr = cleanTitle;
+        }
+        
+        const targetDir = get().workspacePath || get().defaultLibraryPath;
+        filePath = `${targetDir}${targetDir.includes('\\\\') ? '\\\\' : '/'}${titleStr}.md`;
+
+        // 简易去重防碰撞（若同名加上时间戳）
+        try {
+          const exists = await window.api.fs.readFile(filePath);
+          if (exists.success) {
+            filePath = `${targetDir}${targetDir.includes('\\\\') ? '\\\\' : '/'}${titleStr} ${timeStr}.md`;
+          }
+        } catch(e) {}
+      } else {
+        const result = await window.api.dialog.save({
+          defaultPath: isTempFile ? (activeTab.title === '未命名' ? 'untitled.md' : `${activeTab.title}.md`) : filePath,
+          filters: [{ name: 'Markdown', extensions: ['md'] }]
+        });
+        if (!result) return false;
+        filePath = result;
+      }
     }
 
     const saveResult = await window.api.fs.writeFile(filePath, activeTab.content);
     if (saveResult.success) {
       if (isTempFile || saveAs) {
-        await get().updateTabId(activeTab.id, filePath, filePath.split(/[/\\]/).pop() || 'Untitled');
+        await get().updateTabId(activeTab.id, filePath, filePath.split(/[\\\\/]/).pop() || 'Untitled');
         get().setActiveTab(filePath);
+        if (get().workspacePath && filePath.startsWith(get().workspacePath!)) {
+          get().refreshWorkspace();
+        }
       } else {
         set((state) => ({
           tabs: state.tabs.map(t => t.id === filePath ? { ...t, isDirty: false } : t)
@@ -442,8 +505,18 @@ export const useAppStore = create<AppState>((set, get) => ({
     get().saveSettings();
   },
 
-  setDefaultWorkspacePath: (path: string | null) => {
-    set({ defaultWorkspacePath: path });
+  setStartupBehavior: (behavior: 'restore' | 'dashboard') => {
+    set({ startupBehavior: behavior });
+    get().saveSettings();
+  },
+
+  setAutoSave: (autoSave: boolean) => {
+    set({ autoSave });
+    get().saveSettings();
+  },
+
+  setDefaultLibraryPath: (path: string) => {
+    set({ defaultLibraryPath: path });
     get().saveSettings();
   },
 
@@ -452,27 +525,92 @@ export const useAppStore = create<AppState>((set, get) => ({
     document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
   },
 
+  loadSession: async () => {
+    try {
+      const sessionStr = localStorage.getItem('iml_session');
+      let restoredWorkspace = false;
+      
+      if (sessionStr) {
+        const session = JSON.parse(sessionStr);
+
+        // 恢复 Workspace
+        if (session.workspacePath) {
+          const readResult = await window.api.fs.readDir(session.workspacePath);
+          if (readResult.success && readResult.files) {
+            set({ 
+              workspacePath: session.workspacePath, 
+              workspaceName: session.workspacePath.split(/[/\\]/).pop() || 'Workspace', 
+              fileTree: readResult.files,
+              expandedPaths: session.expandedPaths || [session.workspacePath]
+            });
+            restoredWorkspace = true;
+          }
+        }
+
+        // 恢复 Starred Files
+        if (session.starredFiles) {
+          set({ starredFiles: session.starredFiles });
+        }
+
+        // 恢复 Recent Files
+        if (session.recentFiles) {
+          set({ recentFiles: session.recentFiles });
+        }
+
+        // 恢复 Tabs
+        const tabsToRestore = session.tabs || [];
+        if (tabsToRestore.length > 0) {
+          const initialTabs = tabsToRestore.map((t: any) => ({ ...t, content: '' }));
+          set({ tabs: initialTabs, activeTabId: session.activeTabId });
+
+          for (const tab of tabsToRestore) {
+            if (!tab.id.startsWith('new-') && !tab.id.startsWith('ai-gen-')) {
+              try {
+                 const result = await window.api.fs.readFile(tab.id);
+                 if (result.success && result.content !== undefined) {
+                    const loadedContent = result.content || '';
+                    set(state => ({
+                      tabs: state.tabs.map(t => 
+                        t.id === tab.id 
+                          ? { ...t, content: loadedContent, isDirty: tab.isDirty } 
+                          : t
+                      )
+                    }));
+                 } else {
+                    set(state => ({ tabs: state.tabs.filter(t => t.id !== tab.id) }));
+                 }
+              } catch (e) {
+                 set(state => ({ tabs: state.tabs.filter(t => t.id !== tab.id) }));
+              }
+            }
+          }
+          
+          const currentTabs = get().tabs;
+          if (currentTabs.length > 0 && !currentTabs.find(t => t.id === get().activeTabId)) {
+             set({ activeTabId: currentTabs[currentTabs.length - 1].id });
+          } else if (currentTabs.length === 0) {
+             set({ activeTabId: null });
+          }
+        }
+      }
+      return restoredWorkspace;
+    } catch (e) {
+      console.error('Failed to load session:', e);
+      return false;
+    }
+  },
+
   loadSettings: async () => {
     try {
       const settings = await window.api.app.getSettings();
       if (settings) {
         set({ 
           appearanceMode: settings.appearanceMode || 'light',
-          defaultWorkspacePath: settings.defaultWorkspacePath || null
+          startupBehavior: settings.startupBehavior || 'restore',
+          autoSave: settings.autoSave ?? true,
+          defaultLibraryPath: settings.defaultLibraryPath || ''
         });
         get().applyAppearance(settings.appearanceMode || 'light');
-        
-        // 如果开启了默认目录，且当前没有打开目录，则尝试自动打开
-        if (settings.defaultWorkspacePath && !get().workspacePath) {
-          const readResult = await window.api.fs.readDir(settings.defaultWorkspacePath);
-          if (readResult.success && readResult.files) {
-            get().setWorkspace(
-              settings.defaultWorkspacePath, 
-              settings.defaultWorkspacePath.split(/[/\\]/).pop() || 'Workspace', 
-              readResult.files
-            );
-          }
-        }
       }
     } catch (error) {
       console.error('Failed to load settings:', error);
@@ -480,8 +618,84 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   saveSettings: async () => {
-    const { appearanceMode, defaultWorkspacePath } = get();
-    await window.api.app.saveSettings({ appearanceMode, defaultWorkspacePath });
+    const { appearanceMode, startupBehavior, autoSave, defaultLibraryPath } = get();
+    await window.api.app.saveSettings({ appearanceMode, startupBehavior, autoSave, defaultLibraryPath });
+  },
+
+  setSelectedNodePath: (path) => set({ selectedNodePath: path }),
+  setRenamingPath: (path) => set({ renamingPath: path }),
+  setContextMenu: (cm) => set((state) => ({ contextMenu: { ...state.contextMenu, ...cm } })),
+
+  renameFile: async (oldPath: string, newName: string) => {
+    try {
+      const sep = oldPath.includes('\\') ? '\\' : '/';
+      const parentDir = oldPath.substring(0, oldPath.lastIndexOf(sep));
+      const newPath = `${parentDir}${sep}${newName}`;
+      
+      const result = await window.api.fs.rename(oldPath, newPath);
+      if (result.success) {
+        set((state) => {
+          const newTabs = state.tabs.map(t => t.id === oldPath ? { ...t, id: newPath, title: newName.replace(/\.md$/i, '') } : t);
+          return {
+            tabs: newTabs,
+            activeTabId: state.activeTabId === oldPath ? newPath : state.activeTabId,
+            renamingPath: null,
+            selectedNodePath: state.selectedNodePath === oldPath ? newPath : state.selectedNodePath,
+            starredFiles: state.starredFiles.map(p => p === oldPath ? newPath : p)
+          };
+        });
+        await get().refreshWorkspace();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      console.error('Rename failed:', e);
+      return false;
+    }
+  },
+
+  deleteFile: async (path: string) => {
+    try {
+      const result = await window.api.fs.delete(path);
+      if (result.success) {
+        get().closeTab(path);
+        set((state) => ({
+          selectedNodePath: state.selectedNodePath === path ? null : state.selectedNodePath,
+          starredFiles: state.starredFiles.filter(p => p !== path)
+        }));
+        await get().refreshWorkspace();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      console.error('Delete failed:', e);
+      return false;
+    }
+  },
+
+  duplicateFile: async (oldPath: string) => {
+    try {
+      const extMatch = oldPath.match(/\.([^.]+)$/);
+      const ext = extMatch ? `.${extMatch[1]}` : '';
+      const basePath = extMatch ? oldPath.substring(0, oldPath.length - ext.length) : oldPath;
+      
+      let newPath = `${basePath} 副本${ext}`;
+      let counter = 1;
+      // Loop is handled by UI ideally, but backend can also handle duplicates.
+      // For now just try append " 副本"
+      
+      const result = await window.api.fs.copy(oldPath, newPath);
+      if (!result.success) {
+        // Retry with number
+        newPath = `${basePath} 副本 2${ext}`;
+        await window.api.fs.copy(oldPath, newPath);
+      }
+      await get().refreshWorkspace();
+      return true;
+    } catch (e) {
+      console.error('Duplicate failed:', e);
+      return false;
+    }
   },
 
   checkUpdates: async () => {
@@ -535,3 +749,30 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   }
 }));
+
+useAppStore.subscribe((state, prevState) => {
+  const shouldSave = 
+    state.tabs !== prevState.tabs ||
+    state.activeTabId !== prevState.activeTabId ||
+    state.workspacePath !== prevState.workspacePath ||
+    state.expandedPaths !== prevState.expandedPaths ||
+    state.starredFiles !== prevState.starredFiles ||
+    state.recentFiles !== prevState.recentFiles;
+    
+  if (shouldSave) {
+    const sessionToSave = {
+      workspacePath: state.workspacePath,
+      expandedPaths: state.expandedPaths,
+      activeTabId: state.activeTabId,
+      starredFiles: state.starredFiles,
+      recentFiles: state.recentFiles,
+      tabs: state.tabs.map(t => ({
+        id: t.id,
+        title: t.title,
+        isDirty: t.isDirty,
+        mode: t.mode
+      }))
+    };
+    localStorage.setItem('iml_session', JSON.stringify(sessionToSave));
+  }
+});

@@ -70,6 +70,21 @@ export const MermaidBlock: React.FC<NodeViewProps> = ({ node, updateAttributes, 
     setIsRendering(true);
 
     try {
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      mermaid.initialize({
+        startOnLoad: false,
+        theme: isDark ? 'dark' : 'default',
+        securityLevel: 'loose',
+        logLevel: 'error',
+        themeVariables: {
+          fontSize: '16px',
+          fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+          nodePadding: 20, 
+        },
+        flowchart: { useMaxWidth: true, htmlLabels: true, curve: 'basis', nodeSpacing: 50, rankSpacing: 50 },
+        gantt: { useMaxWidth: true, topPadding: 50, barGap: 4, barHeight: 20 }
+      });
+
       // 1. Pre-check: Don't even try if it's too skeletal or looks like a streaming fragment
       const validStart = /^(graph|flowchart|sequenceDiagram|classDiagram|stateDiagram|erDiagram|gantt|pie|gitGraph|journey|C4Context|mindmap|timeline)/i;
       const isIncompleteText = /\s*(-->|--|\->|==>|~>|\||\[|\(|\{|\"|\')\s*$/.test(cleanText);
@@ -143,6 +158,34 @@ export const MermaidBlock: React.FC<NodeViewProps> = ({ node, updateAttributes, 
       renderMermaid(code);
     }, 500); // Slightly longer debounce for better stability
     return () => clearTimeout(timer);
+  }, [code]);
+
+  // Listen for system/app theme changes to re-render the mermaid diagram with the right theme
+  useEffect(() => {
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.attributeName === 'data-theme') {
+          renderMermaid(code);
+        }
+      });
+    });
+
+    observer.observe(document.documentElement, { attributes: true });
+    return () => observer.disconnect();
+  }, [code]);
+
+  // Listen for system/app theme changes to re-render the mermaid diagram with the right theme
+  useEffect(() => {
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.attributeName === 'data-theme') {
+          renderMermaid(code);
+        }
+      });
+    });
+
+    observer.observe(document.documentElement, { attributes: true });
+    return () => observer.disconnect();
   }, [code]);
 
   // Re-render when switching back to preview mode just in case

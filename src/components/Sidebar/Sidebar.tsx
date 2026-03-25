@@ -1,14 +1,22 @@
-import React, { useState } from 'react';
-import { useAppStore, FileNode, HeadingNode, THEME_PRESETS } from '../../stores/appStore';
-import { Folder, Search, ChevronDown, ChevronRight, FolderOpen, FileText, FileCode, FolderClosed, List, RotateCw, Sparkles } from 'lucide-react';
+import React from 'react';
+import { useAppStore, FileNode, HeadingNode } from '../../stores/appStore';
+import { Folder, ChevronDown, ChevronRight, FolderOpen, FileText, FileCode, FolderClosed, List, RotateCw, Sparkles, Star } from 'lucide-react';
 import { AIWritingPanel } from '../AI/AIWritingPanel';
 
 const FileTreeItem: React.FC<{ node: FileNode; level: number }> = ({ node, level }) => {
-  const { openTab, updateFileNode, activeTabId, expandedPaths, setExpanded } = useAppStore();
+  const { openTab, updateFileNode, activeTabId, expandedPaths, setExpanded, starredFiles, toggleStar, selectedNodePath, setSelectedNodePath, renamingPath, setRenamingPath, renameFile, setContextMenu } = useAppStore();
   const isOpen = expandedPaths.includes(node.path);
+  const [editName, setEditName] = React.useState(node.name.replace(/\.md$/i, ''));
+
+  React.useEffect(() => {
+    if (renamingPath === node.path) {
+      setEditName(node.name.replace(/\.md$/i, ''));
+    }
+  }, [renamingPath, node.name, node.path]);
 
   const handleToggle = async (e: React.MouseEvent) => {
     e.stopPropagation();
+    setSelectedNodePath(node.path);
     if (node.isDirectory) {
       if (!isOpen && (!node.children || node.children.length === 0)) {
          const result = await window.api.fs.readDir(node.path);
@@ -33,13 +41,32 @@ const FileTreeItem: React.FC<{ node: FileNode; level: number }> = ({ node, level
 
   const isMarkdown = node.name.toLowerCase().endsWith('.md');
   const isActive = activeTabId === node.path;
+  const isSelected = selectedNodePath === node.path;
+  const isRenaming = renamingPath === node.path;
+
+  const handleRenameSubmit = async () => {
+    if (editName.trim() && editName !== node.name.replace(/\.md$/i, '')) {
+      const newName = node.isDirectory ? editName.trim() : `${editName.trim()}.md`;
+      await renameFile(node.path, newName);
+    }
+    setRenamingPath(null);
+  };
   
   return (
     <div>
       <div 
         className={`tree-item ${isActive && !node.isDirectory ? 'active' : ''}`} 
-        style={{ paddingLeft: `${ level * 12 + 8 }px` }}
+        style={{ 
+          paddingLeft: `${ level * 12 + 8 }px`,
+          backgroundColor: isSelected && !isActive ? 'rgba(255, 255, 255, 0.05)' : undefined 
+        }}
         onClick={handleToggle}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setSelectedNodePath(node.path);
+          setContextMenu({ visible: true, x: e.clientX, y: e.clientY, node });
+        }}
       >
         {node.isDirectory ? (
           <>
@@ -56,14 +83,51 @@ const FileTreeItem: React.FC<{ node: FileNode; level: number }> = ({ node, level
             )}
           </>
         )}
-        <span style={{ 
-          color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis'
-        }}>
-          {node.name}
-        </span>
+        {isRenaming ? (
+          <input
+            autoFocus
+            value={editName}
+            onChange={(e) => setEditName(e.target.value)}
+            onBlur={handleRenameSubmit}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                handleRenameSubmit();
+              } else if (e.key === 'Escape') {
+                setRenamingPath(null);
+              }
+            }}
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              flex: 1,
+              background: 'var(--bg-modifier-active)',
+              color: 'var(--text-primary)',
+              border: '1px solid var(--color-brand-indigo)',
+              borderRadius: 3,
+              padding: '2px 4px',
+              fontSize: 12,
+              outline: 'none'
+            }}
+          />
+        ) : (
+          <span style={{ 
+            color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            flex: 1
+          }}>
+            {node.name}
+          </span>
+        )}
+        {!node.isDirectory && !isRenaming && (
+          <div 
+            className={`tree-item-star ${starredFiles.includes(node.path) ? 'starred' : ''}`}
+            onClick={(e) => { e.stopPropagation(); toggleStar(node.path); }}
+            title={starredFiles.includes(node.path) ? "取消收藏" : "加入收藏"}
+          >
+            <Star size={13} strokeWidth={starredFiles.includes(node.path) ? 0 : 1.5} fill={starredFiles.includes(node.path) ? "currentColor" : "none"} />
+          </div>
+        )}
       </div>
       
       {node.isDirectory && isOpen && node.children && (
@@ -73,6 +137,59 @@ const FileTreeItem: React.FC<{ node: FileNode; level: number }> = ({ node, level
           ))}
         </div>
       )}
+    </div>
+  );
+};
+
+const StarredItem: React.FC<{ path: string }> = ({ path }) => {
+  const { openTab, activeTabId, toggleStar } = useAppStore();
+  const name = path.split(/[/\\]/).pop() || 'Unknown';
+  const isActive = activeTabId === path;
+
+  const handleClick = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const result = await window.api.fs.readFile(path);
+    if (result.success && result.content !== undefined) {
+       openTab({
+         id: path,
+         title: name,
+         content: result.content,
+         isDirty: false,
+         mode: 'word'
+       });
+    }
+  };
+
+  const isMarkdown = name.toLowerCase().endsWith('.md');
+
+  return (
+    <div 
+      className={`tree-item ${isActive ? 'active' : ''}`} 
+      style={{ paddingLeft: '8px' }}
+      onClick={handleClick}
+    >
+      <span style={{width: 14, display: 'inline-block'}}></span> 
+      {isMarkdown ? (
+        <FileCode size={14} color={isActive ? "var(--text-primary)" : "var(--color-accent-green)"} />
+      ) : (
+        <FileText size={14} color="var(--text-secondary)" />
+      )}
+      <span style={{ 
+        flex: 1,
+        color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis'
+      }}>
+        {name}
+      </span>
+      <div 
+        className="tree-item-star starred"
+        onClick={(e) => { e.stopPropagation(); toggleStar(path); }}
+        title="取消收藏"
+      >
+        <Star size={13} strokeWidth={0} fill="currentColor" />
+      </div>
     </div>
   );
 };
@@ -97,96 +214,100 @@ const OutlineItem: React.FC<{ node: HeadingNode }> = ({ node }) => {
   );
 };
 
-const ThemeSwitcher: React.FC = () => {
-  const { theme, setTheme } = useAppStore();
-  const [showPicker, setShowPicker] = useState(false);
+const ContextMenuComponent = () => {
+  const { contextMenu, setContextMenu, setRenamingPath, duplicateFile, deleteFile } = useAppStore();
+  
+  React.useEffect(() => {
+    const handleClickOutside = () => setContextMenu({ visible: false });
+    if (contextMenu.visible) {
+      document.addEventListener('click', handleClickOutside);
+    }
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [contextMenu.visible, setContextMenu]);
+
+  if (!contextMenu.visible || !contextMenu.node) return null;
+
+  const node = contextMenu.node;
+
+  const itemStyle = {
+    padding: '6px 12px', fontSize: 13, cursor: 'pointer', borderRadius: 4, 
+    display: 'flex', justifyContent: 'space-between', color: 'var(--text-primary)',
+    marginBottom: 2
+  };
 
   return (
-    <div className="sidebar-footer" style={{ 
-      padding: '12px', 
-      borderTop: '1px solid var(--border-subtle)',
-      position: 'relative',
-      userSelect: 'none',
-      backgroundColor: 'var(--bg-page)'
-    }}>
+    <div 
+      style={{
+        position: 'fixed', left: contextMenu.x, top: contextMenu.y, zIndex: 9999,
+        background: 'var(--glass-bg)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        border: '1px solid var(--glass-border)',
+        borderRadius: 8, padding: '4px',
+        boxShadow: '0 8px 30px rgba(0,0,0,0.5)', minWidth: 160
+      }}
+      onClick={(e) => e.stopPropagation()}
+      onContextMenu={(e) => e.preventDefault()}
+    >
       <div 
-        onClick={() => setShowPicker(!showPicker)}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '10px',
-          padding: '8px 12px',
-          borderRadius: '10px',
-          cursor: 'pointer',
-          backgroundColor: 'var(--bg-surface)',
-          transition: 'all 0.2s',
-          border: '1px solid var(--border-subtle)',
-        }}
-        className="hover-bg"
+        style={itemStyle} 
+        onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+        onClick={() => { setRenamingPath(node.path); setContextMenu({ visible: false }); }}
       >
-        <div style={{
-          width: 14,
-          height: 14,
-          borderRadius: '50%',
-          background: theme.gradient,
-          boxShadow: `0 0 8px ${theme.shadow}`
-        }} />
-        <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', flex: 1 }}>{theme.name}</span>
+        重命名 <span style={{opacity: 0.5, fontSize: 11}}>F2/Enter</span>
       </div>
-
-      {showPicker && (
-        <>
-          <div 
-            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 90 }} 
-            onClick={() => setShowPicker(false)}
-          />
-          <div style={{
-            position: 'absolute',
-            bottom: 'calc(100% + 8px)',
-            left: '12px',
-            right: '12px',
-            backgroundColor: 'var(--bg-elevated)',
-            borderRadius: '16px',
-            padding: '8px',
-            boxShadow: '0 -10px 30px rgba(0,0,0,0.15), 0 10px 20px rgba(0,0,0,0.05)',
-            border: '1px solid var(--border-subtle)',
-            zIndex: 100,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '4px',
-            animation: 'fadeIn 0.2s ease-out'
-          }}>
-            <div style={{ padding: '6px 12px 8px 12px', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>主题实验室</div>
-            {THEME_PRESETS.map(p => (
-              <div 
-                key={p.id}
-                onClick={() => { setTheme(p.id); setShowPicker(false); }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                  padding: '8px 12px',
-                  borderRadius: '10px',
-                  cursor: 'pointer',
-                  backgroundColor: theme.id === p.id ? 'var(--bg-surface)' : 'transparent',
-                  transition: 'all 0.2s',
-                  border: theme.id === p.id ? '1px solid var(--border-subtle)' : '1px solid transparent'
-                }}
-                className="hover-bg"
-              >
-                <div style={{ width: 14, height: 14, borderRadius: '50%', background: p.gradient }} />
-                <span style={{ fontSize: 13, color: theme.id === p.id ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: theme.id === p.id ? 600 : 400 }}>{p.name}</span>
-              </div>
-            ))}
-          </div>
-        </>
+      {!node.isDirectory && (
+        <div 
+          style={itemStyle}
+          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+          onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+          onClick={() => { duplicateFile(node.path); setContextMenu({ visible: false }); }}
+        >
+          创建副本 <span style={{opacity: 0.5, fontSize: 11}}>Cmd+D</span>
+        </div>
       )}
+      <div 
+        style={{ ...itemStyle, color: '#ef4444' }}
+        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'}
+        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+        onClick={() => { deleteFile(node.path); setContextMenu({ visible: false }); }}
+      >
+        推入废纸篓 <span style={{opacity: 0.5, fontSize: 11}}>Backspace</span>
+      </div>
     </div>
   );
 };
 
 export const Sidebar: React.FC = () => {
-  const { fileTree, workspaceName, sidebarVisible, outline, sidebarTab, setSidebarTab, refreshWorkspace } = useAppStore();
+  const { fileTree, workspaceName, sidebarVisible, outline, sidebarTab, setSidebarTab, refreshWorkspace, starredFiles } = useAppStore();
+
+  React.useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      const activeEl = document.activeElement;
+      if (activeEl) {
+        if (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA') return;
+        if (activeEl.getAttribute('contenteditable') === 'true') return;
+      }
+      
+      const { selectedNodePath, renamingPath, setRenamingPath, duplicateFile, deleteFile } = useAppStore.getState();
+      if (!selectedNodePath || renamingPath) return;
+
+      if (e.key === 'F2' || e.key === 'Enter') {
+        e.preventDefault();
+        setRenamingPath(selectedNodePath);
+      } else if (e.key === 'Backspace' || e.key === 'Delete') {
+        e.preventDefault();
+        deleteFile(selectedNodePath);
+      } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'd') {
+        e.preventDefault();
+        duplicateFile(selectedNodePath);
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, []);
 
   if (!sidebarVisible) return null;
 
@@ -240,6 +361,19 @@ export const Sidebar: React.FC = () => {
            </div>
         ) : (
           <>
+            {starredFiles.length > 0 && (
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', paddingLeft: 12, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4, opacity: 0.7 }}>
+                  <span>⭐ 收藏夹</span>
+                </div>
+                <div>
+                  {starredFiles.map(path => (
+                    <StarredItem key={`star-${path}`} path={path} />
+                  ))}
+                </div>
+              </div>
+            )}
+            
             <div className="tree-item" style={{ fontWeight: 600, color: 'var(--text-primary)', paddingLeft: 8, display: 'flex', alignItems: 'center' }}>
               <ChevronDown size={14} color="var(--text-muted)" />
               <FolderOpen size={14} color="var(--color-brand-indigo)" />
@@ -266,7 +400,7 @@ export const Sidebar: React.FC = () => {
           </>
         )}
       </div>
-      <ThemeSwitcher />
+      <ContextMenuComponent />
     </aside>
   );
 };

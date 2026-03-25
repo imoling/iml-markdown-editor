@@ -10,6 +10,9 @@ contextBridge.exposeInMainWorld('api', {
     writeFile: (filePath: string, content: string) => ipcRenderer.invoke('fs:writeFile', filePath, content),
     readDir: (dirPath: string) => ipcRenderer.invoke('fs:readDir', dirPath),
     saveImage: (activeFilePath: string, fileName: string, buffer: ArrayBuffer) => ipcRenderer.invoke('fs:saveImage', activeFilePath, fileName, buffer),
+    rename: (oldPath: string, newPath: string) => ipcRenderer.invoke('fs:rename', oldPath, newPath),
+    copy: (sourcePath: string, targetPath: string) => ipcRenderer.invoke('fs:copy', sourcePath, targetPath),
+    delete: (path: string) => ipcRenderer.invoke('fs:delete', path),
   },
   export: {
     pdf: (htmlContent: string, defaultPath: string, filePath: string) => ipcRenderer.invoke('export:pdf', htmlContent, defaultPath, filePath),
@@ -51,7 +54,7 @@ contextBridge.exposeInMainWorld('api', {
     }
   },
   app: {
-    version: process.env.npm_package_version || '1.0.0',
+    version: '1.7.0',
     checkUpdates: () => ipcRenderer.invoke('app:checkUpdates'),
     platform: process.platform,
     minimize: () => ipcRenderer.send('window-minimize'),
@@ -60,5 +63,5 @@ contextBridge.exposeInMainWorld('api', {
     getSettings: () => ipcRenderer.invoke('app:getSettings'),
     saveSettings: (settings: any) => ipcRenderer.invoke('app:saveSettings', settings),
   },
-  appVersion: process.env.npm_package_version || '1.0.0'
+  appVersion: '1.7.0'
 });

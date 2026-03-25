@@ -71,6 +71,105 @@
   margin-bottom: 24px;
 }
 
+/* Ensure headings inside lists align with bullets/numbers */
+.tiptap-prosemirror li > h1:first-child,
+.tiptap-prosemirror li > h2:first-child,
+.tiptap-prosemirror li > h3:first-child,
+.tiptap-prosemirror li > h4:first-child,
+.tiptap-prosemirror li > h5:first-child,
+.tiptap-prosemirror li > h6:first-child {
+  margin-top: 0;
+}
+
+/* -----------------------------------------------------
+ * Hierarchical Heading Numbering inside Ordered Lists
+ * ----------------------------------------------------- */
+
+/* Initialize all heading counters when an ordered list containing headings begins */
+/* Deliberately NOT resetting counters on the <ol> parent! 
+   If instantiated here, child <li> resets would create isolated nested scopes. 
+   By letting the first <li> instantiate the counter, its scope naturally spans its following siblings! */
+.tiptap-prosemirror ol:has(> li > h1, > li > h2, > li > h3, > li > h4, > li > h5, > li > h6) {
+  list-style: none; /* Safely prepare the list */
+}
+
+/* Increment the corresponding counter and reset all child counters AND generic paragraph counters */
+.tiptap-prosemirror ol > li:has(> h1:first-child) {
+  counter-increment: h1-cnt;
+  counter-reset: h2-cnt h3-cnt h4-cnt h5-cnt h6-cnt p-cnt;
+}
+.tiptap-prosemirror ol > li:has(> h2:first-child) {
+  counter-increment: h2-cnt;
+  counter-reset: h3-cnt h4-cnt h5-cnt h6-cnt p-cnt;
+}
+.tiptap-prosemirror ol > li:has(> h3:first-child) {
+  counter-increment: h3-cnt;
+  counter-reset: h4-cnt h5-cnt h6-cnt p-cnt;
+}
+.tiptap-prosemirror ol > li:has(> h4:first-child) {
+  counter-increment: h4-cnt;
+  counter-reset: h5-cnt h6-cnt p-cnt;
+}
+.tiptap-prosemirror ol > li:has(> h5:first-child) {
+  counter-increment: h5-cnt;
+  counter-reset: h6-cnt p-cnt;
+}
+.tiptap-prosemirror ol > li:has(> h6:first-child) {
+  counter-increment: h6-cnt;
+  counter-reset: p-cnt;
+}
+
+/* Ensure intermediate regular elements restart their sequential lists */
+.tiptap-prosemirror ol:has(> li > h1, > li > h2, > li > h3, > li > h4, > li > h5, > li > h6) > li:not(:has(> h1:first-child, > h2:first-child, > h3:first-child, > h4:first-child, > h5:first-child, > h6:first-child)) {
+  counter-increment: p-cnt;
+  list-style: none; /* override default browser numbering */
+}
+
+/* Set markers for standard sequence texts within mixed outlines */
+.tiptap-prosemirror ol:has(> li > h1, > li > h2, > li > h3, > li > h4, > li > h5, > li > h6) > li:not(:has(> h1:first-child, > h2:first-child, > h3:first-child, > h4:first-child, > h5:first-child, > h6:first-child))::marker {
+  content: counter(p-cnt) ". ";
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+/* Apply the generated hierarchical string and size to the markers */
+.tiptap-prosemirror ol > li:has(> h1:first-child)::marker {
+  content: counter(h1-cnt) ". ";
+  font-size: 32px;
+  font-weight: 600;
+  font-family: var(--font-heading);
+}
+.tiptap-prosemirror ol > li:has(> h2:first-child)::marker {
+  content: counter(h1-cnt) "." counter(h2-cnt) " ";
+  font-size: 24px;
+  font-weight: 600;
+  font-family: var(--font-heading);
+}
+.tiptap-prosemirror ol > li:has(> h3:first-child)::marker {
+  content: counter(h1-cnt) "." counter(h2-cnt) "." counter(h3-cnt) " ";
+  font-size: 20px;
+  font-weight: 600;
+  font-family: var(--font-heading);
+}
+.tiptap-prosemirror ol > li:has(> h4:first-child)::marker {
+  content: counter(h1-cnt) "." counter(h2-cnt) "." counter(h3-cnt) "." counter(h4-cnt) " ";
+  font-size: 16px;
+  font-weight: 600;
+  font-family: var(--font-heading);
+}
+.tiptap-prosemirror ol > li:has(> h5:first-child)::marker {
+  content: counter(h1-cnt) "." counter(h2-cnt) "." counter(h3-cnt) "." counter(h4-cnt) "." counter(h5-cnt) " ";
+  font-size: 14px;
+  font-weight: 600;
+  font-family: var(--font-heading);
+}
+.tiptap-prosemirror ol > li:has(> h6:first-child)::marker {
+  content: counter(h1-cnt) "." counter(h2-cnt) "." counter(h3-cnt) "." counter(h4-cnt) "." counter(h5-cnt) "." counter(h6-cnt) " ";
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--font-heading);
+}
+
 /* Table styles */
 .tiptap-prosemirror table {
   border-collapse: separate;

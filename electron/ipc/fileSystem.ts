@@ -1,4 +1,4 @@
-import { ipcMain, dialog, BrowserWindow } from 'electron';
+import { ipcMain, dialog, BrowserWindow, shell } from 'electron';
 import fs from 'fs';
 import path from 'path';
 
@@ -180,6 +180,61 @@ export function setupFileSystemIPC() {
     } catch (error: any) {
       console.error('Error reading directory:', error);
       return { success: false, error: error.message };
+    }
+  });
+
+  // Rename or move file/directory
+  ipcMain.handle('fs:rename', async (_, oldPath: string, newPath: string) => {
+    try {
+      const normalizedOld = path.normalize(oldPath);
+      const normalizedNew = path.normalize(newPath);
+      if (fs.existsSync(normalizedNew)) {
+        return { success: false, error: 'Target already exists' };
+      }
+      await fs.promises.rename(normalizedOld, normalizedNew);
+      return { success: true, oldPath: normalizedOld, newPath: normalizedNew };
+    } catch (error: any) {
+      console.error('Error renaming:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Copy file
+  ipcMain.handle('fs:copy', async (_, sourcePath: string, targetPath: string) => {
+    try {
+      const normalizedSource = path.normalize(sourcePath);
+      const normalizedTarget = path.normalize(targetPath);
+      if (fs.existsSync(normalizedTarget)) {
+        return { success: false, error: 'Target already exists' };
+      }
+      await fs.promises.copyFile(normalizedSource, normalizedTarget);
+      return { success: true, sourcePath: normalizedSource, targetPath: normalizedTarget };
+    } catch (error: any) {
+      console.error('Error copying file:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Delete file or directory (move to trash)
+  ipcMain.handle('fs:delete', async (_, targetPath: string) => {
+    try {
+      const normalizedTarget = path.normalize(targetPath);
+      await shell.trashItem(normalizedTarget);
+      return { success: true, path: normalizedTarget };
+    } catch (error: any) {
+      console.error('Error deleting (trash):', error);
+      // Fallback to unlink/rm if trash fails
+      try {
+        const stat = await fs.promises.stat(targetPath);
+        if (stat.isDirectory()) {
+          await fs.promises.rm(targetPath, { recursive: true, force: true });
+        } else {
+          await fs.promises.unlink(targetPath);
+        }
+        return { success: true, path: targetPath, permanently: true };
+      } catch (fallbackError: any) {
+        return { success: false, error: fallbackError.message };
+      }
     }
   });
 }

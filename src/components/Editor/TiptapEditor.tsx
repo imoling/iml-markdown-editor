@@ -1,7 +1,9 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import ReactDOM from 'react-dom';
+import { Extension } from '@tiptap/core';
 import { EditorContent, useEditor, BubbleMenu, FloatingMenu } from '@tiptap/react';
 import { DOMSerializer } from '@tiptap/pm/model';
+import { TextSelection } from '@tiptap/pm/state';
 import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
 import Placeholder from '@tiptap/extension-placeholder';
@@ -12,6 +14,7 @@ import { TableHeader } from '@tiptap/extension-table-header';
 import { CodeBlockLowlight } from '@tiptap/extension-code-block-lowlight';
 import { TaskList } from '@tiptap/extension-task-list';
 import { TaskItem } from '@tiptap/extension-task-item';
+import { ListItem } from '@tiptap/extension-list-item';
 import { Underline } from '@tiptap/extension-underline';
 import { Link } from '@tiptap/extension-link';
 import { TextAlign } from '@tiptap/extension-text-align';
@@ -259,6 +262,54 @@ function renumberHeadings(md: string): string {
   return result;
 }
 
+const CustomHeadingEnter = Extension.create({
+  name: 'customHeadingEnter',
+  priority: 1000, // Highest priority to ensure it runs before StarterKit's Heading/ListItem
+  addKeyboardShortcuts() {
+    const handleHeadingSplit = (editor: any, isMod: boolean) => {
+      const { state } = editor;
+      const { selection } = state;
+      const { $from, empty } = selection;
+
+      if (!empty) return false;
+
+      const parentNode = $from.parent;
+      if (parentNode.type.name !== 'heading') return false;
+
+      // 如果用户在空的 heading 里按键盘，放行
+      if (parentNode.textContent.trim() === '') return false;
+
+      const grandParent = $from.node(-1);
+      if (!grandParent || (grandParent.type.name !== 'listItem' && grandParent.type.name !== 'taskItem')) return false;
+
+      const level = parentNode.attrs.level;
+      
+      // Execute splitListItem
+      const success = editor.chain().splitListItem(grandParent.type.name).run();
+      
+      if (success) {
+        // 如果是 Cmd+Enter，将新产生的段落强行转换为刚才的同级标题
+        if (isMod) {
+          editor.chain().setNode('heading', { level }).run();
+          console.log('[CustomHeadingEnter] Cmd+Enter triggered: spawned same-level heading');
+        } else {
+          // 如果是普通的 Enter，我们不仅要劈开，还要强制它跳出列表（剥离），成为一干二净的纯文本！
+          editor.chain().liftListItem(grandParent.type.name).run();
+          console.log('[CustomHeadingEnter] Normal Enter triggered: extracted to pure paragraph outside list');
+        }
+        return true;
+      }
+
+      return false;
+    };
+
+    return {
+      'Mod-Enter': ({ editor }) => handleHeadingSplit(editor, true),
+      Enter: ({ editor }) => handleHeadingSplit(editor, false)
+    };
+  }
+});
+
 export const TiptapEditor: React.FC = () => {
   const { 
     activeTabId, tabs, updateTabContent, openTab, navigationRequest, setAIStatus, zoom,
@@ -287,9 +338,14 @@ export const TiptapEditor: React.FC = () => {
 
   const editor = useEditor({
     extensions: [
+      CustomHeadingEnter,
       StarterKit.configure({
         codeBlock: false, 
+        listItem: false,
       }), 
+      ListItem.extend({
+        content: 'block+',
+      }),
       Image, 
       Table.configure({
         resizable: true,
@@ -304,7 +360,9 @@ export const TiptapEditor: React.FC = () => {
       DiagramExtension,
       SVGExtension,
       TaskList,
-      TaskItem.configure({
+      TaskItem.extend({
+        content: 'block+',
+      }).configure({
         nested: true,
       }),
       Underline,
@@ -322,6 +380,95 @@ export const TiptapEditor: React.FC = () => {
     editorProps: {
       attributes: {
         class: 'tiptap-prosemirror',
+      },
+      handleDoubleClick: (view, pos, event) => {
+        const coords = { left: event.clientX, top: event.clientY };
+        const result = view.posAtCoords(coords);
+        if (!result) return false;
+
+        const { state } = view;
+        let nodePos = result.inside;
+        // 如果 inside 为 -1，说明点在了顶级（直接的 doc 子节点之间），我们尝试探测 pos
+        if (nodePos === -1) {
+          const $pos = state.doc.resolve(pos);
+          nodePos = $pos.before();
+        }
+
+        if (nodePos < 0) return false;
+
+        const targetEl = event.target as HTMLElement;
+        const inTable = targetEl.closest('td') || targetEl.closest('th');
+
+        // 绝对免疫：避免劫持正常的代码高亮选词和独立按键的双击
+        if (targetEl.closest('.cm-editor') || targetEl.closest('button') || targetEl.closest('input')) {
+          return false;
+        }
+
+        // 如果在表格里，只有直接点击在非常靠近边缘的 td/th 留白处时，才作为触发（保护里面的普通文本段落双击）
+        if (inTable) {
+          if (targetEl.tagName.toLowerCase() === 'p' || targetEl.tagName.toLowerCase() === 'span') {
+            return false; // 点到文字本身，不要劫持
+          }
+          const tableEl = targetEl.closest('table');
+          if (tableEl) {
+             const rect = tableEl.getBoundingClientRect();
+             // 只有点击在整个表格绝对上下边缘的 30px 内，才认为是意图“插在表格外”。否则放行。
+             const isTopEdge = event.clientY < rect.top + 30;
+             const isBottomEdge = event.clientY > rect.bottom - 30;
+             if (!isTopEdge && !isBottomEdge) {
+                return false;
+             }
+          }
+        }
+        
+        const node = state.doc.nodeAt(nodePos);
+        if (!node) return false;
+
+        // 我们关心的富容器：diagram (mermaid), svgBlock (svg拓展), image, table
+        const blockTypes = ['diagram', 'svgBlock', 'image', 'table'];
+        
+        // 向上层层追溯，看看点击究竟属于哪个块级容器
+        let targetNode = node;
+        let targetPos = nodePos;
+        
+        if (!blockTypes.includes(node.type.name)) {
+          const $resolved = state.doc.resolve(pos);
+          for (let depth = $resolved.depth; depth > 0; depth--) {
+            const ancestor = $resolved.node(depth);
+            if (blockTypes.includes(ancestor.type.name)) {
+              targetNode = ancestor;
+              targetPos = $resolved.before(depth);
+              break;
+            }
+          }
+        }
+
+        if (blockTypes.includes(targetNode.type.name)) {
+          const dom = view.nodeDOM(targetPos);
+          if (dom instanceof HTMLElement) {
+            const rect = dom.getBoundingClientRect();
+            // 点击位置位于元素上半区还是下半区
+            const isTopHalf = event.clientY < rect.top + rect.height / 2;
+            
+            // 确保不超过文档最大范围
+            let insertPos = isTopHalf ? targetPos : targetPos + targetNode.nodeSize;
+            insertPos = Math.min(insertPos, state.doc.content.size);
+            
+            // 创建段落并插入
+            let tr = state.tr.insert(insertPos, state.schema.nodes.paragraph.create());
+            
+            // 计算新光标位置：段落开始标签之后，并强制使用 TextSelection 规避 GapCursor 横线
+            const focusPos = insertPos + 1;
+            const newSelection = TextSelection.create(tr.doc, focusPos);
+            tr = tr.setSelection(newSelection);
+            
+            view.dispatch(tr);
+            view.focus();
+            
+            return true;
+          }
+        }
+        return false;
       },
       handleDrop: (view, event, slice, moved) => {
         if (!moved && event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0]) {
@@ -541,6 +688,24 @@ export const TiptapEditor: React.FC = () => {
     setShowAIPalette(false);
     setPalettePos(null);
   };
+
+  const handleToggleHeading = useCallback((level: number) => {
+    if (!editor) return;
+    const isActive = editor.isActive('heading', { level });
+    // Tiptap 的 toggleHeading() 命令有时会调用 clearNodes()，从而意外拔除包裹在外层的 list 节点。
+    // 因此我们使用 setNode 手工强制转换，将该操作安全地束缚在当前的 Block 层级中！
+    if (isActive) {
+      editor.chain().focus().setParagraph().run();
+    } else {
+      editor.chain().focus().setNode('heading', { level }).run();
+    }
+  }, [editor]);
+
+  const handleToggleOrderedList = useCallback(() => {
+    if (!editor) return;
+    // 强制保留内部节点的 wrap
+    editor.chain().focus().toggleOrderedList().run();
+  }, [editor]);
 
   const handleAIPaletteAction = async (prompt: string, useCtx: boolean = false, mode: 'text' | 'mermaid' | 'svg' = 'text') => {
     if (!editor) return;
@@ -896,9 +1061,9 @@ ${textAfter || '（文档末尾，无后文）'}
       } as React.CSSProperties}>
         <div style={{ display: 'flex', gap: 2 }}>
           <button type="button" className={`toolbar-icon-btn ${editor.isActive('paragraph') ? 'active' : ''}`} onClick={() => editor.chain().focus().setParagraph().run()} title="正文"><Type size={16} /></button>
-          <button type="button" className={`toolbar-btn ${editor.isActive('heading', { level: 1 }) ? 'active' : ''}`} onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} title="标题 1">H1</button>
-          <button type="button" className={`toolbar-btn ${editor.isActive('heading', { level: 2 }) ? 'active' : ''}`} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} title="标题 2">H2</button>
-          <button type="button" className={`toolbar-btn ${editor.isActive('heading', { level: 3 }) ? 'active' : ''}`} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} title="标题 3">H3</button>
+          <button type="button" className={`toolbar-btn ${editor.isActive('heading', { level: 1 }) ? 'active' : ''}`} onClick={() => handleToggleHeading(1)} title="标题 1">H1</button>
+          <button type="button" className={`toolbar-btn ${editor.isActive('heading', { level: 2 }) ? 'active' : ''}`} onClick={() => handleToggleHeading(2)} title="标题 2">H2</button>
+          <button type="button" className={`toolbar-btn ${editor.isActive('heading', { level: 3 }) ? 'active' : ''}`} onClick={() => handleToggleHeading(3)} title="标题 3">H3</button>
         </div>
         <div className="toolbar-divider"></div>
         <div style={{ display: 'flex', gap: 2 }}>
@@ -908,7 +1073,7 @@ ${textAfter || '（文档末尾，无后文）'}
         </div>
         <div className="toolbar-divider"></div>
         <div style={{ display: 'flex', gap: 2 }}>
-          <button type="button" className={`toolbar-icon-btn ${editor.isActive('orderedList') ? 'active' : ''}`} onClick={() => editor.chain().focus().toggleOrderedList().run()} title="有序列表"><ListOrdered size={16} /></button>
+          <button type="button" className={`toolbar-icon-btn ${editor.isActive('orderedList') ? 'active' : ''}`} onClick={handleToggleOrderedList} title="有序列表"><ListOrdered size={16} /></button>
           <button type="button" className={`toolbar-icon-btn ${editor.isActive('bulletList') ? 'active' : ''}`} onClick={() => editor.chain().focus().toggleBulletList().run()} title="无序列表"><List size={16} /></button>
           <button type="button" className={`toolbar-icon-btn ${editor.isActive('taskList') ? 'active' : ''}`} onClick={() => editor.chain().focus().toggleTaskList().run()} title="任务列表"><SquareCheck size={16} /></button>
         </div>

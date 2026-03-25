@@ -33,6 +33,7 @@ const App: React.FC = () => {
     autoCheckUpdates,
     theme,
     setTheme,
+    loadSession,
     loadSettings,
     appearanceMode,
     applyAppearance,
@@ -114,6 +115,12 @@ const App: React.FC = () => {
         openFile();
       }
 
+      // Cmd+, to open settings
+      if (modKey && e.key === ',') {
+        e.preventDefault();
+        useAppStore.getState().setSettingsModalOpen(true);
+      }
+
       // Cmd+/ to open shortcuts
       if (modKey && e.key === '/') {
         e.preventDefault();
@@ -140,10 +147,16 @@ const App: React.FC = () => {
     return () => clearTimeout(timer);
   }, [autoCheckUpdates]);
 
-  // Apply theme on mount and load settings
+  // Apply theme on mount and load session & settings
   useEffect(() => {
     setTheme(theme.id);
-    loadSettings();
+    const init = async () => {
+      await loadSettings();
+      if (useAppStore.getState().startupBehavior === 'restore') {
+        await loadSession();
+      }
+    };
+    init();
   }, []);
 
   // Listen for system theme changes

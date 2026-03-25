@@ -16,6 +16,33 @@ export const turndownService = new TurndownService({
 
 turndownService.use(tables);
 
+// Override heading rule to prevent list breakage
+turndownService.addRule('heading', {
+  filter: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
+  replacement: (content, node, options) => {
+    const hLevel = Number(node.nodeName.charAt(1));
+    let prefix = '';
+    for (let i = 0; i < hLevel; i++) {
+      prefix += '#';
+    }
+    
+    // 如果这个标题是在列表项 <li> 内部的第一个元素，不要在它前面加空白行
+    // 原生 turndown 对于 heading 是 '\n\n' + prefix + ' ' + content + '\n\n'
+    // 这会把标题硬生生从 <li> 的首行顶开，导致 markdown 解析器认为列表断了然后再跟一个标题
+    const isFirstChildOfLi = node.parentNode?.nodeName === 'LI' && node.previousSibling === null;
+    
+    if (isFirstChildOfLi) {
+      if (node.nextSibling === null) {
+         // It's the only child
+         return prefix + ' ' + content;
+      }
+      return prefix + ' ' + content + '\n\n';
+    }
+    
+    return '\n\n' + prefix + ' ' + content + '\n\n';
+  }
+});
+
 // Flatten paragraphs inside table cells to prevent Markdown table breakage
 turndownService.addRule('tableCellParagraphs', {
   filter: (node) => {

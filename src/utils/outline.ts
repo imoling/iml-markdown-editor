@@ -5,10 +5,11 @@ export function extractHeadings(markdown: string): HeadingNode[] {
   const lines = markdown.split('\n');
   
   lines.forEach((line, index) => {
-    const match = line.match(/^(#{1,6})\s+(.+)$/);
+    // 允许标题前面存在数字标号或无序列表符（如 `1. # 标题` 或 `- # 标题`）
+    const match = line.match(/^(\s*(?:\d+\.\s+|[-*+]\s+)?)(#{1,6})\s+(.+)$/);
     if (match) {
       // Strip common markdown formatting symbols for a cleaner catalog view
-      let cleanText = match[2].trim()
+      let cleanText = match[3].trim()
         .replace(/\*\*([^*]+)\*\*/g, '$1') // Bold **
         .replace(/__([^_]+)__/g, '$1')     // Bold __
         .replace(/\*([^*]+)\*/g, '$1')     // Italic *
@@ -18,7 +19,7 @@ export function extractHeadings(markdown: string): HeadingNode[] {
         .replace(/\\([\\`*_{}[\]()#+-.!])/g, '$1'); // Escapes
       
       headings.push({
-        level: match[1].length,
+        level: match[2].length,
         text: cleanText,
         id: `heading-${index}`
       });

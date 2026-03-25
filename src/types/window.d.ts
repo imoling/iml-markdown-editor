@@ -12,6 +12,9 @@ declare global {
         writeFile: (filePath: string, content: string) => Promise<{ success: boolean; error?: string; filePath?: string }>;
         readDir: (dirPath: string) => Promise<{ success: boolean; files?: any[]; error?: string; path?: string }>;
         saveImage: (activeFilePath: string, fileName: string, buffer: ArrayBuffer) => Promise<{ success: boolean; path?: string; error?: string }>;
+        rename: (oldPath: string, newPath: string) => Promise<{ success: boolean; oldPath?: string; newPath?: string; error?: string }>;
+        copy: (sourcePath: string, targetPath: string) => Promise<{ success: boolean; sourcePath?: string; targetPath?: string; error?: string }>;
+        delete: (path: string) => Promise<{ success: boolean; path?: string; permanently?: boolean; error?: string }>;
       };
       export: {
         pdf: (htmlContent: string, defaultPath: string, filePath: string) => Promise<{ success: boolean; path?: string; canceled?: boolean; error?: string }>;
