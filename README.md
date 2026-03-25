@@ -1,62 +1,40 @@
-# iML Markdown Editor (v1.6.0)
+# iML Markdown Editor (v1.7.0)
 
-一款为 **Vibe Coding** 时代打造的 AI 灵感编辑器。
+**AI 时代的敏捷知识编辑中枢**
 **极简其表 &middot; 极致内核** (Minimalist Surface, Maximalist Core).
 
 ![iML Main Interface](screenshots/ScreenShot_2026-03-17_034853_908.png)
 
-## 🛡️ 核心哲学：让灵感被 AI 精准理解
+## 🛡️ 核心哲学：灵感驱动，逻辑重塑
 iML Markdown Editor 的诞生初衷，是让 **Vibe Coding 的第一步变得前所未有的简单**。
 
-在 AI 编程时代，最大的挑战往往不是代码编写，而是如何将脑海中模糊的“灵感（Vibe）”转化为 AI 能够无损理解的“指令”。iML 旨在成为您与 AI 之间的最优接口，通过极致的编辑器体验与 **指令级 AI 助手**，让您的想象力能够毫无障碍地传递给 AI 编程工具。
+在 AI 编程时代，最大的挑战往往不是代码编写，而是如何将脑海中模糊的“灵感（Vibe）”转化为 AI 能够无损理解的“指令”。iML 旨在成为您与 AI 之间的最优接口，通过 **指令级 AI 助手** 与 **工程化文档系统**，让您的想象力能够毫无障碍地传递给 AI 编程工具。
 
-当然，作为一款根植于本地系统的编辑器，iML 也是您处理本地 Markdown（.md）文件的得力助手。它提供了极速的文件系统响应、专业的排版渲染以及丝滑的编辑体验，确保无论是在深度 AI 创作还是日常文字记录中，都能让您得心应手。
+作为一款根植于本地系统的编辑器，v1.7.0 版本更进一步，进化为具备**深度文件管理**能力的“知识管理库（Knowledge Base）”。它提供了极速的文件系统响应、专业的排版渲染以及丝滑的编辑体验，确保无论是在深度 AI 创作还是日常知识沉淀中，都能让您得心应手。
 
 ## ✨ 核心特性
 
-### 🪄 Vibe Coding AI 驱动 (The First Step)
-集成极致精简的 **指令级 AI 面板**，支持全链路流式生成，即刻实现从灵感到实体的跨越：
-- **常驻发送指令**：重新设计的 AI 气泡，具备实体感按钮与常驻发送确认，优化盲操体验。
-- **结合上下文**：一键切换是否引入当前文档全量上下文进行精准生成。
-- **AI 场景化写作**：PRD 文档、Google AI Studio Prompts、Stitch 原型、Nano Banana PPT 模板等深度集成。
-- **工程化解构**：自动化将 Vibe Coding 创意拆解为标准技术骨架与模块化文档。
+### 🪄 AI 灵感驱动 (Knowledge Architect)
+集成极致精简的 **指令级 AI 面板**，支持全链路流式生成，实现从灵感维度到标准 PRD/原型/文档的跨越：
+- **常驻发送指令**：重新设计的 AI 气泡，具备实体感按钮与确认状态，优化盲操体验。
+- **智能上下文引用**：一键引入文档大纲与全量内容，实现具备“逻辑深度”的内容润色与扩写。
+- **AI 场景化工作室**：PRD 文档、Google AI Studio Prompts、Stitch 原型、Nano Banana PPT 模板等深度集成。
 
-### 🎨 高端视觉与交互 (UI/UX)
-- **纸张态沉浸排版**：富文本模式采用层次明晰的“白纸”交互图层，背景自适应深度增长，带来极致视网膜级的书写体验。
-- **Modern Nordic Clarity**: 继承北欧简约设计，辅以 macOS 级原生地图、毛玻璃效果、以及丝滑的微动画。
-- **极简标签管理**: 隐藏原生滚动条，支持活动标签自动居中，标签宽度根据负载智能收缩。
-- **紧凑型交互弹窗**: 分页式快捷键详情（Shortcuts Modal），消除滚动条，按功能逻辑动态分布。
-- **响应式图形预览**: 集成 Mermaid 与 SVG 实时渲染，支持 **拖拽式自由拉伸缩放** 与等比放大呈现。
-- **全平台原生体验 (Cross-Platform)**: 
-    - **macOS**: 完美适配 Apple Silicon (arm64)，具备原生交通灯控件与毛玻璃效果。
-    - **Windows**: 提供深度定制的安装向导，支持 x64 与 arm64 双架构，并新增了原生感知的窗口控制按钮。
+### 📁 深度文件管理系统 (File Management)
+- **原生级右键菜单**：侧边栏支持重命名、复制副本、新建子文档、推入回收站等高阶操作。
+- **极客快捷键网格**：`F2` 重命名、`Cmd+D` 快速克隆、`Backspace` 快速删除。
+- **智能收藏与近期**：支持文档星标收藏，并自动记录近期活动文件，实现秒级上下文恢复。
+- **无感自动保存**：监听失焦（Blur）事件自动存盘，确保数据安全万无一失。
+
+### 🎨 极简控制台 (Smart Dashboard)
+- **智能启动页**：当关闭所有标签页时，自动唤起具备毛玻璃质感的 Dashboard，展示近期文件与核心入口。
+- **会话持久化 (Session Restore)**：冷启动时自动恢复上次的工作区、已打开的标签页（Tabs）及滚动位置。
+- **可定制启动行为**：自由切换“恢复上次会话”或“展示启动控制台”。
 
 ### ⌨️ 专业级编辑能力
-- **双模态无缝切换**：
-    - **富文本模式 (Rich Text)**：基于 Tiptap 2.0，支持 GFM 表格、气泡菜单引导与图片即时插入。
-    - **源码模式 (Source Code)**：基于 CodeMirror 6，集成高性能实时预览、代码高亮与数学公式。
-- **全场景安全审计**：实时追踪文档变更，针对新建文件与未保存更改提供三态（保存/不保存/取消）闭环保护。
-
-## 📸 系统预览 (System Preview)
-
-![Main Editor Interface](screenshots/screenshot_20260313_2328.png)
-*图 1：主编辑界面*
-
-![AI Scenario Panel](screenshots/screenshot_20260313_2325.png)
-*图 2：AI 写作面板*
-
-## 💡 Vibe Coding 实战示例：从灵感到全栈应用
-
-使用 iML Markdown Editor 生成精准的 PRD 需求文档，并由 AI 编程工具自动开发完成的“极简会议预订系统”实战案例：
-
-![Meeting System Preview 1](screenshots/screenshot_20260313_2340.png)
-*图 3：实战案例 (1)*
-
-![Meeting System Preview 2](screenshots/screenshot_20260313_2342.png)
-*图 4：实战案例 (2)*
-
-![Meeting System Preview 3](screenshots/screenshot_20260313_2343.png)
-*图 5：实战案例 (3)*
+- **双模态无缝切换**：基于 Tiptap 2.0 (富文本) 与 CodeMirror 6 (源码模式)，支持物理隔离的图表编辑体验。
+- **响应式图形引擎**：集成 Mermaid 与 SVG 实时渲染，支持 **拖拽式高度拉伸** 与等比缩放。
+- **纸张态沉浸排版**：视网膜级“白纸”交互图层，背景随内容动态拉伸，带给您如同纸笔书写般的宁静感。
 
 ## 🚀 运行与构建
 
@@ -71,32 +49,28 @@ npm run dev
 
 ### 生产构建
 ```bash
-# 生成 macOS (arm64) 安装包
-npm run build:mac
-
-# 生成 Windows (x64/arm64) 安装包
-npm run build:win
+# 生成 Windows/Mac (x64/arm64) 安装包
+npm run build
 ```
 
 ## 🛠 技术架构
-- **Core**: React 18 + Vite + TypeScript
-- **Runtime**: Electron (Main/Renderer Process Communication Layer)
-- **State**: Zustand (Local Persistence)
-- **Engine**: Tiptap (Rich Text) / CodeMirror 6 (Markdown)
-- **Logic**: Node.js Native FS + Buffer-based SSE Streaming protocol
-- **Styling**: Modern CSS Variables & Glassmorphism Design System
+- **Core**: React 19 + Vite + TypeScript
+- **Runtime**: Electron (Main/Preload Bridge Layer)
+- **State**: Zustand (Local Persistence Engine)
+- **Engine**: Tiptap Gen-2 (Rich Text) / CodeMirror 6 (Markdown)
+- **Styling**: Glassmorphism CSS Variables System
 
 ## ⌨️ 核心快捷键
 | 动作 | 快捷键 |
 |---|---|
 | 新建 / 打开 / 保存 | `⌘ N` / `⌘ O` / `⌘ S` |
-| 切换编辑模式 | `⌘ E` |
-| 切换侧边栏 | `⌘ B` |
-| 快捷键全览 | `⌘ /` |
+| 侧边栏重命名 / 克隆 | `F2` / `⌘ D` |
+| 切换编辑模式 / 侧边栏 | `⌘ E` / `⌘ B` |
+| 打开设置中心 / 关于 | `⌘ ,` / `⌘ I` |
 | 另存为 | `⌘ ⇧ S` |
 
 ## 📄 许可证 & 愿景
-本项目采用 [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4./) 许可证，未经授权，禁止将本项目用于任何商业目的。
+本项目采用 [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/) 许可证。未经授权，禁止商业用途。
 
 Logic & Design by [imoling.cn@gmail.com](mailto:imoling.cn@gmail.com) | Architected with Antigravity AI
 

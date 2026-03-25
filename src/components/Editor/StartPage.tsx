@@ -67,12 +67,12 @@ export const StartPage: React.FC = () => {
 
       <div style={{ zIndex: 1, width: '100%', maxWidth: 760, animation: 'fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1)' }}>
         <div style={{ textAlign: 'center', marginBottom: 48 }}>
-          <h1 style={{ fontSize: 36, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.02em', margin: '0 0 12px 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
-            <span>{timeGreeting}，欢迎来到 <span style={{ background: 'var(--brand-gradient)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>iML Markdown Editor</span></span>
-            <span style={{ fontSize: 13, fontWeight: 600, padding: '2px 8px', borderRadius: 12, backgroundColor: 'var(--bg-code-inline)', color: 'var(--color-brand-indigo)', border: '1px solid var(--brand-shadow)' }}>v{window.api?.appVersion || '1.7.0'}</span>
+          <h1 style={{ fontSize: 36, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.02em', margin: '0 0 12px 0' }}>
+            {timeGreeting}，欢迎来到 <span style={{ background: 'var(--brand-gradient)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>iML Markdown Editor</span>
           </h1>
-          <p style={{ fontSize: 15, color: 'var(--text-secondary)', margin: 0 }}>
-            <span style={{ color: 'var(--color-brand-indigo)', fontWeight: 600 }}>AI 时代</span>的敏捷知识编辑中枢
+          <p style={{ fontSize: 15, color: 'var(--text-secondary)', margin: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+            <span><span style={{ color: 'var(--color-brand-indigo)', fontWeight: 600 }}>AI 时代</span>的敏捷知识编辑中枢</span>
+            <span style={{ fontSize: 12, fontWeight: 600, padding: '1px 6px', borderRadius: 8, backgroundColor: 'var(--bg-code-inline)', color: 'var(--color-brand-indigo)', border: '1px solid var(--brand-shadow)', display: 'inline-flex', alignItems: 'center', height: 18 }}>v{window.api?.appVersion || '1.7.0'}</span>
           </p>
         </div>
 

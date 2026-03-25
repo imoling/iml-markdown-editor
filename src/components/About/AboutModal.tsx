@@ -103,7 +103,7 @@ const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
           fontSize: 14, 
           color: 'var(--text-muted)',
           fontWeight: 500
-        }}>Version {window.api?.appVersion || '1.6.0'}</p>
+        }}>Version {window.api?.appVersion || '1.7.0'}</p>
         
         <p style={{ 
           margin: '0 0 24px 0', 
@@ -159,7 +159,7 @@ const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
           lineHeight: 1.6
         }}>
           &copy; 2026 iML Studio. 保留所有权利。<br />
-          让书写回归纯粹。
+          AI 时代的敏捷知识编辑中枢
         </p>
 
         {(!isStandalone || !isMac) && (
