@@ -20,7 +20,8 @@ iML Markdown Editor 的诞生初衷，是让 **Vibe Coding 的第一步变得前
 - **智能上下文引用**：一键引入文档大纲与全量内容，实现具备“逻辑深度”的内容润色。
 - **AI 场景化工作室**：PRD 文档、Prompt 工程、Nano Banana 画图等深度集成。
 
-![AI 场景写作](screenshots/AI 场景写作.png)
+
+![AI场景写作](screenshots/AI场景写作.png)
 *图：深度集成多种 Vibe Coding 写作场景*
 
 ### 📁 深度文件管理系统 (File Management)
@@ -42,18 +43,24 @@ iML Markdown Editor 的诞生初衷，是让 **Vibe Coding 的第一步变得前
 - **双模态无缝切换**：基于 Tiptap 2.0 (富文本) 与 CodeMirror 6 (源码模式)，支持物理隔离的交互体验。
 - **纸张态沉浸排版**：视网膜级“白纸”交互图层，带来如同纸笔书写般的宁静感。
 
-![MD 模式](screenshots/md 模式.png)
+![MD 模式](screenshots/MD模式.png)
 *图：极致清晰的 Markdown 源码编辑体验*
 
-## 📸 更多系统截图 (Gallery)
+## 💡 Vibe Coding 实战示例：从灵感到全栈应用
 
-| ![空格 AI](screenshots/空格 AI.png) | ![右键 AI](screenshots/右键 AI.png) |
-|:---:|:---:|
-| *光标处快捷唤起 AI* | *气泡菜单深度赋能* |
+使用 iML Markdown Editor 生成精准的 PRD 需求文档，并由 AI 编程工具自动开发完成的“极简会议预订系统”实战案例：
 
-| ![全局设置](screenshots/全局设置.png) | ![版本检测](screenshots/版本检测.png) |
-|:---:|:---:|
-| *极致简洁的设置中心* | *GitHub 自动化更新检测* |
+![Meeting System Preview 1](screenshots/示例1.png)
+*图 1：实战案例 (1)*
+
+![Meeting System Preview 2](screenshots/示例2.png)
+*图 2：实战案例 (2)*
+
+![Meeting System Preview 3](screenshots/示例3.png)
+*图 3：实战案例 (3)*
+
+![Meeting System Preview 4](screenshots/示例4.png)
+*图 4：实战案例 (4)*
 
 ## 🚀 运行与构建
 
