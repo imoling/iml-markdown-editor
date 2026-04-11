@@ -1,4 +1,5 @@
-# iML Markdown Editor · v1.8.0
+# iML Markdown Editor · [![Release v1.8.0](https://img.shields.io/badge/Release-v1.8.0-indigo?style=for-the-badge&logo=github)](https://github.com/imoling/iml-markdown-editor/releases)
+
 
 **极简其表 · 极致内核**
 
