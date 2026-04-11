@@ -79,6 +79,67 @@ export interface NavigationRequest {
   timestamp: number;
 }
 
+// ── SKILL 写作运行时状态 ──
+export type SkillStepStatus = 'pending' | 'running' | 'done' | 'skipped' | 'error';
+
+export interface CoverImage {
+  url: string;
+  localPath: string;
+}
+
+export interface SkillStepRun {
+  stepId: string;
+  status: SkillStepStatus;
+  output: string;
+  outlineItems?: string[];
+  selectedItemIndex?: number;
+  coverImages?: CoverImage[];
+  selectedCoverIndex?: number;
+  sectionOutputs?: Record<string, string>;
+  /** polish 步骤选中的功能项 ID 列表 */
+  polishOptions?: string[];
+  /** publish 步骤：选中的主题和颜色 */
+  publishTheme?: string;
+  publishColor?: string;
+  /** publish 步骤：发布状态 */
+  publishStatus?: 'idle' | 'publishing' | 'success' | 'error';
+  publishError?: string;
+  /** illustrations 步骤：每张图的已生成图片 */
+  illustrationImages?: Record<string, { url: string; localPath: string }>;
+  /** illustrations 步骤：每张图的生成中状态 */
+  illustrationLoading?: Record<string, boolean>;
+  error?: string;
+  updatedAt: number;
+}
+
+export interface SkillRun {
+  id: string;
+  skillId: string;
+  vibe: string;
+  webContext?: string;
+  steps: SkillStepRun[];
+  currentStepIndex: number;
+  tabId?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface ImageGenConfig {
+  source: 'crawl' | 'generate';
+  provider: 'gemini' | 'gemini-imagen' | 'gemini-flash' | 'volcengine' | 'minimax' | 'custom';
+  apiKey: string;
+  model: string;
+  endpoint: string;
+}
+
+export const DEFAULT_IMAGE_GEN_CONFIG: ImageGenConfig = {
+  source: 'crawl',
+  provider: 'gemini-imagen',
+  apiKey: '',
+  model: '',
+  endpoint: '',
+};
+
 export interface AppState {
   mode: 'word' | 'markdown';
   activeTabId: string | null;
@@ -93,7 +154,10 @@ export interface AppState {
   outline: HeadingNode[];
   findVisible: boolean;
   replaceVisible: boolean;
-  sidebarTab: 'catalog' | 'files' | 'ai';
+  sidebarTab: 'catalog' | 'files' | 'notes';
+  sidebarWidth: number;
+  aiPanelVisible: boolean;
+  aiPanelWidth: number;
   expandedPaths: string[];
   navigationRequest: NavigationRequest | null;
   updateStatus: {
@@ -106,15 +170,20 @@ export interface AppState {
     generating: boolean;
     onStop: (() => void) | null;
   };
+  skillRuns: Record<string, SkillRun>;
+  activeSkillRunId: string | null;
   zoom: number;
   theme: ThemeConfig;
   isSettingsModalOpen: boolean;
-  appearanceMode: 'light' | 'dark' | 'system';
+  isWechatConfigOpen: boolean;
+  isImageConfigOpen: boolean;
+  appearanceMode: 'light' | 'dark' | 'system' | 'eye-protection';
   startupBehavior: 'restore' | 'dashboard';
   autoSave: boolean;
   defaultLibraryPath: string;
   starredFiles: string[];
-  
+  imageGenConfig: ImageGenConfig;
+
   // File Management State
   selectedNodePath: string | null;
   renamingPath: string | null;
@@ -142,8 +211,12 @@ export interface AppState {
   createNewFile: () => void;
   toggleFind: () => void;
   toggleReplace: () => void;
-  setSidebarTab: (tab: 'catalog' | 'files' | 'ai') => void;
+  setSidebarTab: (tab: 'catalog' | 'files' | 'notes') => void;
+  setSidebarWidth: (width: number) => void;
+  toggleAIPanel: () => void;
+  setAIPanelWidth: (width: number) => void;
   refreshWorkspace: () => Promise<void>;
+  openFileByPath: (filePath: string) => Promise<void>;
   openFile: () => Promise<void>;
   openDirectory: () => Promise<void>;
   tabToClose: string | null;
@@ -153,18 +226,25 @@ export interface AppState {
   autoCheckUpdates: () => Promise<void>;
   setUpdateStatus: (status: Partial<AppState['updateStatus']>) => void;
   setAIStatus: (status: Partial<AppState['aiStatus']>) => void;
+  upsertSkillRun: (run: SkillRun) => void;
+  updateSkillStepRun: (runId: string, stepId: string, patch: Partial<SkillStepRun>) => void;
+  setActiveSkillRun: (id: string | null) => void;
+  deleteSkillRun: (id: string) => void;
   setZoom: (zoom: number) => void;
   setTheme: (themeId: string) => void;
   setSettingsModalOpen: (open: boolean) => void;
-  setAppearanceMode: (mode: 'light' | 'dark' | 'system') => void;
+  setWechatConfigOpen: (open: boolean) => void;
+  setImageConfigOpen: (open: boolean) => void;
+  setAppearanceMode: (mode: 'light' | 'dark' | 'system' | 'eye-protection') => void;
   setStartupBehavior: (behavior: 'restore' | 'dashboard') => void;
   setAutoSave: (autoSave: boolean) => void;
   setDefaultLibraryPath: (path: string) => void;
   loadSession: () => Promise<boolean>;
   loadSettings: () => Promise<void>;
   saveSettings: () => Promise<void>;
-  applyAppearance: (mode: 'light' | 'dark' | 'system') => void;
+  applyAppearance: (mode: 'light' | 'dark' | 'system' | 'eye-protection') => void;
   toggleStar: (path: string) => void;
+  setImageGenConfig: (config: Partial<ImageGenConfig>) => void;
 
   // File Management Actions
   setSelectedNodePath: (path: string | null) => void;
@@ -189,7 +269,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   outline: [],
   findVisible: false,
   replaceVisible: false,
-  sidebarTab: 'files',
+  sidebarTab: 'notes',
+  sidebarWidth: 240,
+  aiPanelVisible: false,
+  aiPanelWidth: 400,
   expandedPaths: [],
   navigationRequest: null,
   tabToClose: null,
@@ -201,20 +284,30 @@ export const useAppStore = create<AppState>((set, get) => ({
   
   updateStatus: { show: false, loading: false, latestVersion: null, error: null },
   aiStatus: { generating: false, onStop: null },
+  skillRuns: {},
+  activeSkillRunId: null,
   zoom: 100,
   theme: THEME_PRESETS[0],
   isSettingsModalOpen: false,
+  isWechatConfigOpen: false,
+  isImageConfigOpen: false,
   appearanceMode: 'light',
   startupBehavior: 'restore',
   autoSave: true,
   defaultLibraryPath: '',
   starredFiles: [],
-  
+  imageGenConfig: DEFAULT_IMAGE_GEN_CONFIG,
+
   toggleStar: (path: string) => set((state) => ({
-    starredFiles: state.starredFiles.includes(path) 
+    starredFiles: state.starredFiles.includes(path)
       ? state.starredFiles.filter(p => p !== path)
       : [...state.starredFiles, path]
   })),
+
+  setImageGenConfig: (config: Partial<ImageGenConfig>) => {
+    set((state) => ({ imageGenConfig: { ...state.imageGenConfig, ...config } }));
+    get().saveSettings();
+  },
 
   setTabToClose: (id: string | null) => set({ tabToClose: id }),
   
@@ -362,7 +455,17 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   toggleFind: () => set((state) => ({ findVisible: !state.findVisible, replaceVisible: false })),
   toggleReplace: () => set((state) => ({ replaceVisible: !state.replaceVisible, findVisible: false })),
-  setSidebarTab: (tab: 'catalog' | 'files' | 'ai') => set({ sidebarTab: tab }),
+  setSidebarTab: (tab: 'catalog' | 'files' | 'notes') => {
+    const { sidebarTab, sidebarVisible } = get();
+    if (sidebarVisible && sidebarTab === tab) {
+      set({ sidebarVisible: false });
+    } else {
+      set({ sidebarTab: tab, sidebarVisible: true });
+    }
+  },
+  setSidebarWidth: (width) => set({ sidebarWidth: Math.min(600, Math.max(240, width)) }),
+  toggleAIPanel: () => set((s) => ({ aiPanelVisible: !s.aiPanelVisible })),
+  setAIPanelWidth: (width) => set({ aiPanelWidth: Math.min(600, Math.max(240, width)) }),
   refreshWorkspace: async () => {
     const { workspacePath } = get();
     if (!workspacePath) return;
@@ -374,6 +477,22 @@ export const useAppStore = create<AppState>((set, get) => ({
       }
     } catch (error) {
       console.error('Failed to refresh workspace:', error);
+    }
+  },
+
+  openFileByPath: async (filePath: string) => {
+    const existing = get().tabs.find(t => t.id === filePath);
+    if (existing) { get().setActiveTab(filePath); return; }
+    const readResult = await window.api.fs.readFile(filePath);
+    if (readResult.success) {
+      get().openTab({
+        id: filePath,
+        title: filePath.split(/[/\\]/).pop() || 'Untitled',
+        content: readResult.content || '',
+        isDirty: false,
+        mode: 'word',
+      });
+      get().addToRecent(filePath);
     }
   },
 
@@ -428,9 +547,9 @@ export const useAppStore = create<AppState>((set, get) => ({
         const timeStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}-${String(date.getMinutes()).padStart(2, '0')}-${String(date.getSeconds()).padStart(2, '0')}`;
         
         let titleStr = timeStr;
-        const firstLine = activeTab.content.split('\\n').find(l => l.trim().length > 0);
+        const firstLine = activeTab.content.split('\n').find(l => l.trim().length > 0);
         if (firstLine) {
-          const cleanTitle = firstLine.replace(/^#+\\s*/, '').replace(/[\\\\/:*?"<>|]/g, '').trim().substring(0, 30);
+          const cleanTitle = firstLine.replace(/^#+\s*/, '').replace(/[\\/:*?"<>|]/g, '').trim().substring(0, 30);
           if (cleanTitle) titleStr = cleanTitle;
         }
         
@@ -479,6 +598,38 @@ export const useAppStore = create<AppState>((set, get) => ({
   setAIStatus: (status: Partial<AppState['aiStatus']>) => set((state) => ({
     aiStatus: { ...state.aiStatus, ...status }
   })),
+
+  upsertSkillRun: (run: SkillRun) => set((state) => ({
+    skillRuns: { ...state.skillRuns, [run.id]: { ...run, updatedAt: Date.now() } }
+  })),
+
+  updateSkillStepRun: (runId, stepId, patch) => set((state) => {
+    const run = state.skillRuns[runId];
+    if (!run) return {};
+    const exists = run.steps.some(s => s.stepId === stepId);
+    const now = Date.now();
+    const steps = exists
+      ? run.steps.map(s => s.stepId === stepId ? { ...s, ...patch, updatedAt: now } : s)
+      // 步骤不存在时（旧 run 遇到新增步骤）：追加
+      : [...run.steps, { stepId, status: 'pending' as const, output: '', updatedAt: now, ...patch }];
+    return {
+      skillRuns: {
+        ...state.skillRuns,
+        [runId]: { ...run, steps, updatedAt: now }
+      }
+    };
+  }),
+
+  setActiveSkillRun: (id) => set({ activeSkillRunId: id }),
+
+  deleteSkillRun: (id) => set((state) => {
+    const next = { ...state.skillRuns };
+    delete next[id];
+    return {
+      skillRuns: next,
+      activeSkillRunId: state.activeSkillRunId === id ? null : state.activeSkillRunId
+    };
+  }),
   
   setZoom: (zoom: number) => set({ zoom }),
   
@@ -498,8 +649,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   setSettingsModalOpen: (open: boolean) => set({ isSettingsModalOpen: open }),
+  setWechatConfigOpen: (open: boolean) => set({ isWechatConfigOpen: open }),
+  setImageConfigOpen: (open: boolean) => set({ isImageConfigOpen: open }),
   
-  setAppearanceMode: (mode: 'light' | 'dark' | 'system') => {
+  setAppearanceMode: (mode: 'light' | 'dark' | 'system' | 'eye-protection') => {
     set({ appearanceMode: mode });
     get().applyAppearance(mode);
     get().saveSettings();
@@ -520,7 +673,11 @@ export const useAppStore = create<AppState>((set, get) => ({
     get().saveSettings();
   },
 
-  applyAppearance: (mode: 'light' | 'dark' | 'system') => {
+  applyAppearance: (mode: 'light' | 'dark' | 'system' | 'eye-protection') => {
+    if (mode === 'eye-protection') {
+      document.documentElement.setAttribute('data-theme', 'eye-protection');
+      return;
+    }
     const isDark = mode === 'dark' || (mode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
     document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
   },
@@ -555,6 +712,24 @@ export const useAppStore = create<AppState>((set, get) => ({
         // 恢复 Recent Files
         if (session.recentFiles) {
           set({ recentFiles: session.recentFiles });
+        }
+
+        // 恢复 SKILL 写作进度
+        if (session.skillRuns) {
+          // 将所有 running 状态视为中断 → 重置为 pending，避免恢复后看起来卡住
+          const cleaned: Record<string, SkillRun> = {};
+          for (const [k, run] of Object.entries(session.skillRuns as Record<string, SkillRun>)) {
+            cleaned[k] = {
+              ...run,
+              steps: run.steps.map(s =>
+                s.status === 'running' ? { ...s, status: 'pending' as SkillStepStatus } : s
+              )
+            };
+          }
+          set({ skillRuns: cleaned });
+        }
+        if (session.activeSkillRunId) {
+          set({ activeSkillRunId: session.activeSkillRunId });
         }
 
         // 恢复 Tabs
@@ -608,7 +783,8 @@ export const useAppStore = create<AppState>((set, get) => ({
           appearanceMode: settings.appearanceMode || 'light',
           startupBehavior: settings.startupBehavior || 'restore',
           autoSave: settings.autoSave ?? true,
-          defaultLibraryPath: settings.defaultLibraryPath || ''
+          defaultLibraryPath: settings.defaultLibraryPath || '',
+          imageGenConfig: settings.imageGenConfig || DEFAULT_IMAGE_GEN_CONFIG,
         });
         get().applyAppearance(settings.appearanceMode || 'light');
       }
@@ -618,8 +794,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   saveSettings: async () => {
-    const { appearanceMode, startupBehavior, autoSave, defaultLibraryPath } = get();
-    await window.api.app.saveSettings({ appearanceMode, startupBehavior, autoSave, defaultLibraryPath });
+    const { appearanceMode, startupBehavior, autoSave, defaultLibraryPath, imageGenConfig } = get();
+    await window.api.app.saveSettings({ appearanceMode, startupBehavior, autoSave, defaultLibraryPath, imageGenConfig });
   },
 
   setSelectedNodePath: (path) => set({ selectedNodePath: path }),
@@ -751,14 +927,16 @@ export const useAppStore = create<AppState>((set, get) => ({
 }));
 
 useAppStore.subscribe((state, prevState) => {
-  const shouldSave = 
+  const shouldSave =
     state.tabs !== prevState.tabs ||
     state.activeTabId !== prevState.activeTabId ||
     state.workspacePath !== prevState.workspacePath ||
     state.expandedPaths !== prevState.expandedPaths ||
     state.starredFiles !== prevState.starredFiles ||
-    state.recentFiles !== prevState.recentFiles;
-    
+    state.recentFiles !== prevState.recentFiles ||
+    state.skillRuns !== prevState.skillRuns ||
+    state.activeSkillRunId !== prevState.activeSkillRunId;
+
   if (shouldSave) {
     const sessionToSave = {
       workspacePath: state.workspacePath,
@@ -771,7 +949,9 @@ useAppStore.subscribe((state, prevState) => {
         title: t.title,
         isDirty: t.isDirty,
         mode: t.mode
-      }))
+      })),
+      skillRuns: state.skillRuns,
+      activeSkillRunId: state.activeSkillRunId
     };
     localStorage.setItem('iml_session', JSON.stringify(sessionToSave));
   }

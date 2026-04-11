@@ -1,11 +1,12 @@
 {
   "name": "iml-markdown-editor",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "description": "极简而极致的 Markdown 编辑器，支持双模编辑、PDF 导出与智能目录同步。",
   "main": "dist-electron/main.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "concurrently \"vite\" \"tsc -p electron/tsconfig.json -w\" \"(wait-on tcp:5173 || wait-on tcp:5174) && cross-env NODE_ENV=development ELECTRON_RUN_AS_NODE= electron .\"",
+    "predev": "npx tsc -p electron/tsconfig.json",
+    "dev": "concurrently \"vite\" \"npx tsc -p electron/tsconfig.json -w\" \"(wait-on tcp:5173 || wait-on tcp:5174) && cross-env NODE_ENV=development ELECTRON_RUN_AS_NODE= electron .\"",
     "build": "tsc && vite build && tsc -p electron/tsconfig.json && electron-builder",
     "build:mac": "tsc && vite build && tsc -p electron/tsconfig.json && electron-builder --mac",
     "build:win": "tsc && vite build && tsc -p electron/tsconfig.json && electron-builder --win"
@@ -80,9 +81,42 @@
       "dist-electron/**/*",
       "assets/**/*"
     ],
+    "fileAssociations": [
+      {
+        "ext": ["md", "markdown", "mdown", "mkd"],
+        "name": "Markdown Document",
+        "description": "Markdown 文档",
+        "mimeType": "text/markdown",
+        "role": "Editor",
+        "icon": "assets/logo.icns"
+      }
+    ],
     "mac": {
       "icon": "assets/logo.icns",
-      "category": "public.app-category.productivity"
+      "category": "public.app-category.productivity",
+      "extendInfo": {
+        "CFBundleDocumentTypes": [
+          {
+            "CFBundleTypeName": "Markdown Document",
+            "CFBundleTypeRole": "Editor",
+            "LSHandlerRank": "Owner",
+            "LSItemContentTypes": ["net.daringfireball.markdown", "public.plain-text"],
+            "CFBundleTypeExtensions": ["md", "markdown", "mdown", "mkd"],
+            "CFBundleTypeMIMETypes": ["text/markdown", "text/plain"]
+          }
+        ],
+        "UTImportedTypeDeclarations": [
+          {
+            "UTTypeIdentifier": "net.daringfireball.markdown",
+            "UTTypeDescription": "Markdown Document",
+            "UTTypeConformsTo": ["public.plain-text"],
+            "UTTypeTagSpecification": {
+              "public.filename-extension": ["md", "markdown", "mdown", "mkd"],
+              "public.mime-type": "text/markdown"
+            }
+          }
+        ]
+      }
     },
     "win": {
       "icon": "assets/logo.ico",

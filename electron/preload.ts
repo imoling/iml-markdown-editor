@@ -20,30 +20,38 @@ contextBridge.exposeInMainWorld('api', {
   ai: {
     getConfig: () => ipcRenderer.invoke('ai:getConfig'),
     saveConfig: (config: any) => ipcRenderer.invoke('ai:saveConfig', config),
-    chat: (messages: any[], onStream: (chunk: string) => void, requestId: string) => {
-      
+    chat: (messages: any[], onStream: (chunk: string) => void, requestId: string, maxTokens?: number) => {
       const chunkListener = (_event: any, content: string) => onStream(content);
-      
       ipcRenderer.on(`ai:chat-chunk-${requestId}`, chunkListener);
-      
       return new Promise((resolve, reject) => {
         ipcRenderer.once(`ai:chat-done-${requestId}`, (_event, fullContent) => {
           ipcRenderer.removeListener(`ai:chat-chunk-${requestId}`, chunkListener);
           resolve(fullContent);
         });
-        
         ipcRenderer.once(`ai:chat-error-${requestId}`, (_event, error) => {
           ipcRenderer.removeListener(`ai:chat-chunk-${requestId}`, chunkListener);
           reject(new Error(error));
         });
-        
-        ipcRenderer.send('ai:chat', { messages, requestId });
+        ipcRenderer.send('ai:chat', { messages, requestId, maxTokens });
       });
     },
     stop: (requestId: string) => ipcRenderer.send('ai:stop', requestId),
+    webSearch: (query: string) => ipcRenderer.invoke('ai:webSearch', query),
+    openSearchConfig: () => ipcRenderer.send('open-search-config'),
+    getCoverImages: (params: any) => ipcRenderer.invoke('ai:getCoverImages', params),
   },
   shell: {
     openExternal: (url: string) => ipcRenderer.invoke('open-url', url),
+  },
+  wechat: {
+    getTrends: () => ipcRenderer.invoke('wechat:getTrends'),
+    getHotTopics: () => ipcRenderer.invoke('wechat:getHotTopics'),
+    getConfig: () => ipcRenderer.invoke('wechat:getConfig'),
+    saveConfig: (config: any) => ipcRenderer.invoke('wechat:saveConfig', config),
+    publish: (markdown: string, options?: { theme?: string; color?: string; accountId?: string; coverLocalPath?: string }) =>
+      ipcRenderer.invoke('wechat:publish', { markdown, ...options }),
+    publishHtml: (html: string, options?: { title?: string; accountId?: string; coverLocalPath?: string; inlineImageDataUrls?: string[] }) =>
+      ipcRenderer.invoke('wechat:publishHtml', { html, ...options }),
   },
   events: {
     on: (channel: string, callback: (...args: any[]) => void) => {
@@ -54,7 +62,7 @@ contextBridge.exposeInMainWorld('api', {
     }
   },
   app: {
-    version: '1.7.0',
+    version: '1.8.0',
     checkUpdates: () => ipcRenderer.invoke('app:checkUpdates'),
     platform: process.platform,
     minimize: () => ipcRenderer.send('window-minimize'),
@@ -63,5 +71,5 @@ contextBridge.exposeInMainWorld('api', {
     getSettings: () => ipcRenderer.invoke('app:getSettings'),
     saveSettings: (settings: any) => ipcRenderer.invoke('app:saveSettings', settings),
   },
-  appVersion: '1.7.0'
+  appVersion: '1.8.0'
 });

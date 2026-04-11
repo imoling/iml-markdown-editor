@@ -25,7 +25,7 @@ import {
   Type, ListOrdered, List, SquareCheck, Quote, Minus, Link as LinkIcon,
   Sparkles, Wand2, FileText, FastForward, Loader2, BrainCircuit,
   Activity, FileCode, Send, BookOpen,
-  Trophy, AlignLeft, AlignCenter, AlignRight
+  Trophy, AlignLeft, AlignCenter, AlignRight, RotateCcw
 } from 'lucide-react';
 import { useAppStore } from '../../stores/appStore';
 import { markdownToHtml, htmlToMarkdown } from '../../utils/markdown';
@@ -119,6 +119,341 @@ const PromptDialog: React.FC<PromptDialogProps> = ({ title, fields, onConfirm, o
           >确定</button>
         </div>
       </div>
+    </div>
+  );
+};
+
+// ── 图片插入对话框 ─────────────────────────────────────────────────────────────
+interface ImageInsertDialogProps {
+  onConfirm: (src: string, alt: string) => void;
+  onCancel: () => void;
+}
+
+const ImageInsertDialog: React.FC<ImageInsertDialogProps> = ({ onConfirm, onCancel }) => {
+  const imageGenConfig = useAppStore((s) => s.imageGenConfig);
+  const [tab, setTab] = React.useState<'upload' | 'url' | 'ai'>('upload');
+  const [url, setUrl] = React.useState('');
+  const [alt, setAlt] = React.useState('');
+  const [preview, setPreview] = React.useState('');
+  const [dragging, setDragging] = React.useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  // AI 生成状态
+  const [aiPrompt, setAiPrompt] = React.useState('');
+  const [aiImages, setAiImages] = React.useState<{ url: string; localPath: string }[]>([]);
+  const [aiSelected, setAiSelected] = React.useState<number | null>(null);
+  const [aiLoading, setAiLoading] = React.useState(false);
+  const [aiError, setAiError] = React.useState('');
+  const [lightboxSrc, setLightboxSrc] = React.useState<string | null>(null);
+
+  const handleFile = (file: File) => {
+    if (!file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      setPreview(dataUrl);
+      if (!alt) setAlt(file.name.replace(/\.[^.]+$/, ''));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleFile(file);
+  };
+
+  const handleGenerate = async () => {
+    if (!aiPrompt.trim() || aiLoading) return;
+    setAiLoading(true);
+    setAiError('');
+    setAiImages([]);
+    setAiSelected(null);
+    try {
+      const cfg = { ...imageGenConfig, source: 'generate' as const };
+      const results: { url: string; localPath: string }[] = await (window as any).api.ai.getCoverImages({
+        query: aiPrompt.trim(),
+        vibe: aiPrompt.trim(),
+        config: cfg,
+      });
+      setAiImages(results);
+      if (results.length > 0) setAiSelected(0);
+    } catch (err: any) {
+      setAiError(err.message || '生成失败，请检查 API Key 配置');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleConfirm = () => {
+    if (tab === 'upload' && preview) { onConfirm(preview, alt.trim()); return; }
+    if (tab === 'url' && url.trim()) { onConfirm(url.trim(), alt.trim()); return; }
+    if (tab === 'ai' && aiSelected !== null && aiImages[aiSelected]) {
+      onConfirm(aiImages[aiSelected].url, alt.trim() || aiPrompt.trim());
+    }
+  };
+
+  const canConfirm =
+    tab === 'upload' ? !!preview :
+    tab === 'url' ? !!url.trim() :
+    aiSelected !== null && aiImages.length > 0;
+
+  const TABS = [
+    { id: 'upload' as const, label: '本地上传' },
+    { id: 'url' as const, label: '网络链接' },
+    { id: 'ai' as const, label: 'AI 生成' },
+  ];
+
+  return (
+    <div
+      style={{
+        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+        backgroundColor: 'rgba(0,0,0,0.25)', backdropFilter: 'blur(6px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        zIndex: 1000, animation: 'fadeIn 0.2s ease-out',
+      }}
+      onClick={(e) => { if (e.target === e.currentTarget) onCancel(); }}
+    >
+      <div style={{
+        backgroundColor: 'var(--bg-page)', borderRadius: 18,
+        boxShadow: '0 24px 48px rgba(0,0,0,0.22), 0 0 0 1px var(--border-subtle)',
+        width: 440, display: 'flex', flexDirection: 'column', gap: 0,
+        overflow: 'hidden', animation: 'scaleIn 0.22s cubic-bezier(0.16,1,0.3,1)',
+      }}>
+        {/* 头部 */}
+        <div style={{ padding: '20px 24px 0', display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>插入图片</h3>
+          {/* Tabs */}
+          <div style={{
+            display: 'flex', backgroundColor: 'var(--bg-surface)',
+            borderRadius: 8, padding: 3, gap: 2,
+          }}>
+            {TABS.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => setTab(t.id)}
+                style={{
+                  flex: 1, padding: '6px 0', borderRadius: 6, border: 'none', cursor: 'pointer',
+                  fontSize: 12, fontWeight: 500, transition: 'all 0.15s',
+                  backgroundColor: tab === t.id ? 'var(--bg-page)' : 'transparent',
+                  color: tab === t.id ? 'var(--text-primary)' : 'var(--text-muted)',
+                  boxShadow: tab === t.id ? '0 1px 4px rgba(0,0,0,0.1)' : 'none',
+                }}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 内容区 */}
+        <div style={{ padding: '16px 24px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {tab === 'upload' && (
+            <>
+              <div
+                onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+                onDragLeave={() => setDragging(false)}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+                style={{
+                  border: `2px dashed ${dragging ? 'var(--color-brand-indigo)' : 'var(--border-subtle)'}`,
+                  borderRadius: 12, cursor: 'pointer', transition: 'all 0.15s',
+                  backgroundColor: dragging ? 'rgba(99,102,241,0.04)' : 'var(--bg-surface)',
+                  overflow: 'hidden', minHeight: 140,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}
+              >
+                {preview ? (
+                  <img src={preview} alt="preview" style={{ width: '100%', maxHeight: 200, objectFit: 'contain', display: 'block' }} />
+                ) : (
+                  <div style={{ textAlign: 'center', padding: 24 }}>
+                    <div style={{ fontSize: 28, marginBottom: 8 }}>🖼️</div>
+                    <div style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500 }}>点击选择或拖拽图片到此处</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>支持 JPG、PNG、GIF、WebP</div>
+                  </div>
+                )}
+              </div>
+              <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }}
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
+            </>
+          )}
+
+          {tab === 'url' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <label style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 500 }}>图片 URL</label>
+              <input
+                autoFocus type="url" value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter' && canConfirm) handleConfirm(); if (e.key === 'Escape') onCancel(); }}
+                placeholder="https://example.com/image.jpg"
+                style={{ padding: '9px 12px', borderRadius: 8, fontSize: 13, border: '1px solid var(--border-strong)', backgroundColor: 'var(--bg-surface)', color: 'var(--text-primary)', outline: 'none' }}
+              />
+              {url.trim() && (
+                <div style={{ border: '1px solid var(--border-subtle)', borderRadius: 10, overflow: 'hidden', backgroundColor: 'var(--bg-surface)', maxHeight: 160, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <img src={url.trim()} alt="preview" style={{ maxWidth: '100%', maxHeight: 160, objectFit: 'contain', display: 'block' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                </div>
+              )}
+            </div>
+          )}
+
+          {tab === 'ai' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input
+                  autoFocus
+                  type="text"
+                  value={aiPrompt}
+                  onChange={(e) => setAiPrompt(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleGenerate(); if (e.key === 'Escape') onCancel(); }}
+                  placeholder="描述你想要的图片…"
+                  style={{ flex: 1, padding: '9px 12px', borderRadius: 8, fontSize: 13, border: '1px solid var(--border-strong)', backgroundColor: 'var(--bg-surface)', color: 'var(--text-primary)', outline: 'none' }}
+                />
+                <button
+                  onClick={handleGenerate}
+                  disabled={!aiPrompt.trim() || aiLoading}
+                  style={{
+                    padding: '9px 16px', borderRadius: 8, border: 'none', fontSize: 13, fontWeight: 600, cursor: aiLoading || !aiPrompt.trim() ? 'not-allowed' : 'pointer',
+                    background: aiLoading || !aiPrompt.trim() ? 'var(--border-subtle)' : 'var(--brand-gradient)',
+                    color: aiLoading || !aiPrompt.trim() ? 'var(--text-muted)' : '#fff',
+                    display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap', flexShrink: 0,
+                    boxShadow: aiLoading || !aiPrompt.trim() ? 'none' : '0 3px 10px var(--brand-shadow)',
+                  }}
+                >
+                  {aiLoading ? <><Loader2 size={13} className="animate-spin" /> 生成中</> : <><Sparkles size={13} /> 生成</>}
+                </button>
+              </div>
+
+              {/* 单张图片预览 */}
+              {aiLoading && aiImages.length === 0 && (
+                <div style={{ width: '100%', aspectRatio: '16/9', borderRadius: 10, backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Loader2 size={20} className="animate-spin" color="var(--text-muted)" />
+                </div>
+              )}
+
+              {aiImages.length > 0 && (
+                <div style={{ position: 'relative', width: '100%', aspectRatio: '16/9', borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border-subtle)' }}>
+                  <img src={aiImages[0].url} alt="生成图" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                  {/* 左下角：放大 */}
+                  <button
+                    onClick={() => setLightboxSrc(aiImages[0].url)}
+                    title="查看大图"
+                    style={{
+                      position: 'absolute', bottom: 8, left: 8,
+                      width: 28, height: 28, borderRadius: 6, border: 'none',
+                      backgroundColor: 'rgba(0,0,0,0.5)', color: 'white',
+                      cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0,
+                    }}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M1 1h4M1 1v4M13 1h-4M13 1v4M1 13h4M1 13v-4M13 13h-4M13 13v-4" stroke="white" strokeWidth="1.8" strokeLinecap="round" /></svg>
+                  </button>
+                  {/* 右下角：重新生成 */}
+                  <button
+                    onClick={handleGenerate}
+                    title="重新生成"
+                    style={{
+                      position: 'absolute', bottom: 8, right: 8,
+                      width: 28, height: 28, borderRadius: 6, border: 'none',
+                      backgroundColor: 'rgba(0,0,0,0.5)', color: 'white',
+                      cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0,
+                    }}
+                  >
+                    <RotateCcw size={12} />
+                  </button>
+                </div>
+              )}
+
+              {aiError && (
+                <div style={{ fontSize: 11, color: '#ff4757', padding: '8px 10px', borderRadius: 6, backgroundColor: 'rgba(255,71,87,0.06)', border: '1px solid rgba(255,71,87,0.15)' }}>
+                  {aiError}
+                </div>
+              )}
+
+              {!aiLoading && aiImages.length === 0 && !aiError && (
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'center', padding: '12px 0' }}>
+                  {!imageGenConfig.apiKey ? (
+                    <span style={{ color: '#f97316' }}>
+                      需先配置 API Key<br />
+                      <span style={{ fontSize: 10 }}>智能菜单（右键编辑区）→ 图片生成配置 → 选择提供商并填入 Key</span>
+                    </span>
+                  ) : (
+                    <>输入描述后点击「生成」<br />
+                    <span style={{ fontSize: 10 }}>当前提供商：{imageGenConfig.provider}　可在智能菜单 → 图片生成配置中切换</span></>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Alt text（AI 生成 tab 时隐藏，使用 prompt 作为 alt） */}
+          {tab !== 'ai' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <label style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 500 }}>
+                图片描述 <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(可选)</span>
+              </label>
+              <input
+                type="text" value={alt}
+                onChange={(e) => setAlt(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter' && canConfirm) handleConfirm(); if (e.key === 'Escape') onCancel(); }}
+                placeholder="图片说明文字"
+                style={{ padding: '9px 12px', borderRadius: 8, fontSize: 13, border: '1px solid var(--border-strong)', backgroundColor: 'var(--bg-surface)', color: 'var(--text-primary)', outline: 'none' }}
+              />
+            </div>
+          )}
+
+          {/* 按钮 */}
+          <div style={{ display: 'flex', gap: 10, marginTop: 2 }}>
+            <button
+              onClick={onCancel}
+              style={{ flex: 1, padding: '10px', borderRadius: 8, border: '1px solid var(--border-subtle)', backgroundColor: 'transparent', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 14, fontWeight: 500 }}
+            >取消</button>
+            <button
+              onClick={handleConfirm}
+              disabled={!canConfirm}
+              style={{
+                flex: 1, padding: '10px', borderRadius: 8, border: 'none',
+                background: canConfirm ? 'var(--color-accent-indigo)' : 'var(--border-subtle)',
+                color: canConfirm ? 'white' : 'var(--text-muted)',
+                cursor: canConfirm ? 'pointer' : 'not-allowed',
+                fontSize: 14, fontWeight: 500, transition: 'all 0.15s',
+              }}
+            >插入</button>
+          </div>
+        </div>
+      </div>
+
+      {/* Lightbox */}
+      {lightboxSrc && (
+        <div
+          onClick={() => setLightboxSrc(null)}
+          style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 2000,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            animation: 'fadeIn 0.15s ease-out', cursor: 'zoom-out',
+          }}
+        >
+          <img
+            src={lightboxSrc}
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              maxWidth: '90vw', maxHeight: '90vh', objectFit: 'contain',
+              borderRadius: 8, boxShadow: '0 8px 40px rgba(0,0,0,0.6)',
+              animation: 'scaleIn 0.2s cubic-bezier(0.16,1,0.3,1)',
+              cursor: 'default',
+            }}
+          />
+          <button
+            onClick={() => setLightboxSrc(null)}
+            style={{
+              position: 'absolute', top: 20, right: 20, width: 36, height: 36,
+              borderRadius: '50%', border: 'none', backgroundColor: 'rgba(255,255,255,0.15)',
+              color: 'white', cursor: 'pointer', fontSize: 18, display: 'flex',
+              alignItems: 'center', justifyContent: 'center',
+            }}
+          >×</button>
+        </div>
+      )}
     </div>
   );
 };
@@ -319,6 +654,7 @@ export const TiptapEditor: React.FC = () => {
   } = useAppStore();
   const activeTab = tabs.find(t => t.id === activeTabId);
   const [prompt, setPrompt] = React.useState<PromptDialogProps | null>(null);
+  const [showImageDialog, setShowImageDialog] = React.useState(false);
   const { generate, stop, loading: aiLoading } = useAI();
   const [aiGenerating, setAiGenerating] = useState(false);
   const [showStyleSelector, setShowStyleSelector] = React.useState(false);
@@ -331,6 +667,10 @@ export const TiptapEditor: React.FC = () => {
   const lastActiveTabIdRef = useRef<string | null>(null);
   const editorRef = useRef<any>(null);
   const activeTabIdRef = useRef<string | null>(null);
+  // Tracks the previous editor instance to detect fresh mounts (e.g. after mode switch)
+  const prevEditorRef = useRef<ReturnType<typeof useEditor> | null>(null);
+  // Tracks previous activeTabId for the content-sync effect, to detect tab switches
+  const prevSyncTabIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     activeTabIdRef.current = activeTabId;
@@ -346,7 +686,7 @@ export const TiptapEditor: React.FC = () => {
       ListItem.extend({
         content: 'block+',
       }),
-      Image, 
+      Image.configure({ allowBase64: true }),
       Table.configure({
         resizable: true,
       }),
@@ -516,16 +856,17 @@ export const TiptapEditor: React.FC = () => {
       const currentTabId = activeTabIdRef.current;
       if (currentTabId) {
         const html = editor.getHTML();
+        const hasDataImg = html.includes('data:image/');
         const markdown = htmlToMarkdown(html);
-        
-        // 安全检查：如果文档原本有内容，但转换出的 Markdown 却为空（可能是序列化逻辑异常），
-        // 则跳过本次 Store 同步，防止文档被意外“清空”。
-        // 特别是在流式生成或复杂的模式切换过程中。
+        const mdHasDataImg = markdown.includes('data:image/');
+        if (hasDataImg && !mdHasDataImg) {
+          console.warn('[Tiptap:onUpdate] htmlToMarkdown dropped data URL image, skipping sync');
+          return;
+        }
         if (!markdown && editor.state.doc.textContent.trim()) {
           console.warn('[Tiptap] htmlToMarkdown returned empty, skipping store sync to prevent data loss.');
           return;
         }
-
         updateTabContent(currentTabId, markdown);
       }
     },
@@ -600,9 +941,9 @@ export const TiptapEditor: React.FC = () => {
 关键规则：
 1. 仅返回处理后的正文结果。
 2. 严禁包含任何前言、引言、解释说明、括号内的备注或修改日志。
-3. 严禁包含任何如“好的，这是为您处理后的结果”之类的废话。
+3. 严禁包含任何如"好的，这是为您处理后的结果"之类的废话。
 4. 如果用户要求润色，请直接给出润色后的文本。
-5. 对于总结任务，请直接给出总结正文，不可包含“总结如下”等任何辅助性标签。`;
+5. 对于总结任务，请直接给出总结正文，不可包含"总结如下"等任何辅助性标签。`;
 
     let userPrompt = '';
 
@@ -623,23 +964,19 @@ export const TiptapEditor: React.FC = () => {
     try {
       let accumulated = '';
       const startPos = from;
-      let currentPos = to; // 初始化为选区终点，确保首个 chunk 就能替换掉整个选区
+      let currentPos = to;
 
       await generate([
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }
       ], (chunk) => {
         accumulated += chunk;
-        // 清理潜在的辅助性文字
         const cleanAccumulated = accumulated.replace(/^(.*?)(如下[:：]|结果[:：]|总结[:：]|内容[:：])|^\s*/gi, '').trim();
         const html = markdownToHtml(cleanAccumulated);
-        
         editor.chain()
           .focus()
           .insertContentAt({ from: startPos, to: currentPos }, html)
           .run();
-        
-        // 关键：更新当前插入内容的终点位置
         currentPos = editor.state.selection.to;
       }, rid);
     } catch (err: any) {
@@ -707,13 +1044,18 @@ export const TiptapEditor: React.FC = () => {
     editor.chain().focus().toggleOrderedList().run();
   }, [editor]);
 
-  const handleAIPaletteAction = async (prompt: string, useCtx: boolean = false, mode: 'text' | 'mermaid' | 'svg' = 'text') => {
+  const handleAIPaletteAction = async (
+    prompt: string,
+    useCtx: boolean = false,
+    mode: 'text' | 'mermaid' | 'svg' | 'outline' | 'skill' = 'text',
+    skillRef?: { skillId: string; stepId: string; inputAs: 'vibe' | 'prevOutput' }
+  ) => {
     if (!editor) return;
-    
+
     setShowAIPalette(true); // 保持气泡开启
     setAiGenerating(true);
     setAIStatus({ generating: true, onStop: handleAIPaletteStop });
-    
+
     // 开启生成前保存文档快照，以便由于“停止”时回滚
     setDocSnapshot(editor.getHTML());
     const requestId = Math.random().toString(36).substring(7);
@@ -723,6 +1065,26 @@ export const TiptapEditor: React.FC = () => {
     const { before: textBefore, after: textAfter } = paletteContext;
 
     let systemPrompt = `您是一位卓越的文档写作助手。请严格按照用户的指令，输出 Markdown 格式的内容，不要任何解释或开场白。`;
+
+    // SKILL 模式：用 skill 的 step prompt 替换默认 systemPrompt
+    let skillUserPromptOverride: string | null = null;
+    if (mode === 'skill' && skillRef) {
+      // 动态导入避免循环依赖
+      const { getSkillById, getStepById, renderTemplate } = await import('../../data/skills');
+      const skill = getSkillById(skillRef.skillId);
+      const step = skill ? getStepById(skill, skillRef.stepId) : undefined;
+      if (skill && step) {
+        systemPrompt = step.systemPrompt;
+        // 选区文本通过 prompt 传入；按 inputAs 注入
+        const vars: Record<string, string | number | undefined> = {
+          vibe: skillRef.inputAs === 'vibe' ? prompt : '',
+          prevOutput: skillRef.inputAs === 'prevOutput' ? prompt : '',
+          outline: '',
+          webContext: '',
+        };
+        skillUserPromptOverride = renderTemplate(step.userPromptTemplate, vars);
+      }
+    }
 
     if (mode === 'mermaid') {
       systemPrompt = `您是一位 Mermaid 图表专家。请根据用户指令生成标准的 Mermaid 代码块。
@@ -768,7 +1130,7 @@ ${textAfter || '（文档末尾，无后文）'}
 请在插入位置完成以下任务：${prompt}`
       : prompt;
 
-    const userMessage = contextInstruction;
+    const userMessage = skillUserPromptOverride ?? contextInstruction;
 
     console.log('[AIPalette] useCtx:', useCtx, '| before length:', textBefore.length, '| after length:', textAfter.length);
     if (useCtx) {
@@ -1005,20 +1367,43 @@ ${textAfter || '（文档末尾，无后文）'}
   useEffect(() => {
     if (!editor || !activeTab) return;
 
-    const currentHtml = editor.getHTML();
-    const newHtml = markdownToHtml(activeTab.content);
-    // 非切换 Tab 时（例如侧边栏 AI 写入内容到当前 Tab）：
-    // 如果当前编辑器正获得焦点，或者 AI 正在生成内容，不接受由 store 反馈回来的同步（避免回流冲突和内容丢失）
-    if (editor.isFocused || aiGenerating) return;
+    const isTabSwitch = prevSyncTabIdRef.current !== activeTabId;
+    prevSyncTabIdRef.current = activeTabId;
 
-    // 只有在 HTML 发生实质性变化时才更新
-    // 增加一层清理逻辑，消除由于 Tiptap 内部自动修复导致的微小 HTML 差异（如空的 colgroup）
-    if (currentHtml !== newHtml) {
-      // 如果只有空白符差异，不更新
-      if (currentHtml.replace(/\s/g, '') === newHtml.replace(/\s/g, '')) return;
-      
+    const newHtml = markdownToHtml(activeTab.content);
+
+    // 检测是否是全新的 editor 实例（切换 word/markdown 模式后 TipTap 会完全卸载重载）
+    const isNewEditor = prevEditorRef.current !== editor;
+    prevEditorRef.current = editor;
+
+    if (isNewEditor) {
+      // 新实例时强制用 store 中的真实内容初始化，确保 data URL 图片不丢失
       editor.commands.setContent(newHtml, false);
+      return;
     }
+
+    // tab 切换时必须强制更新内容，不受焦点或 AI 生成状态影响
+    if (!isTabSwitch) {
+      // 非切换 Tab（例如 AI 写入内容到当前 Tab）：若编辑器有焦点或 AI 正在生成则跳过，避免回流冲突
+      if (editor.isFocused || aiGenerating) return;
+
+      const currentHtml = editor.getHTML();
+      // 如果当前编辑器有 data URL 图片但 newHtml 没有，说明 markdown→html 转换丢失了图片，跳过
+      if (currentHtml.includes('data:image/') && !newHtml.includes('data:image/')) {
+        console.warn('[Tiptap:useEffect] newHtml dropped data URL images, skipping setContent');
+        return;
+      }
+      // 只有在 HTML 发生实质性变化时才更新
+      const currentHtml2 = currentHtml;
+      if (currentHtml2 !== newHtml) {
+        if (currentHtml2.replace(/\s/g, '') === newHtml.replace(/\s/g, '')) return;
+        editor.commands.setContent(newHtml, false);
+      }
+      return;
+    }
+
+    // tab 切换：直接更新内容
+    editor.commands.setContent(newHtml, false);
   }, [activeTabId, editor, activeTab?.content]);
 
   useEffect(() => {
@@ -1101,20 +1486,7 @@ ${textAfter || '（文档末尾，无后文）'}
               onCancel: () => setPrompt(null)
             });
           }} title="插入表格"><TableIcon size={16} /></button>
-          <button type="button" className="toolbar-icon-btn" onClick={() => {
-            setPrompt({
-              title: '插入图片',
-              fields: [{ name: 'url', label: '图片链接 (URL)', defaultValue: '' }],
-              onConfirm: (values) => {
-                const url = values.url;
-                if (url) {
-                  editor.chain().focus().setImage({ src: url }).run();
-                }
-                setPrompt(null);
-              },
-              onCancel: () => setPrompt(null)
-            });
-          }} title="插入图片"><ImageIcon size={16} /></button>
+          <button type="button" className="toolbar-icon-btn" onClick={() => setShowImageDialog(true)} title="插入图片"><ImageIcon size={16} /></button>
           <button type="button" className={`toolbar-icon-btn ${editor.isActive('link') ? 'active' : ''}`} onClick={() => {
             setPrompt({
               title: '插入链接',
@@ -1143,6 +1515,34 @@ ${textAfter || '（文档末尾，无后文）'}
 
       <div className="tiptap-container">
         {prompt && <PromptDialog {...prompt} />}
+        {showImageDialog && (
+          <ImageInsertDialog
+            onConfirm={(src, alt) => {
+              setShowImageDialog(false);
+              requestAnimationFrame(() => {
+                if (!editor) return;
+                editor.commands.focus();
+                requestAnimationFrame(() => {
+                  const imageNode = editor.schema.nodes.image?.create({ src, alt: alt || null });
+                  if (imageNode) {
+                    editor.view.dispatch(
+                      editor.state.tr.replaceSelectionWith(imageNode)
+                    );
+                    // 插入后主动同步，避免 data URL 在 onUpdate 时序中丢失
+                    requestAnimationFrame(() => {
+                      const tabId = activeTabIdRef.current;
+                      if (tabId) {
+                        const md = htmlToMarkdown(editor.getHTML());
+                        if (md) updateTabContent(tabId, md);
+                      }
+                    });
+                  }
+                });
+              });
+            }}
+            onCancel={() => setShowImageDialog(false)}
+          />
+        )}
         {showStyleSelector && (
           <StyleSelector 
             onSelect={(style) => handleAIAction('polish', style)} 
@@ -1165,7 +1565,7 @@ ${textAfter || '（文档末尾，无后文）'}
                 setPalettePos(null); 
                 editor?.chain().focus().run(); 
               }} 
-              onAction={(p, useCtx, mode) => handleAIPaletteAction(p, useCtx, mode)}
+              onAction={(p, useCtx, mode, skillRef) => handleAIPaletteAction(p, useCtx, mode as any, skillRef)}
               onStop={handleAIPaletteStop}
               loading={aiGenerating}
             />

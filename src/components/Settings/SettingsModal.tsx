@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Moon, Sun, Monitor, Palette, Power, Save, Trash2, AlertTriangle, FolderOpen } from 'lucide-react';
+import { X, Moon, Sun, Monitor, Palette, Power, Save, Trash2, AlertTriangle, FolderOpen, Coffee } from 'lucide-react';
 import { useAppStore, THEME_PRESETS } from '../../stores/appStore';
 
 export const SettingsModal: React.FC = () => {
@@ -15,7 +15,7 @@ export const SettingsModal: React.FC = () => {
     defaultLibraryPath,
     setDefaultLibraryPath,
     theme,
-    setTheme
+    setTheme,
   } = useAppStore();
 
   if (!isSettingsModalOpen) return null;
@@ -86,7 +86,7 @@ export const SettingsModal: React.FC = () => {
             <h3 style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 12, fontWeight: 500 }}>外观界面</h3>
             <div style={{ 
               display: 'grid', 
-              gridTemplateColumns: 'repeat(3, 1fr)', 
+              gridTemplateColumns: 'repeat(4, 1fr)', 
               gap: 12,
               backgroundColor: 'var(--bg-card)',
               padding: 6,
@@ -94,9 +94,10 @@ export const SettingsModal: React.FC = () => {
               border: '1px solid var(--border-subtle)'
             }}>
               {[
+                { id: 'system', name: '系统', icon: Monitor },
                 { id: 'light', name: '亮色', icon: Sun },
                 { id: 'dark', name: '深色', icon: Moon },
-                { id: 'system', name: '跟随系统', icon: Monitor }
+                { id: 'eye-protection', name: '护眼', icon: Coffee }
               ].map((item) => (
                 <button
                   key={item.id}

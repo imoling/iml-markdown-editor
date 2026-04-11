@@ -1,12 +1,14 @@
 import React, { useEffect } from 'react';
 import { TitleBar } from './components/TitleBar/TitleBar';
-import { Sidebar } from './components/Sidebar/Sidebar';
+import { Sidebar, ActivityBar, RightPanel } from './components/Sidebar/Sidebar';
 import { EditorArea } from './components/Editor/EditorArea';
 import { StatusBar } from './components/StatusBar/StatusBar';
 import { useAppStore } from './stores/appStore';
 import { extractHeadings } from './utils/outline';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { SettingsModal } from './components/Settings/SettingsModal';
+import { WechatConfigModal } from './components/AI/WechatConfigModal';
+import { ImageConfigModal } from './components/AI/ImageConfigModal';
 import './styles/layout.css';
 
 const App: React.FC = () => {
@@ -15,15 +17,18 @@ const App: React.FC = () => {
     activeTabId, 
     tabs,
     sidebarVisible,
+    aiPanelVisible,
     statusBarVisible,
     setOutline,
     toggleSidebar,
     toggleToolbar,
     toggleStatusBar,
+    toggleAIPanel,
     createNewFile,
     toggleFind,
     toggleReplace,
     openFile,
+    openFileByPath,
     openDirectory,
     saveActiveFile,
     tabToClose,
@@ -78,8 +83,8 @@ const App: React.FC = () => {
         toggleMode();
       }
 
-      // Cmd+B to toggle sidebar
-      if (modKey && e.key === 'b') {
+      // Cmd+\ to toggle sidebar
+      if (modKey && e.key === '\\') {
         e.preventDefault();
         toggleSidebar();
       }
@@ -138,6 +143,18 @@ const App: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [toggleMode, openFile, openDirectory, saveActiveFile, toggleSidebar, toggleToolbar, toggleStatusBar, createNewFile, toggleFind, toggleReplace]);
 
+  // 监听主进程发来的 open-file（macOS 双击或"打开方式"）
+  useEffect(() => {
+    window.api.events.on('open-file', (filePath: string) => {
+      openFileByPath(filePath);
+    });
+    window.api.events.on('menu:new-file', () => createNewFile());
+    window.api.events.on('menu:open-file', () => openFile());
+    window.api.events.on('menu:save', () => saveActiveFile());
+    window.api.events.on('menu:open-wechat-config', () => useAppStore.getState().setWechatConfigOpen(true));
+    window.api.events.on('menu:open-image-config', () => useAppStore.getState().setImageConfigOpen(true));
+  }, [openFileByPath, createNewFile, openFile, saveActiveFile]);
+
   // Handle auto-update check on mount
   useEffect(() => {
     // Only auto-check after a short delay to not block initial rendering and show it as a premium background task
@@ -174,8 +191,10 @@ const App: React.FC = () => {
       <TitleBar />
       
       <div className="main-content">
+        <ActivityBar />
         {sidebarVisible && <Sidebar />}
         <EditorArea />
+        {aiPanelVisible && <RightPanel />}
       </div>
       
       {statusBarVisible && <StatusBar />}
@@ -200,6 +219,16 @@ const App: React.FC = () => {
 
       {/* 全局设置弹窗 */}
       <SettingsModal />
+
+      {/* 微信公众号配置弹窗 */}
+      {useAppStore((s) => s.isWechatConfigOpen) && (
+        <WechatConfigModal onClose={() => useAppStore.getState().setWechatConfigOpen(false)} />
+      )}
+
+      {/* 封面图配置弹窗 */}
+      {useAppStore((s) => s.isImageConfigOpen) && (
+        <ImageConfigModal onClose={() => useAppStore.getState().setImageConfigOpen(false)} />
+      )}
     </div>
   );
 };

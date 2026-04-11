@@ -1,105 +1,127 @@
-# iML Markdown Editor (v1.7.0)
+# iML Markdown Editor · v1.8.0
 
-**AI 时代的敏捷知识编辑中枢**
-**极简其表 &middot; 极致内核** (Minimalist Surface, Maximalist Core).
+**极简其表 · 极致内核**
 
 ![iML 首页](screenshots/首页.png)
 
-## 🛡️ 核心哲学：灵感驱动，逻辑重塑
-iML Markdown Editor 的诞生初衷，是让 **Vibe Coding 的第一步变得前所未有的简单**。
+---
 
-在 AI 编程时代，最大的挑战往往不是代码编写，而是如何将脑海中模糊的“灵感（Vibe）”转化为 AI 能够无损理解的“指令”。iML 旨在成为您与 AI 之间的最优接口，通过 **指令级 AI 助手** 与 **工程化文档系统**，让您的想象力能够毫无障碍地传递给 AI 编程工具。
+本地 Markdown 编辑器，为长期写作和 AI 辅助创作设计。界面只保留必要的东西，剩下的交给快捷键和侧边栏。
 
-作为一款根植于本地系统的编辑器，v1.7.0 版本更进一步，进化为具备**深度文件管理**能力的“知识管理库（Knowledge Base）”。它提供了极速的文件系统响应、专业的排版渲染以及丝滑的编辑体验，确保无论是在深度 AI 创作还是日常知识沉淀中，都能让您得心应手。
+v1.8.0 将 AI 写作重构为 Skill 体系——每个场景是一条独立的步骤化工作流，首发公众号热点写作：从联网选题到微信发布，9 步，不用切其他工具。
 
-## ✨ 核心特性
+---
 
-### 🪄 AI 灵感驱动 (Knowledge Architect)
-集成极致精简的 **指令级 AI 面板**，支持全链路流式生成，实现从灵感维度到标准 PRD/原型/文档的跨越：
-- **常驻发送指令**：重新设计的 AI 气泡，具备实体感按钮与确认状态。
-- **智能上下文引用**：一键引入文档大纲与全量内容，实现具备“逻辑深度”的内容润色。
-- **AI 场景化工作室**：PRD 文档、Prompt 工程、Nano Banana 画图等深度集成。
+## 特性
 
+### 🪄 公众号热点写作
 
-![AI场景写作](screenshots/AI场景写作.png)
-*图：深度集成多种 Vibe Coding 写作场景*
+9 步走完一篇公众号文章：
 
-### 📁 深度文件管理系统 (File Management)
-- **原生级右键菜单**：侧边栏支持重命名、复制副本、新建子文档、推入回收站。
-- **极客快捷键网格**：`F2` 重命名、`Cmd + D` 快速克隆、`Backspace` 快速删除。
-- **会话持久化 (Session Restore)**：冷启动时自动恢复上次的工作区、已打开的标签页（Tabs）及滚动位置。
+1. **选题推荐**：抓取 X / HN / GitHub 当日动态，给出 5~8 条选题方向，每条附标题、钩子句和大纲思路
+2. **文章框架** `可选`：干货、故事、观点、测评、趋势、案例 6 种结构，选一种，后续大纲按它来
+3. **标题工场**：5 个角度各出 3 条，共 15 个候选标题，点一个就锁定
+4. **文章大纲**：目标读者、开篇钩子、分节结构，执行前可以手改
+5. **封面图**：网络爬取或 AI 生成，每次出 3 张，点选确认
+6. **正文撰写**：把选题、框架、标题一起喂进去，写出带 emoji 和金句的完整正文
+7. **插图提示词** `可选`：读完正文，标出该放图的位置，给每处出一条文生图提示词
+8. **润色定稿** `可选`：先静默读原文判断语气和风格，再按这个风格改，不会改成 AI 腔
+9. **排版预览** `可选`：选主题色，输出微信兼容的 inline style HTML，可预览；「发布到公众号」一键推草稿箱，封面和插图自动上传
+
+![AI场景写作](screenshots/公众号热点写作.png)
+
+### 📁 文件管理
+
+- 侧边栏右键：重命名、创建副本、新建子文档、推入废纸篓
+- 独立笔记库 Tab，路径在设置里配，右键管理和文件面板一致
+- 重启自动恢复上次的工作区、标签页、滚动位置
+- 装好之后可以在 macOS「打开方式」里设为 `.md` 的默认编辑器
+- `F2` 重命名 / `⌘D` 克隆 / `Backspace` 删除
 
 ![目录窗口](screenshots/目录窗口.png)
-*图：功能强大的侧边栏文件管理与目录树*
 
-### 🎨 沉浸式图表编辑 (Diagram Engine)
-- **响应式图形引擎**：集成 Mermaid 与 SVG 实时渲染，支持 **拖拽式高度拉伸** 与等比缩放。
-- **多模态实时预览**：在 MD 源码模式下支持侧边栏实时图表预览。
+### 🎨 编辑器
 
-![图表功能](screenshots/图表功能.png)
-*图：Mermaid 与 SVG 实时可视化编辑*
-
-### ⌨️ 专业级编辑能力
-- **双模态无缝切换**：基于 Tiptap 2.0 (富文本) 与 CodeMirror 6 (源码模式)，支持物理隔离的交互体验。
-- **纸张态沉浸排版**：视网膜级“白纸”交互图层，带来如同纸笔书写般的宁静感。
+- 富文本和源码两种模式，`⌘E` 切换，底层分别是 Tiptap 2.0 和 CodeMirror 6
+- Mermaid / SVG 实时渲染，图表高度可拖拽调整
+- 图片生成接 Gemini / MiniMax / 豆包，也可以填自定义端点
+- 接推理模型时自动过滤 `<think>` 块，不用手动清理
 
 ![MD 模式](screenshots/MD模式.png)
-*图：极致清晰的 Markdown 源码编辑体验*
 
-## 💡 Vibe Coding 实战示例：从灵感到全栈应用
+### 💡 Vibe Coding
 
-使用 iML Markdown Editor 生成精准的 PRD 需求文档，并由 AI 编程工具自动开发完成的“极简会议预订系统”实战案例：
+用 iML 写 PRD，再交给 AI 编程工具——下面是"极简会议预订系统"的完整过程：
 
-![Meeting System Preview 1](screenshots/示例1.png)
-*图 1：实战案例 (1)*
+![示例1](screenshots/示例1.png)
+![示例2](screenshots/示例2.png)
+![示例3](screenshots/示例3.png)
+![示例4](screenshots/示例4.png)
 
-![Meeting System Preview 2](screenshots/示例2.png)
-*图 2：实战案例 (2)*
+---
 
-![Meeting System Preview 3](screenshots/示例3.png)
-*图 3：实战案例 (3)*
+## 运行
 
-![Meeting System Preview 4](screenshots/示例4.png)
-*图 4：实战案例 (4)*
-
-## 🚀 运行与构建
-
-### 开发环境
 ```bash
-# 安装依赖
 npm install
-
-# 启动开发服务器 (自动开启 Electron 容器)
-npm run dev
+npm run dev          # 开发模式
+npm run build:mac    # macOS 安装包
+npm run build:win    # Windows 安装包
 ```
 
-### 生产构建
-```bash
-# 生成 Windows/Mac (x64/arm64) 安装包
-npm run build
-```
+---
 
-## 🛠 技术架构
-- **Core**: React 19 + Vite + TypeScript
-- **Runtime**: Electron (Main/Preload Bridge Layer)
-- **State**: Zustand (Local Persistence Engine)
-- **Engine**: Tiptap Gen-2 (Rich Text) / CodeMirror 6 (Markdown)
-- **Styling**: Glassmorphism CSS Variables System
+## 技术栈
 
-## ⌨️ 核心快捷键
+| 层 | 技术 |
+|---|---|
+| Core | React 19 + Vite + TypeScript |
+| Runtime | Electron（Main / Preload Bridge） |
+| State | Zustand（本地持久化） |
+| Editor | Tiptap 2.0 / CodeMirror 6 |
+| AI | OpenAI-compatible API，流式输出，支持推理模型 |
+| 发布 | 微信公众号 Draft API，Node.js 原生 HTTPS |
+
+---
+
+## 快捷键
+
 | 动作 | 快捷键 |
 |---|---|
-| 新建 / 打开 / 保存 | `⌘ N` / `⌘ O` / `⌘ S` |
-| 侧边栏重命名 / 克隆 | `F2` / `⌘ D` |
-| 切换编辑模式 / 侧边栏 | `⌘ E` / `⌘ B` |
-| 打开设置中心 / 关于 | `⌘ ,` / `⌘ I` |
-| 另存为 | `⌘ ⇧ S` |
+| 新建 / 打开 / 保存 | `⌘N` / `⌘O` / `⌘S` |
+| 另存为 | `⌘⇧S` |
+| 切换编辑模式 | `⌘E` |
+| 侧边栏显隐 | `⌘\` |
+| 重命名 / 克隆 | `F2` / `⌘D` |
+| 设置 | `⌘,` |
 
-## 📄 许可证 & 愿景
-本项目采用 [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/) 许可证。未经授权，禁止商业用途。
+---
+
+## 版本历史
+
+**v1.8.0** — Skill 化 AI 写作 & 公众号工作站
+AI 写作重构为 Skill 体系：每个写作场景封装为独立的步骤化工作流，按需执行、可跳过、可重跑，告别单一大框的 prompt 模式。首发公众号热点写作 Skill，覆盖从联网选题到微信一键发布的完整 9 步流程。新增独立笔记库 Tab，支持右键管理与键盘快捷键。支持 macOS 文件关联，可设为 `.md` 默认编辑器。
+
+**v1.7.0** — Knowledge Base
+深度文件管理：侧边栏右键菜单（重命名、副本、子文档、废纸篓），星标收藏与访问记录。全局会话持久化：冷启动恢复所有标签页、工作区路径和滚动位置，窗口失焦自动存盘。新增毛玻璃 Dashboard 启动页。
+
+**v1.6.0** — Windows 支持 & 图形引擎
+首次支持 Windows 平台。新增 AI 生成 Mermaid / SVG 图，图形响应式缩放，修复 PDF 导出时图形丢失问题。新增"结合上下文"AI 补充文案能力。
+
+**v1.5.0** — AI 写作助手
+引入场景化 AI 面板，内置 Vibe Coding 工具链（PRD、技术方案、周报等）。AI 请求迁移至 Electron 主进程，绕过 CSP 限制，SSE 流式输出稳定性大幅提升。全站 Indigo-Purple 视觉重设计，毛玻璃侧边栏。新增自动检查更新。
+
+**v1.0.0** — 首发
+双模编辑（Tiptap 富文本 + CodeMirror Markdown）、侧边栏目录与文件导航、PDF 导出、macOS 原生体验。
+
+---
+
+## 许可证
+
+[CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/) — 非商业使用。
 
 Logic & Design by [imoling.cn@gmail.com](mailto:imoling.cn@gmail.com) | Architected with Antigravity AI
 
-&copy; 2026 iML Studio. **极简其表，极致内核。让 AI 真正读懂你的 Vibe。**
+&copy; 2026 iML Studio
 
 [![CC BY-NC 4.0](https://licensebuttons.net/l/by-nc/4.0/88x31.png)](https://creativecommons.org/licenses/by-nc/4.0/)

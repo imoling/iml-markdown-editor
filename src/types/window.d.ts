@@ -1,5 +1,15 @@
 export {};
 
+export interface WechatAccount {
+  id: string;
+  name: string;
+  appId: string;
+  appSecret: string;
+  author?: string;
+  defaultTheme?: string;
+  defaultColor?: string;
+}
+
 declare global {
   interface Window {
     api: {
@@ -22,11 +32,22 @@ declare global {
       ai: {
         getConfig: () => Promise<any>;
         saveConfig: (config: any) => Promise<{ success: boolean; error?: string }>;
-        chat: (messages: any[], onStream: (chunk: string) => void, requestId: string) => Promise<string>;
+        chat: (messages: any[], onStream: (chunk: string) => void, requestId: string, maxTokens?: number) => Promise<string>;
         stop: (requestId: string) => void;
+        webSearch: (query: string) => Promise<string>;
+        openSearchConfig: () => void;
+        getCoverImages: (params: { query: string; vibe: string; config: any }) => Promise<{ url: string; localPath: string }[]>;
       };
       shell: {
         openExternal: (url: string) => Promise<void>;
+      };
+      wechat: {
+        getTrends: () => Promise<string>;
+        getHotTopics: () => Promise<{ title: string; source: string }[]>;
+        getConfig: () => Promise<{ accounts: WechatAccount[] }>;
+        saveConfig: (config: { accounts: WechatAccount[] }) => Promise<{ success: boolean; error?: string }>;
+        publish: (markdown: string, options?: { theme?: string; color?: string; accountId?: string; coverLocalPath?: string }) => Promise<{ success: boolean; output: string }>;
+        publishHtml: (html: string, options?: { title?: string; accountId?: string; coverLocalPath?: string; inlineImageDataUrls?: string[] }) => Promise<{ success: boolean; mediaId: string }>;
       };
       events: {
         on: (channel: string, callback: (...args: any[]) => void) => void;

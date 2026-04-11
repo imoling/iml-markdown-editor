@@ -4,6 +4,7 @@ import App from './App';
 import AboutModal from './components/About/AboutModal';
 import ShortcutsModal from './components/Help/ShortcutsModal';
 import ModelConfigModal from './components/AI/ModelConfigModal';
+import SearchConfigModal from './components/AI/SearchConfigModal';
 import './styles/index.css';
 
 const urlParams = new URLSearchParams(window.location.search);
@@ -22,6 +23,10 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
     ) : windowParam === 'ai-config' ? (
       <div style={{ height: '100vh', width: '100vw', display: 'flex', overflow: 'hidden' }}>
         <ModelConfigModal isOpen={true} onClose={() => window.close()} />
+      </div>
+    ) : windowParam === 'search-config' ? (
+      <div style={{ height: '100vh', width: '100vw', display: 'flex', overflow: 'hidden' }}>
+        <SearchConfigModal isOpen={true} onClose={() => window.close()} />
       </div>
     ) : (
       <App />

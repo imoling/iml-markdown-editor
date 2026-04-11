@@ -1,19 +1,22 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAppStore } from '../../stores/appStore';
-import { 
-  FileText, 
-  FileCode, 
-  X, 
-  FileDown, 
-  Plus, 
-  Save, 
-  FileUp, 
-  Sidebar as SidebarIcon, 
-  Layout, 
+import {
+  FileText,
+  FileCode,
+  X,
+  FileDown,
+  Plus,
+  Save,
+  FileUp,
+  Sidebar as SidebarIcon,
+  Layout,
   RotateCw,
   Minus,
   Square,
-  Settings
+  Settings,
+  Globe,
+  Sparkles,
+  Image,
 } from 'lucide-react';
 import { markdownToHtml, markdownToStaticHtml } from '../../utils/markdown';
 
@@ -25,13 +28,15 @@ export const TitleBar: React.FC = () => {
     activeTabId, 
     setActiveTab, 
     closeTab, 
-    toggleSidebar, 
-    toggleToolbar, 
+    toggleSidebar,
+    toggleToolbar,
     toggleStatusBar,
+    toggleAIPanel,
     createNewFile,
     sidebarVisible,
     toolbarVisible,
     statusBarVisible,
+    aiPanelVisible,
     openFile,
     openDirectory,
     saveActiveFile,
@@ -126,10 +131,47 @@ export const TitleBar: React.FC = () => {
           )}
         </div>
 
+        {/* 编辑菜单 */}
+        <div style={{ position: 'relative' }}>
+          <button
+            className="menu-trigger"
+            onClick={() => setActiveMenu(activeMenu === 'edit' ? null : 'edit')}
+            style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', padding: '6px 12px', borderRadius: 6, fontSize: 13, cursor: 'pointer', fontWeight: 500, transition: 'background 0.2s', WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+          >
+            编辑
+          </button>
+          {activeMenu === 'edit' && (
+            <>
+              <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: 999 }} onClick={() => setActiveMenu(null)} />
+              <div className="dropdown-menu" style={{ position: 'absolute', top: 36, left: 0, backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: 10, boxShadow: '0 10px 40px rgba(0,0,0,0.12)', zIndex: 1000, minWidth: 200, padding: 6, backdropFilter: 'blur(30px)', WebkitBackdropFilter: 'blur(30px)' }}>
+                <div className="menu-item" onClick={() => { document.execCommand('undo'); setActiveMenu(null); }} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', fontSize: 13, cursor: 'pointer', borderRadius: 6 }}>
+                  撤销 <span style={{ marginLeft: 'auto', opacity: 0.4, fontSize: 11 }}>⌘Z</span>
+                </div>
+                <div className="menu-item" onClick={() => { document.execCommand('redo'); setActiveMenu(null); }} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', fontSize: 13, cursor: 'pointer', borderRadius: 6 }}>
+                  重做 <span style={{ marginLeft: 'auto', opacity: 0.4, fontSize: 11 }}>⇧⌘Z</span>
+                </div>
+                <div style={{ height: 1, backgroundColor: 'var(--border-subtle)', margin: '6px 4px' }} />
+                <div className="menu-item" onClick={() => { document.execCommand('cut'); setActiveMenu(null); }} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', fontSize: 13, cursor: 'pointer', borderRadius: 6 }}>
+                  剪切 <span style={{ marginLeft: 'auto', opacity: 0.4, fontSize: 11 }}>⌘X</span>
+                </div>
+                <div className="menu-item" onClick={() => { document.execCommand('copy'); setActiveMenu(null); }} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', fontSize: 13, cursor: 'pointer', borderRadius: 6 }}>
+                  复制 <span style={{ marginLeft: 'auto', opacity: 0.4, fontSize: 11 }}>⌘C</span>
+                </div>
+                <div className="menu-item" onClick={() => { document.execCommand('paste'); setActiveMenu(null); }} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', fontSize: 13, cursor: 'pointer', borderRadius: 6 }}>
+                  粘贴 <span style={{ marginLeft: 'auto', opacity: 0.4, fontSize: 11 }}>⌘V</span>
+                </div>
+                <div className="menu-item" onClick={() => { document.execCommand('selectAll'); setActiveMenu(null); }} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', fontSize: 13, cursor: 'pointer', borderRadius: 6 }}>
+                  全选 <span style={{ marginLeft: 'auto', opacity: 0.4, fontSize: 11 }}>⌘A</span>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
         {/* 视图菜单 */}
         <div style={{ position: 'relative' }}>
-          <button 
-            className="menu-trigger" 
+          <button
+            className="menu-trigger"
             onClick={() => setActiveMenu(activeMenu === 'view' ? null : 'view')}
             style={{ 
               background: 'none', border: 'none', color: 'var(--text-secondary)', padding: '6px 12px', borderRadius: 6, fontSize: 13, cursor: 'pointer', fontWeight: 500, transition: 'background 0.2s', WebkitAppRegion: 'no-drag'
@@ -144,7 +186,7 @@ export const TitleBar: React.FC = () => {
                 position: 'absolute', top: 36, left: 0, backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: 10, boxShadow: '0 10px 40px rgba(0,0,0,0.12)', zIndex: 1000, minWidth: 180, padding: 6, backdropFilter: 'blur(30px)', WebkitBackdropFilter: 'blur(30px)'
               }}>
                 <div className="menu-item" onClick={() => { toggleSidebar(); setActiveMenu(null); }} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', fontSize: 13, cursor: 'pointer', borderRadius: 6 }}>
-                  <SidebarIcon size={14} /> {sidebarVisible ? '隐藏侧边栏' : '显示侧边栏'} <span style={{ marginLeft: 'auto', opacity: 0.4, fontSize: 11 }}>⌘B</span>
+                  <SidebarIcon size={14} /> {sidebarVisible ? '隐藏侧边栏' : '显示侧边栏'} <span style={{ marginLeft: 'auto', opacity: 0.4, fontSize: 11 }}>⌘\</span>
                 </div>
                 <div style={{ height: 1, backgroundColor: 'var(--border-subtle)', margin: '6px 4px' }}></div>
                 <div className="menu-item" onClick={() => { toggleToolbar(); setActiveMenu(null); }} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', fontSize: 13, cursor: 'pointer', borderRadius: 6, opacity: toolbarVisible ? 1 : 0.6 }}>
@@ -176,17 +218,39 @@ export const TitleBar: React.FC = () => {
           {activeMenu === 'intel' && (
             <>
               <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: 999 }} onClick={() => setActiveMenu(null)} />
-              <div className="dropdown-menu" style={{ 
+              <div className="dropdown-menu" style={{
                 position: 'absolute', top: 36, left: 0, backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: 10, boxShadow: '0 10px 40px rgba(0,0,0,0.12)', zIndex: 1000, minWidth: 200, padding: 6, backdropFilter: 'blur(30px)', WebkitBackdropFilter: 'blur(30px)'
               }}>
-                <div 
-                  className="menu-item" 
-                  onClick={() => { setActiveMenu(null); window.api.events.send('open-ai-config'); }}
-                  style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', fontSize: 13, cursor: 'pointer', borderRadius: 6 }}
-                >
-                  <Layout size={14} /> 模型配置 <span style={{ marginLeft: 'auto', opacity: 0.4, fontSize: 11 }}>⇧⌘M</span>
-                </div>
-              </div>
+                <div
+                   className="menu-item"
+                   onClick={() => { setActiveMenu(null); window.api.events.send('open-ai-config'); }}
+                   style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', fontSize: 13, cursor: 'pointer', borderRadius: 6 }}
+                 >
+                   <Layout size={14} /> 模型配置 <span style={{ marginLeft: 'auto', opacity: 0.4, fontSize: 11 }}>⇧⌘M</span>
+                 </div>
+                 <div
+                   className="menu-item"
+                   onClick={() => { setActiveMenu(null); window.api.events.send('open-search-config'); }}
+                   style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', fontSize: 13, cursor: 'pointer', borderRadius: 6 }}
+                 >
+                   <Globe size={14} /> 联网配置
+                 </div>
+                 <div style={{ height: 1, backgroundColor: 'var(--border-subtle)', margin: '6px 4px' }} />
+                 <div
+                   className="menu-item"
+                   onClick={() => { setActiveMenu(null); useAppStore.getState().setWechatConfigOpen(true); }}
+                   style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', fontSize: 13, cursor: 'pointer', borderRadius: 6 }}
+                 >
+                   <Sparkles size={14} /> 微信公众号配置
+                 </div>
+                 <div
+                   className="menu-item"
+                   onClick={() => { setActiveMenu(null); useAppStore.getState().setImageConfigOpen(true); }}
+                   style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', fontSize: 13, cursor: 'pointer', borderRadius: 6 }}
+                 >
+                   <Image size={14} /> 图片生成配置
+                 </div>
+               </div>
             </>
           )}
         </div>
@@ -258,6 +322,24 @@ export const TitleBar: React.FC = () => {
           );
         })}
       </div>
+
+      {/* AI 助手切换按钮 */}
+      <button
+        onClick={toggleAIPanel}
+        title={aiPanelVisible ? '隐藏 AI 助手' : '显示 AI 助手'}
+        style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          width: 32, height: 32, borderRadius: 8, border: 'none',
+          background: aiPanelVisible ? 'var(--brand-gradient)' : 'none',
+          color: aiPanelVisible ? '#fff' : 'var(--text-muted)',
+          cursor: 'pointer', flexShrink: 0, marginRight: 8,
+          boxShadow: aiPanelVisible ? '0 2px 8px var(--brand-shadow)' : 'none',
+          transition: 'all 0.2s',
+          WebkitAppRegion: 'no-drag',
+        } as React.CSSProperties}
+      >
+        <Sparkles size={15} />
+      </button>
 
       {/* Windows 窗口控制按钮 */}
       {!isMac && (

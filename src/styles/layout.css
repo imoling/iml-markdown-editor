@@ -104,8 +104,8 @@
 .sidebar {
   display: flex;
   flex-direction: column;
-  width: 240px;
-  min-width: 200px;
+  width: 220px;
+  flex-shrink: 0;
   background-color: var(--bg-surface);
   border-right: 1px solid var(--border-subtle);
 }
@@ -351,4 +351,130 @@
   height: 6px;
   border: none;
   box-shadow: 0 0 6px rgba(255, 77, 79, 0.4);
+}
+
+/* ── Sidebar resize handle (visible only on AI tab) ── */
+.sidebar-resize-handle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 4px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 10;
+  background: transparent;
+  transition: background 0.15s;
+  -webkit-app-region: no-drag;
+}
+.sidebar-resize-handle:hover,
+.sidebar-resize-handle.dragging {
+  background: var(--color-brand-indigo);
+  opacity: 0.5;
+}
+
+/* ── Right Panel (AI Assistant) ── */
+.right-panel {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  position: relative;
+  background-color: var(--bg-surface);
+  border-left: 1px solid var(--border-subtle);
+  transition: width 0.25s ease;
+  overflow: hidden;
+}
+
+.right-panel-resize-handle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 10;
+  background: transparent;
+  transition: background 0.15s;
+  -webkit-app-region: no-drag;
+}
+
+.right-panel-resize-handle:hover,
+.right-panel-resize-handle.dragging {
+  background: var(--color-brand-indigo);
+  opacity: 0.5;
+}
+
+/* ── Activity Bar ── */
+.activity-bar {
+  width: 48px;
+  min-width: 48px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 0;
+  gap: 4px;
+  background-color: var(--bg-surface);
+  border-right: 1px solid var(--border-subtle);
+  -webkit-app-region: no-drag;
+  z-index: 10;
+}
+
+.activity-bar-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  color: var(--text-muted);
+  transition: all 0.15s;
+  position: relative;
+}
+
+.activity-bar-btn:hover {
+  background-color: var(--bg-hover-editor);
+  color: var(--text-primary);
+}
+
+.activity-bar-btn.active {
+  background-color: rgba(99, 102, 241, 0.12);
+  color: var(--color-brand-indigo);
+}
+
+.activity-bar-btn.active::before {
+  content: '';
+  position: absolute;
+  left: -7px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 20px;
+  background: var(--brand-gradient);
+  border-radius: 0 3px 3px 0;
+}
+
+.activity-bar-btn span {
+  font-size: 9px;
+  font-weight: 500;
+  line-height: 1;
+}
+
+/* ── SKILL step timeline connector ── */
+.skill-timeline {
+  position: relative;
+}
+.skill-timeline::before {
+  content: '';
+  position: absolute;
+  left: 10px;
+  top: 22px;
+  bottom: 22px;
+  width: 1px;
+  background: var(--border-subtle);
+  pointer-events: none;
 }

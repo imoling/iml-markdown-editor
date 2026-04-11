@@ -16,6 +16,23 @@ export const turndownService = new TurndownService({
 
 turndownService.use(tables);
 
+// 显式图片规则：data URL 用 HTML 标签保存（避免 marked 解析超长 inline token 失败），普通 URL 用 markdown 语法
+turndownService.addRule('image', {
+  filter: 'img',
+  replacement: (_content, node: any) => {
+    const alt = (node.getAttribute('alt') || '').replace(/\n/g, '').replace(/"/g, '&quot;');
+    const src = node.getAttribute('src') || '';
+    if (!src) return '';
+    // data URL：输出标准 markdown 语法
+    if (src.startsWith('data:')) {
+      return `![${alt}](${src})`;
+    }
+    const title = node.getAttribute('title') || '';
+    const titlePart = title ? ` "${title.replace(/"/g, '\\"')}"` : '';
+    return `![${alt}](${src}${titlePart})`;
+  },
+});
+
 // Override heading rule to prevent list breakage
 turndownService.addRule('heading', {
   filter: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
@@ -160,12 +177,22 @@ turndownService.addRule('taskList', {
 export const markdownToHtml = (markdownContent: string, inlineActual: boolean = false): string => {
   if (!markdownContent) return '';
 
+  // 0. Pre-extract <img> tags with data URLs before passing to marked.
+  //    This prevents marked from wrapping them in <p> or mangling the very long src attribute.
+  const dataImgs: string[] = [];
+  const placeholderDataImg = (i: number) => `:::DATA_IMG_${i}:::`;
+
+  let processed = markdownContent.replace(/<img\s[^>]*src="data:[^"]*"[^>]*\/?>/gi, (match) => {
+    dataImgs.push(match);
+    return placeholderDataImg(dataImgs.length - 1);
+  });
+
   // 1. Process Mermaid code blocks
   const mermaidRegex = /```mermaid\s*([\s\S]*?)(?:```|$)/g;
   const diagrams: string[] = [];
   const placeholderMermaid = (index: number) => `:::MERMAID_BLOCK_${index}:::`;
 
-  let processed = markdownContent.replace(mermaidRegex, (match, code) => {
+  processed = processed.replace(mermaidRegex, (match, code) => {
     const index = diagrams.length;
     let html = '';
     
@@ -246,7 +273,17 @@ export const markdownToHtml = (markdownContent: string, inlineActual: boolean = 
   });
 
   let htmlResult = marked.parse(processed, { async: false }) as string;
-  
+
+  // 3.5. Restore data URL <img> tags (replace placeholders, strip any <p> wrapper marked may have added)
+  dataImgs.forEach((imgHtml, index) => {
+    const pStr = placeholderDataImg(index);
+    if (!htmlResult.includes(pStr)) return;
+    const escaped = pStr.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
+    const pRegex = new RegExp(`<p>\\s*${escaped}\\s*</p>`, 'g');
+    htmlResult = htmlResult.replace(pRegex, imgHtml);
+    htmlResult = htmlResult.split(pStr).join(imgHtml);
+  });
+
   // 4. Restore Mermaid blocks
   diagrams.forEach((diagramHtml, index) => {
     const pStr = placeholderMermaid(index);

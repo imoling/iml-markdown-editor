@@ -89,7 +89,41 @@
   --sh-string: #98c379;
   --sh-keyword: #c678dd;
   --sh-title: #61afef;
+
 }
+
+/* Eye Protection Mode Overrides */
+[data-theme='eye-protection'] {
+  --bg-page: #FAF3E0;
+  --bg-surface: #F5EDD6;
+  --bg-card: #FAF3E0;
+  --bg-elevated: #EEE1BF;
+  --text-primary: #3C3C3C;
+  --text-secondary: #5C5C5C;
+  --text-tertiary: #7C7C7C;
+  --text-muted: #9E9E9E;
+  --border-subtle: #E6DABE;
+  --border-strong: #D6CAAE;
+  --glass-bg: rgba(250, 243, 224, 0.85);
+  --glass-border: rgba(230, 218, 190, 0.4);
+
+  /* Editor Specifics Eye Protection */
+  --bg-hover-editor: rgba(0, 0, 0, 0.04);
+  --bg-zebra-editor: rgba(0, 0, 0, 0.02);
+  --selection-bg-editor: rgba(99, 102, 241, 0.15);
+  --bg-code-inline: rgba(99, 102, 241, 0.08);
+  --bg-code-block: #EEE1BF;
+  
+  /* Syntax Highlighting Eye Protection (Softened contrast) */
+  --sh-comment: #8e908c;
+  --sh-variable: #a52627;
+  --sh-number: #c5771f;
+  --sh-attribute: #b29700;
+  --sh-string: #617c00;
+  --sh-keyword: #794998;
+  --sh-title: #32619e;
+}
+
 
 * {
   box-sizing: border-box;
