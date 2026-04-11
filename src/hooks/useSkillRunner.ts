@@ -231,13 +231,16 @@ export function useSkillRunner(runId: string | null) {
         });
       }
 
-      // 写作类步骤：第一次（非 section 子项）时确保有 tab
+      // 写作类步骤：确保有 tab；重跑时先清空 tab 内容
       if (isWritingStep && !isSingleSection) {
         const currentRun = useAppStore.getState().skillRuns[run.id];
         if (!currentRun?.tabId) {
           const tabId = `ai-gen-${Date.now()}.md`;
           openTab({ id: tabId, title: skill.label, content: '', isDirty: true, mode: 'word' });
           upsertSkillRun({ ...currentRun!, tabId });
+        } else {
+          // 重跑：先清空，避免旧内容残留
+          updateTabContent(currentRun.tabId, '');
         }
       }
 
@@ -332,7 +335,7 @@ export function useSkillRunner(runId: string | null) {
           // 单 section 项完成 → 不动整体 step.status
           // status 由外层循环负责
         } else {
-          // wechat_html：裁掉 HTML 开始前的所有前言文字
+          // 裁掉模型输出的前言文字
           const finalOutput = step.id === 'wechat_html'
             ? (() => {
                 // 去掉 markdown 代码块包裹 ```html ... ```
@@ -340,6 +343,12 @@ export function useSkillRunner(runId: string | null) {
                 if (mdMatch) return mdMatch[1].trim();
                 // 找第一个真正的 HTML 根标签起点
                 const idx = accumulated.search(/<!DOCTYPE|<html|<section|<div|<body/i);
+                return idx > 0 ? accumulated.slice(idx) : accumulated.trim();
+              })()
+            : step.kind === 'draft'
+            ? (() => {
+                // 裁掉正文前的任务描述/前言，从第一个 Markdown 标题开始
+                const idx = accumulated.search(/^#{1,6}\s/m);
                 return idx > 0 ? accumulated.slice(idx) : accumulated.trim();
               })()
             : accumulated;
