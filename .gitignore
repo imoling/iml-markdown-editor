@@ -11,6 +11,7 @@ dist/
 dist-electron/
 release/
 post-to-wechat
+wiki/
 *.editorconfig
 
 # Logs
