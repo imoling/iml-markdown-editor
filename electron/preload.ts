@@ -37,6 +37,7 @@ contextBridge.exposeInMainWorld('api', {
     },
     stop: (requestId: string) => ipcRenderer.send('ai:stop', requestId),
     webSearch: (query: string) => ipcRenderer.invoke('ai:webSearch', query),
+    fetchUrl: (url: string) => ipcRenderer.invoke('ai:fetchUrl', url),
     openSearchConfig: () => ipcRenderer.send('open-search-config'),
     getCoverImages: (params: any) => ipcRenderer.invoke('ai:getCoverImages', params),
   },
@@ -50,7 +51,7 @@ contextBridge.exposeInMainWorld('api', {
     saveConfig: (config: any) => ipcRenderer.invoke('wechat:saveConfig', config),
     publish: (markdown: string, options?: { theme?: string; color?: string; accountId?: string; coverLocalPath?: string }) =>
       ipcRenderer.invoke('wechat:publish', { markdown, ...options }),
-    publishHtml: (html: string, options?: { title?: string; accountId?: string; coverLocalPath?: string; inlineImageDataUrls?: string[] }) =>
+    publishHtml: (html: string, options?: { title?: string; abstract?: string; accountId?: string; coverLocalPath?: string; inlineImageDataUrls?: string[] }) =>
       ipcRenderer.invoke('wechat:publishHtml', { html, ...options }),
   },
   events: {
@@ -62,7 +63,7 @@ contextBridge.exposeInMainWorld('api', {
     }
   },
   app: {
-    version: '1.8.0',
+    version: '1.9.0',
     checkUpdates: () => ipcRenderer.invoke('app:checkUpdates'),
     platform: process.platform,
     minimize: () => ipcRenderer.send('window-minimize'),
@@ -70,6 +71,11 @@ contextBridge.exposeInMainWorld('api', {
     close: () => ipcRenderer.send('window-close'),
     getSettings: () => ipcRenderer.invoke('app:getSettings'),
     saveSettings: (settings: any) => ipcRenderer.invoke('app:saveSettings', settings),
+    openWechatConfig: () => ipcRenderer.send('open:wechat-config'),
+    openImageConfig: () => ipcRenderer.send('open:image-config'),
+    openSettings: () => ipcRenderer.send('open:settings'),
+    previewSettings: (settings: any) => ipcRenderer.send('settings:preview', settings),
+    revertSettings: () => ipcRenderer.send('settings:revert'),
   },
-  appVersion: '1.8.0'
+  appVersion: '1.9.0'
 });

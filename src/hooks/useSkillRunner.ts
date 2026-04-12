@@ -283,25 +283,33 @@ export function useSkillRunner(runId: string | null) {
       let accumulated = '';
       // 节流写 store
       let lastFlush = 0;
+      // 流式过滤：去掉已闭合的 <think> 块，隐藏未闭合的（流式中可能还在传输）
+      const cleanForDisplay = (text: string): string =>
+        text
+          .replace(/<think>[\s\S]*?<\/think>/gi, '')
+          .replace(/<think>[\s\S]*/i, '')
+          .trimStart();
+
       const flush = (force = false) => {
         const now = Date.now();
         if (!force && now - lastFlush < 80) return;
         lastFlush = now;
+        const display = cleanForDisplay(accumulated);
         if (isSingleSection) {
           const latest = useAppStore.getState().skillRuns[run.id];
           const cur = latest?.steps.find((s) => s.stepId === stepId);
           const sectionOutputs = { ...(cur?.sectionOutputs || {}) };
-          sectionOutputs[String(opts!.sectionIndex)] = accumulated;
+          sectionOutputs[String(opts!.sectionIndex)] = display;
           updateSkillStepRun(run.id, stepId, { sectionOutputs });
         } else {
-          updateSkillStepRun(run.id, stepId, { output: accumulated });
+          updateSkillStepRun(run.id, stepId, { output: display });
         }
         // 实时同步到 tab
         if (isWritingStep) {
           const latestRun = useAppStore.getState().skillRuns[run.id];
           const tabId = latestRun?.tabId;
           if (tabId) {
-            updateTabContent(tabId, assembleFromLatest(accumulated));
+            updateTabContent(tabId, assembleFromLatest(display));
           }
         }
       };
@@ -317,10 +325,9 @@ export function useSkillRunner(runId: string | null) {
           rid,
           maxTokens,
         );
-        flush(true);
-
-        // 全局：去掉推理模型的 <think>...</think> 块
+        // 全局：去掉推理模型的 <think>...</think> 块（在 flush 之前，避免脏内容写入 tab）
         accumulated = accumulated.replace(/<think>[\s\S]*?<\/think>/gi, '').trimStart();
+        flush(true);
 
         // 后处理
         if (step.kind === 'outline') {

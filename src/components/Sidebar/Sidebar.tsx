@@ -283,7 +283,7 @@ const OutlineItem: React.FC<{ node: HeadingNode }> = ({ node }) => {
 };
 
 const NotesPanel: React.FC = () => {
-  const { defaultLibraryPath, openTab, activeTabId, setSettingsModalOpen, renameFile, deleteFile, duplicateFile } = useAppStore();
+  const { defaultLibraryPath, openTab, activeTabId, renameFile, deleteFile, duplicateFile } = useAppStore();
   const [files, setFiles] = React.useState<{ name: string; path: string }[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [notesMenu, setNotesMenu] = React.useState<{ visible: boolean; x: number; y: number; file: { name: string; path: string } | null }>({ visible: false, x: 0, y: 0, file: null });
@@ -405,7 +405,7 @@ const NotesPanel: React.FC = () => {
           设置一个目录作为笔记存放位置，<br />新建文档将自动存入该目录
         </div>
         <button
-          onClick={() => setSettingsModalOpen?.(true)}
+          onClick={() => window.api.app.openSettings()}
           style={{
             fontSize: 11, padding: '5px 12px', borderRadius: 6, border: '1px solid var(--border-subtle)',
             background: 'transparent', color: 'var(--text-secondary)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4,
@@ -583,7 +583,7 @@ const ContextMenuComponent = () => {
 };
 
 export const Sidebar: React.FC = () => {
-  const { fileTree, workspaceName, sidebarVisible, outline, sidebarTab, refreshWorkspace, starredFiles, setSettingsModalOpen } = useAppStore();
+  const { fileTree, workspaceName, sidebarVisible, outline, sidebarTab, refreshWorkspace, starredFiles } = useAppStore();
 
   React.useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {

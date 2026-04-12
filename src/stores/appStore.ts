@@ -779,13 +779,14 @@ export const useAppStore = create<AppState>((set, get) => ({
     try {
       const settings = await window.api.app.getSettings();
       if (settings) {
-        set({ 
+        set({
           appearanceMode: settings.appearanceMode || 'light',
           startupBehavior: settings.startupBehavior || 'restore',
           autoSave: settings.autoSave ?? true,
           defaultLibraryPath: settings.defaultLibraryPath || '',
           imageGenConfig: settings.imageGenConfig || DEFAULT_IMAGE_GEN_CONFIG,
         });
+        if (settings.themeId) get().setTheme(settings.themeId);
         get().applyAppearance(settings.appearanceMode || 'light');
       }
     } catch (error) {
@@ -794,8 +795,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   saveSettings: async () => {
-    const { appearanceMode, startupBehavior, autoSave, defaultLibraryPath, imageGenConfig } = get();
-    await window.api.app.saveSettings({ appearanceMode, startupBehavior, autoSave, defaultLibraryPath, imageGenConfig });
+    const { appearanceMode, startupBehavior, autoSave, defaultLibraryPath, imageGenConfig, theme } = get();
+    await window.api.app.saveSettings({
+      appearanceMode, startupBehavior, autoSave, defaultLibraryPath, imageGenConfig,
+      themeId: theme?.id,
+    });
   },
 
   setSelectedNodePath: (path) => set({ selectedNodePath: path }),

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useAppStore } from '../../stores/appStore';
 import {
   Sparkles,
@@ -15,6 +15,9 @@ import {
   CheckCircle2,
   Flame,
   RefreshCw,
+  Link,
+  X,
+  FileText,
 } from 'lucide-react';
 import { SKILLS, getSkillById } from '../../data/skills';
 import { createSkillRun, useSkillRunner } from '../../hooks/useSkillRunner';
@@ -30,15 +33,80 @@ const ellipsisStyle: React.CSSProperties = {
 // ─────────────────────────────────────────────
 // 入口态：选 SKILL + 输入 vibe + 历史列表
 // ─────────────────────────────────────────────
-const EntryView: React.FC<{ onStart: (skillId: string, vibe: string, webContext?: string) => void }> = ({ onStart }) => {
+// Tavily 限制 400 字符
+// 若内容超限：有模型时用 AI 提取关键词摘要，否则硬截断
+async function buildSearchQuery(raw: string): Promise<string> {
+  const MAX = 380;
+  const trimmed = raw.trim();
+  if (trimmed.length <= MAX) return trimmed;
+
+  try {
+    const cfg = await window.api.ai.getConfig();
+    const hasModel = cfg?.apiKey || cfg?.openaiApiKey || cfg?.anthropicApiKey || cfg?.modelId;
+    if (hasModel) {
+      const result = await window.api.ai.chat(
+        [
+          { role: 'system', content: '你是搜索词提取助手。将用户提供的内容提炼为不超过 80 个字符的中文搜索关键词，只输出关键词本身，不要解释。' },
+          { role: 'user', content: trimmed },
+        ],
+        () => {},
+        `search-query-${Date.now()}`,
+        100,
+      );
+      const extracted = result.trim();
+      if (extracted && extracted.length <= MAX) return extracted;
+    }
+  } catch {
+    // 模型调用失败，降级截断
+  }
+
+  return trimmed.slice(0, MAX).replace(/[，。！？,.!?\s]+$/, '');
+}
+
+const EntryView: React.FC<{ onStart: (skillId: string, vibe: string, webContext?: string) => void; skillId: string; setSkillId: (id: string) => void }> = ({ onStart, skillId, setSkillId }) => {
   const sidebarWidth = useAppStore((s) => s.sidebarWidth);
   const isWide = sidebarWidth >= 360;
   const [vibe, setVibe] = useState('');
-  const [skillId, setSkillId] = useState(SKILLS[0].id);
   const [collapsed, setCollapsed] = useState(false);
   const [useWebSearch, setUseWebSearch] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const isWechatSkill = skillId === 'wechat-hot-topic';
+  const isScenarioSkill = skillId === 'wechat-scenario';
+
+  // 参考资料（仅 wechat-scenario）
+  type Ref = { id: string; type: 'url' | 'file'; name: string; content: string };
+  const [refs, setRefs] = useState<Ref[]>([]);
+  const [urlInput, setUrlInput] = useState('');
+  const [urlLoading, setUrlLoading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const addUrlRef = async () => {
+    const url = urlInput.trim();
+    if (!url) return;
+    setUrlLoading(true);
+    try {
+      const content = await window.api.ai.fetchUrl(url);
+      const name = url.replace(/^https?:\/\//, '').slice(0, 40);
+      setRefs(r => [...r, { id: Date.now().toString(), type: 'url', name, content }]);
+      setUrlInput('');
+    } catch (e: any) {
+      alert(`无法获取页面内容：${e.message}`);
+    } finally {
+      setUrlLoading(false);
+    }
+  };
+
+  const addFileRef = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const content = (ev.target?.result as string) || '';
+      setRefs(r => [...r, { id: Date.now().toString(), type: 'file', name: file.name, content: content.slice(0, 8000) }]);
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
 
   const skillRuns = useAppStore((s) => s.skillRuns);
   const setActiveSkillRun = useAppStore((s) => s.setActiveSkillRun);
@@ -59,7 +127,7 @@ const EntryView: React.FC<{ onStart: (skillId: string, vibe: string, webContext?
       setIsSearching(true);
       try {
         webContext = await window.api.ai.webSearch(
-          `${vibe.trim()} 热点话题 最新动态`,
+          await buildSearchQuery(`${vibe.trim()} 热点话题 最新动态`),
         );
       } catch {
         // 无 Tavily Key 或网络故障时直接跳过，不影响选题生成
@@ -68,7 +136,7 @@ const EntryView: React.FC<{ onStart: (skillId: string, vibe: string, webContext?
     } else if (selectedSkill?.autoSearchQuery) {
       setIsSearching(true);
       try {
-        webContext = await window.api.ai.webSearch(selectedSkill.autoSearchQuery);
+        webContext = await window.api.ai.webSearch(await buildSearchQuery(selectedSkill.autoSearchQuery));
       } catch (err: any) {
         alert(`自动联网搜索失败：${err.message}`);
         setIsSearching(false);
@@ -78,7 +146,7 @@ const EntryView: React.FC<{ onStart: (skillId: string, vibe: string, webContext?
     } else if (useWebSearch) {
       setIsSearching(true);
       try {
-        webContext = await window.api.ai.webSearch(vibe);
+        webContext = await window.api.ai.webSearch(await buildSearchQuery(vibe));
       } catch (err: any) {
         alert(err.message);
         setIsSearching(false);
@@ -86,7 +154,10 @@ const EntryView: React.FC<{ onStart: (skillId: string, vibe: string, webContext?
       }
       setIsSearching(false);
     }
-    onStart(skillId, vibe, webContext);
+    const fullVibe = refs.length > 0
+      ? `${vibe.trim()}\n\n---\n参考资料：\n${refs.map(r => `【${r.name}】\n${r.content}`).join('\n\n')}`
+      : vibe.trim();
+    onStart(skillId, fullVibe, webContext);
   };
 
   return (
@@ -111,40 +182,54 @@ const EntryView: React.FC<{ onStart: (skillId: string, vibe: string, webContext?
         </div>
 
         {!collapsed && (
-          <div className="scenario-grid" style={{ display: 'grid', gap: 4, marginBottom: 12, gridTemplateColumns: isWide ? '1fr 1fr' : '1fr' }}>
-            {[...SKILLS].sort((a, b) => a.id === 'wechat-hot-topic' ? -1 : b.id === 'wechat-hot-topic' ? 1 : 0).map((s) => {
-              const isFeatured = s.id === 'wechat-hot-topic';
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 12 }}>
+            {[...SKILLS].sort((a, b) => {
+              const order = ['wechat-hot-topic', 'wechat-scenario'];
+              const ai = order.indexOf(a.id), bi = order.indexOf(b.id);
+              if (ai !== -1 && bi !== -1) return ai - bi;
+              if (ai !== -1) return -1;
+              if (bi !== -1) return 1;
+              return 0;
+            }).map((s) => {
+              const isFeatured = s.id === 'wechat-hot-topic' || s.id === 'wechat-scenario';
               const isSelected = skillId === s.id;
               return (
-                <div
-                  key={s.id}
-                  onClick={() => setSkillId(s.id)}
-                  title={`${s.label}: ${s.description}（${s.steps.length} 步）`}
-                  style={{
-                    padding: '6px 12px', borderRadius: 10, position: 'relative',
-                    border: `1px solid ${isSelected ? 'transparent' : isFeatured ? 'rgba(99,102,241,0.25)' : 'var(--border-subtle)'}`,
-                    background: isSelected ? 'var(--brand-gradient)' : isFeatured ? 'rgba(99,102,241,0.05)' : 'var(--bg-card)',
-                    boxShadow: isSelected ? '0 4px 12px var(--brand-glow)' : 'none',
-                    cursor: 'pointer',
-                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  }}
-                >
-                  {isFeatured && !isSelected && (
-                    <span style={{
-                      position: 'absolute', top: 6, right: 8,
-                      fontSize: 9, fontWeight: 600, color: 'var(--color-brand-indigo)',
-                      background: 'rgba(99,102,241,0.12)', padding: '1px 5px', borderRadius: 4,
-                      letterSpacing: '0.02em',
-                    }}>作者热荐</span>
-                  )}
-                  <div style={{ fontSize: 12, fontWeight: 600, color: isSelected ? '#fff' : 'var(--text-primary)', ...ellipsisStyle, paddingRight: isFeatured && !isSelected ? 52 : 0 }}>
-                    {s.label}
-                    <span style={{ marginLeft: 6, fontSize: 9, opacity: 0.7 }}>{s.steps.length} 步</span>
+                <React.Fragment key={s.id}>
+                  <div
+                    onClick={() => setSkillId(s.id)}
+                    title={`${s.label}: ${s.description}（${s.steps.length} 步）`}
+                    style={{
+                      padding: '6px 12px', borderRadius: 10, position: 'relative',
+                      border: `1px solid ${isSelected ? 'transparent' : 'var(--border-subtle)'}`,
+                      background: isSelected ? 'var(--brand-gradient)' : 'var(--bg-card)',
+                      boxShadow: isSelected ? '0 4px 12px var(--brand-glow)' : 'none',
+                      cursor: 'pointer', transition: 'all 0.2s ease',
+                    }}
+                    onMouseEnter={e => { if (!isSelected) (e.currentTarget as HTMLDivElement).style.background = 'var(--bg-elevated)'; }}
+                    onMouseLeave={e => { if (!isSelected) (e.currentTarget as HTMLDivElement).style.background = 'var(--bg-card)'; }}
+                  >
+                    {isFeatured && (
+                      <span style={{
+                        position: 'absolute', top: 6, right: 8,
+                        fontSize: 9, fontWeight: 600,
+                        color: isSelected ? 'rgba(255,255,255,0.9)' : 'var(--color-brand-indigo)',
+                        background: isSelected ? 'rgba(255,255,255,0.2)' : 'rgba(99,102,241,0.12)',
+                        padding: '1px 5px', borderRadius: 4, letterSpacing: '0.02em',
+                      }}>作者热荐</span>
+                    )}
+                    <div style={{
+                      fontSize: 12, fontWeight: 600,
+                      color: isSelected ? '#fff' : 'var(--text-primary)',
+                      ...ellipsisStyle, paddingRight: isFeatured && !isSelected ? 52 : 0,
+                    }}>
+                      {s.label}
+                      <span style={{ marginLeft: 5, fontSize: 9, fontWeight: 400, color: isSelected ? 'rgba(255,255,255,0.6)' : 'var(--text-muted)' }}>{s.steps.length} 步</span>
+                    </div>
+                    <div style={{ fontSize: 11, marginTop: 1, color: isSelected ? 'rgba(255,255,255,0.75)' : 'var(--text-muted)', ...ellipsisStyle }}>
+                      {s.description}
+                    </div>
                   </div>
-                  <div style={{ fontSize: 11, color: isSelected ? 'rgba(255,255,255,0.8)' : 'var(--text-muted)', ...ellipsisStyle }}>
-                    {s.description}
-                  </div>
-                </div>
+                </React.Fragment>
               );
             })}
           </div>
@@ -239,6 +324,71 @@ const EntryView: React.FC<{ onStart: (skillId: string, vibe: string, webContext?
         </div>
       </div>
 
+      {/* 参考资料（仅 wechat-scenario）*/}
+      {isScenarioSkill && (
+        <div style={{ marginBottom: 10 }}>
+          {/* 已添加的 refs */}
+          {refs.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 6 }}>
+              {refs.map(r => (
+                <div key={r.id} style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  padding: '4px 8px', borderRadius: 8,
+                  backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-subtle)',
+                  fontSize: 11,
+                }}>
+                  {r.type === 'url' ? <Link size={10} color="var(--color-brand-indigo)" /> : <FileText size={10} color="var(--color-brand-indigo)" />}
+                  <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>{r.name}</span>
+                  <button onClick={() => setRefs(prev => prev.filter(x => x.id !== r.id))}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', padding: 0 }}>
+                    <X size={11} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          {/* URL 输入行 */}
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <input
+              value={urlInput}
+              onChange={e => setUrlInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && addUrlRef()}
+              placeholder="粘贴网页链接..."
+              style={{
+                flex: 1, padding: '5px 10px', borderRadius: 8, fontSize: 11,
+                border: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-main)',
+                color: 'var(--text-primary)', outline: 'none',
+              }}
+            />
+            <button
+              onClick={addUrlRef}
+              disabled={!urlInput.trim() || urlLoading}
+              style={{
+                padding: '5px 10px', borderRadius: 8, fontSize: 11, fontWeight: 500,
+                border: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-card)',
+                color: 'var(--color-brand-indigo)', cursor: urlLoading ? 'wait' : 'pointer',
+                display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap',
+              }}
+            >
+              {urlLoading ? <Loader2 size={10} className="animate-spin" /> : <Link size={10} />}
+              {urlLoading ? '获取中' : '添加链接'}
+            </button>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              style={{
+                padding: '5px 10px', borderRadius: 8, fontSize: 11, fontWeight: 500,
+                border: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-card)',
+                color: 'var(--text-muted)', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap',
+              }}
+            >
+              <Upload size={10} /> 上传文档
+            </button>
+            <input ref={fileInputRef} type="file" accept=".txt,.md,.markdown" style={{ display: 'none' }} onChange={addFileRef} />
+          </div>
+        </div>
+      )}
+
       {/* 未完成的写作 */}
       {unfinishedRuns.length > 0 && (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', borderTop: '1px solid var(--border-subtle)', paddingTop: 12, overflow: 'hidden' }}>
@@ -295,6 +445,7 @@ const RunView: React.FC<{ runId: string; onBack: () => void }> = ({ runId, onBac
   const imageGenConfig = useAppStore((s) => s.imageGenConfig);
   const tabs = useAppStore((s) => s.tabs);
   const activeTabId = useAppStore((s) => s.activeTabId);
+  const updateTabContent = useAppStore((s) => s.updateTabContent);
   const autoTriggeredRef = React.useRef(false);
   const [publishState, setPublishState] = React.useState<'idle' | 'loading' | 'done' | 'error'>('idle');
 
@@ -341,10 +492,18 @@ const RunView: React.FC<{ runId: string; onBack: () => void }> = ({ runId, onBac
           ? titleStep.outlineItems[titleStep.selectedItemIndex]?.trim()
           : undefined;
 
+      // 从 seo 步骤提取搜一搜摘要
+      const seoStep = run?.steps.find((s) => s.stepId === 'seo');
+      let abstract: string | undefined;
+      if (seoStep?.output) {
+        const m = seoStep.output.match(/②[^\n]*\n+([\s\S]*?)(?:\n+[①-⑩]|\n+\*\*[①-⑩]|$)/);
+        abstract = m?.[1]?.replace(/\*\*/g, '').trim();
+      }
+
       // 优先使用 wechat_html 步骤的输出（直接 HTML，保留排版）
       const htmlStep = run?.steps.find((s) => s.stepId === 'wechat_html');
       if (htmlStep?.output) {
-        await window.api.wechat.publishHtml(htmlStep.output, { title: selectedTitle, accountId, coverLocalPath, inlineImageDataUrls });
+        await window.api.wechat.publishHtml(htmlStep.output, { title: selectedTitle, abstract, accountId, coverLocalPath, inlineImageDataUrls });
       } else {
         const md = assembleMarkdown?.();
         if (!md) { setPublishMsg('暂无可发布内容，请先完成写作步骤'); setPublishState('error'); return; }
@@ -449,6 +608,7 @@ const RunView: React.FC<{ runId: string; onBack: () => void }> = ({ runId, onBac
                   coverLocalPath,
                 });
               } : undefined}
+              onWriteToDoc={step.kind === 'polish' && activeTabId ? (content) => updateTabContent(activeTabId, content) : undefined}
             />
           );
         })}
@@ -550,9 +710,10 @@ export const AIWritingPanel: React.FC = () => {
   const activeSkillRunId = useAppStore((s) => s.activeSkillRunId);
   const setActiveSkillRun = useAppStore((s) => s.setActiveSkillRun);
   const upsertSkillRun = useAppStore((s) => s.upsertSkillRun);
+  const [skillId, setSkillId] = useState('wechat-hot-topic');
 
-  const handleStart = (skillId: string, vibe: string, webContext?: string) => {
-    const skill = getSkillById(skillId);
+  const handleStart = (sid: string, vibe: string, webContext?: string) => {
+    const skill = getSkillById(sid);
     if (!skill) return;
     const run = createSkillRun(skill, vibe, webContext);
     upsertSkillRun(run);
@@ -562,5 +723,5 @@ export const AIWritingPanel: React.FC = () => {
   if (activeSkillRunId) {
     return <RunView runId={activeSkillRunId} onBack={() => setActiveSkillRun(null)} />;
   }
-  return <EntryView onStart={handleStart} />;
+  return <EntryView onStart={handleStart} skillId={skillId} setSkillId={setSkillId} />;
 };

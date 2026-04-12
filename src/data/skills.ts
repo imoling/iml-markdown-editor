@@ -297,7 +297,7 @@ export const SKILLS: Skill[] = [
   {
     id: 'wechat-hot-topic',
     label: '公众号热点写作',
-    description: '选题推荐 → 大纲策略 → 正文撰写 → 排版发布',
+    description: '输入关键词，AI 帮你从选题到爆款全程包办',
     steps: [
       // Step 1: 直接给出选题推荐（富格式，含钩子 + 大纲思路）
       {
@@ -386,6 +386,18 @@ export const SKILLS: Skill[] = [
         userPromptTemplate: '请分析以下文章，给出 3~5 张插图建议（JSON 格式）：\n\n{{prevOutput}}',
         polishFromStepId: 'draft',
       },
+      // Step 4c: 结构诊断（可选）
+      {
+        id: 'structure_check',
+        kind: 'custom',
+        optional: true,
+        label: '结构诊断',
+        description: '可读性 · 逻辑 · 节奏 4 维诊断，给出具体改进建议',
+        systemPrompt:
+          '你是资深文字编辑，擅长诊断微信公众号文章的结构问题。\n\n从以下 4 个维度诊断文章，严格按照下面的格式输出，不要增减维度、不要改变格式：\n\n**逻辑连贯**\n评分：X/5\n问题定位：（指出具体段落或句子）\n改进建议：（具体可操作的修改方向）\n\n**可读性**\n评分：X/5\n问题定位：（指出具体段落或句子）\n改进建议：（具体可操作的修改方向）\n\n**开篇吸引力**\n评分：X/5\n问题定位：（指出前几行的具体问题）\n改进建议：（具体可操作的修改方向）\n\n**结尾力度**\n评分：X/5\n问题定位：（指出结尾的具体问题）\n改进建议：（具体可操作的修改方向）\n\n**优先修改清单**\n1. （第一优先，影响最大）\n2. （第二优先）\n3. （第三优先）\n\n不要重写文章，只给诊断报告。',
+        userPromptTemplate: '请对以下文章进行结构诊断：\n\n{{prevOutput}}',
+        polishFromStepId: 'draft',
+      },
       // Step 5: 润色（可选）
       {
         id: 'polish',
@@ -397,6 +409,18 @@ export const SKILLS: Skill[] = [
         userPromptTemplate: '请润色以下微信公众号文章：\n\n{{prevOutput}}',
         polishFromStepId: 'draft',
         optional: true,
+      },
+      // Step 5c: SEO 摘要（可选）
+      {
+        id: 'seo',
+        kind: 'custom',
+        optional: true,
+        label: '传播优化',
+        description: '搜一搜摘要（发布自动带入）+ 关键词 + 话题标签',
+        systemPrompt:
+          '你是微信内容 SEO 专家，熟悉微信搜一搜的收录规则和小红书话题运营。\n\n输出 3 个部分：\n\n**① 核心关键词**\n8~12 个，逗号分隔，覆盖核心词 + 长尾词 + 相关词\n\n**② 搜一搜摘要**\n150 字以内，信息密度高，自然嵌入核心关键词，首句必须点出文章核心价值\n\n**③ 话题标签**\n10 个 # 标签，格式：#标签名，含 3~4 个大众标签（流量大）+ 5~6 个垂直标签（精准）+ 1~2 个品牌/原创标签\n\n每部分单独成块，标题加粗，清晰分隔。',
+        userPromptTemplate: '请为以下文章生成 SEO 元数据：\n\n{{prevOutput}}',
+        polishFromStepId: 'polish',
       },
       // Step 5b: 微信排版预览（可选）
       {
@@ -411,6 +435,138 @@ export const SKILLS: Skill[] = [
           '主题色：{{themeColor}}\n\n请将以下文章转换为微信公众号排版 HTML：\n\n{{prevOutput}}',
         polishFromStepId: 'polish',
       },
+    ],
+  },
+  // ── 微信公众号场景写作（脑暴 → 分析 → 标题 → 大纲 → 写作 → 发布）──
+  {
+    id: 'wechat-scenario',
+    label: '公众号场景写作',
+    description: '把你的想法交给 AI，提炼亮点、锁定标题、写出全文',
+    steps: [
+      // Step 1: 分析脑暴内容，提炼核心角度
+      {
+        id: 'idea_analysis',
+        kind: 'outline',
+        label: '脑暴分析',
+        description: 'AI 分析你的想法，提炼核心主题、受众、差异化角度',
+        systemPrompt:
+          '你是一位资深微信公众号策略顾问，擅长从创作者的零散想法中挖掘最有传播力的选题角度。\n\n用户将提供他们的选题想法、行文逻辑或写作素材。请深度分析后，输出结构化的创作策略。\n\n严格按以下格式输出，每条占一行，使用"序号. 内容"格式：\n1. 核心主题：用一句话提炼文章的灵魂（用户想说什么）\n2. 目标读者：精确描述谁会读并转发这篇文章（越具体越好）\n3. 核心痛点：这篇文章解决了读者的什么问题或触碰了什么情绪\n4. 差异化角度：相比同类文章，此文的独特切入点是什么\n5. 内容亮点 ①：最值得展开的论点或故事\n6. 内容亮点 ②：第二个有力支撑\n7. 内容亮点 ③：第三个有力支撑（可选）\n8. 传播潜力：预判转发动机（知识分享 / 情感共鸣 / 自我表达 / 实用收藏）\n\n只输出列表，不要任何前言后语。',
+        userPromptTemplate:
+          '以下是我的选题想法和行文逻辑：\n\n{{vibe}}\n\n请对上述内容进行深度分析，提炼创作策略。',
+      },
+      // Step 2: 标题工场（基于分析结果生成候选标题）
+      {
+        id: 'title_factory',
+        kind: 'outline',
+        singleSelect: true,
+        label: '标题工场',
+        description: '5 种角度 × 3 个变体 = 15 个候选标题，点选一个',
+        systemPrompt:
+          '你是爆款标题专家，深谙微信公众号点击心理。根据创作策略分析，按 5 种角度各生成 3 个标题候选，共 15 个。\n\n角度说明：\n- 悬念型：制造信息缺口，让读者必须点进来才能解答\n- 对比型：用数字/反差制造冲击感\n- 场景型：精准描述目标读者的具体场景\n- 观点型：鲜明立场，敢于表达反常识判断\n- 共鸣型：戳中情绪痛点，引发"这说的就是我"\n\n严格按以下格式，每条占一行：\n序号. 标题内容\n\n只输出纯标题列表，不要在标题前加【角度】前缀，不要任何解释。',
+        userPromptTemplate:
+          '用户原始想法：{{vibe}}\n\n创作策略分析：\n{{outline}}\n\n请按 5 种角度各生成 3 个标题候选（共 15 个）。',
+        outlineFromStepId: 'idea_analysis',
+      },
+      // Step 3: 文章大纲
+      {
+        id: 'article_outline',
+        kind: 'outline',
+        label: '文章大纲',
+        description: '目标读者 · 开篇钩子 · 分节结构，可在此调整',
+        systemPrompt:
+          '你是一位兼具运营洞察与内容架构能力的微信公众号专家。\n文章标题已由用户选定，无需再生成标题，直接输出内容策略与大纲。\n\n输出格式（每条独占一行，使用"序号. 内容"）：\n1. 目标读者：xxx（具体描述谁会读并转发，一句话）\n2. 开篇钩子：xxx（一句制造悬念或痛点共鸣的开场白）\n3. 第一节标题\n4. 第二节标题\n5. 第三节标题\n6. 第四节标题\n7. （可选）第五节标题\n8. 结尾行动号召：xxx（评论/转发/收藏的引导语）\n\n只输出列表，不要有任何前言后语。',
+        userPromptTemplate:
+          '用户原始想法：{{vibe}}\n\n已锁定标题：「{{context}}」\n\n创作策略分析（核心主题、受众、亮点等）：\n{{outline}}\n\n请围绕上述标题和分析，生成完整的内容策略 + 大纲列表。',
+        outlineFromStepId: 'idea_analysis',
+        contextFromStepId: 'title_factory',
+      },
+      // Step 4: 封面图
+      {
+        id: 'cover',
+        kind: 'cover',
+        label: '封面图',
+        description: '网络爬取或 AI 生成 3 张封面，点选确认',
+        systemPrompt: '',
+        userPromptTemplate: '{{vibe}}',
+        outlineFromStepId: 'article_outline',
+      },
+      // Step 5: 全文撰写
+      {
+        id: 'draft',
+        kind: 'draft',
+        label: '正文撰写',
+        description: '公众号风格全文，含 emoji 与金句',
+        systemPrompt:
+          '你是一位顶级微信公众号写手，文章多次 10w+，风格兼具干货与情感温度。\n撰写规范：\n1. 开篇直接使用大纲中的"开篇钩子"，前 3 行必须抓住读者\n2. 每个章节内有 1~2 个具体案例或数据支撑\n3. 善用 emoji 增加视觉节奏（每段 1~2 个，不要滥用）\n4. 金句单独成段，加粗\n5. 结尾使用大纲中的行动号召\n6. 全文 1500~2500 字\n7. 只输出 Markdown 正文，不要任何前后说明',
+        userPromptTemplate:
+          '用户原始想法：{{vibe}}\n\n{{context?【标题已锁定】请严格使用以下标题作为文章标题，不得更改：\n「{{context}}」\n\n}}文章大纲（目标读者、章节结构、钩子、行动号召等）：\n{{outline}}\n\n请按上述大纲撰写完整的微信公众号文章正文。',
+        outlineFromStepId: 'article_outline',
+        contextFromStepId: 'title_factory',
+      },
+      // Step 5b: 插图提示词（可选）
+      {
+        id: 'illustrations',
+        kind: 'custom',
+        optional: true,
+        label: '插图提示词',
+        description: '分析正文，分图给出插图位置和文生图提示词',
+        systemPrompt:
+          '你是视觉内容策划师，精通微信公众号配图策略。阅读文章后，在最适合配图的位置给出插图建议（每 500 字约 1 张，全文 3~5 张）。\n\n严格按以下 JSON 格式输出，不要加 markdown 代码块包裹，不要其他任何文字：\n[\n  {"n":1,"position":"第X段/「小标题」之后","prompt":"具体英文画面描述，含场景/人物/氛围/构图/色调/风格，30~60词，画面感强烈"},\n  {"n":2,"position":"...","prompt":"..."}\n]',
+        userPromptTemplate: '请分析以下文章，给出 3~5 张插图建议（JSON 格式）：\n\n{{prevOutput}}',
+        polishFromStepId: 'draft',
+      },
+      // Step 5b: 结构诊断（可选）
+      {
+        id: 'structure_check',
+        kind: 'custom',
+        optional: true,
+        label: '结构诊断',
+        description: '可读性 · 逻辑 · 节奏 4 维诊断，给出具体改进建议',
+        systemPrompt:
+          '你是资深文字编辑，擅长诊断微信公众号文章的结构问题。\n\n从以下 4 个维度诊断文章，严格按照下面的格式输出，不要增减维度、不要改变格式：\n\n**逻辑连贯**\n评分：X/5\n问题定位：（指出具体段落或句子）\n改进建议：（具体可操作的修改方向）\n\n**可读性**\n评分：X/5\n问题定位：（指出具体段落或句子）\n改进建议：（具体可操作的修改方向）\n\n**开篇吸引力**\n评分：X/5\n问题定位：（指出前几行的具体问题）\n改进建议：（具体可操作的修改方向）\n\n**结尾力度**\n评分：X/5\n问题定位：（指出结尾的具体问题）\n改进建议：（具体可操作的修改方向）\n\n**优先修改清单**\n1. （第一优先，影响最大）\n2. （第二优先）\n3. （第三优先）\n\n不要重写文章，只给诊断报告。',
+        userPromptTemplate: '请对以下文章进行结构诊断：\n\n{{prevOutput}}',
+        polishFromStepId: 'draft',
+      },
+      // Step 6: 润色（可选）
+      {
+        id: 'polish',
+        kind: 'polish',
+        optional: true,
+        label: '润色定稿',
+        description: '两阶段：静默分析原文 → 保留作者风格地全面优化',
+        systemPrompt:
+          '你是一位专注微信公众号的资深编辑。\n\n第一步：默读原文（不输出任何内容），在心里完成以下分析：\n- 主题提炼：文章的核心观点是什么？\n- 受众判断：面向什么读者？\n- 风格识别：正式 / 口语 / 叙事 / 议论？\n- 问题诊断：逻辑跳跃？晦涩表达？冗余重复？结构不清？\n\n第二步：基于分析，对原文进行优化，遵循：\n1. 保留原意（最高优先级，不改变作者观点和立场）\n2. 通俗易懂（简单词替换晦涩术语，必要时保留术语但加括号解释）\n3. 逻辑通顺（补充段落间衔接，确保自然递进）\n4. 精简冗余（删重复表达，但不过度删减导致信息丢失）\n5. 语感自然（读起来像人写的，不像 AI 生成）\n6. 必要时调整结构（可重排段落顺序，但不遗漏、不添加任何内容）\n\n注意事项：\n- 英文词汇（thread、hook、roadmap 等）后加中文注释，如"hook（钩子）"；但品牌名/产品名（ChatGPT、Midjourney、GitHub 等）保持原样\n- 不要添加原文没有的观点，可补充衔接语\n- 避免"在当今社会""不言而喻""值得注意的是"等 AI 套话\n- 强化开篇前 3 行的吸引力\n- 结尾给出有互动感的行动号召或引发读者反思的问题\n- 提炼 2~3 句适合截图传播的金句（加粗 + 独立成段）\n- 优化段落节奏（过长段落拆分，过短段落合并）\n- 全程保留 emoji，堆砌处适当减少\n\n直接输出润色后的完整 Markdown，不要解释做了什么改动。',
+        userPromptTemplate: '请润色以下微信公众号文章：\n\n{{prevOutput}}',
+        polishFromStepId: 'draft',
+      },
+      // Step 6b: SEO 摘要（可选）
+      {
+        id: 'seo',
+        kind: 'custom',
+        optional: true,
+        label: '传播优化',
+        description: '搜一搜摘要（发布自动带入）+ 关键词 + 话题标签',
+        systemPrompt:
+          '你是微信内容 SEO 专家，熟悉微信搜一搜的收录规则和小红书话题运营。\n\n输出 3 个部分：\n\n**① 核心关键词**\n8~12 个，逗号分隔，覆盖核心词 + 长尾词 + 相关词\n\n**② 搜一搜摘要**\n150 字以内，信息密度高，自然嵌入核心关键词，首句必须点出文章核心价值\n\n**③ 话题标签**\n10 个 # 标签，格式：#标签名，含 3~4 个大众标签（流量大）+ 5~6 个垂直标签（精准）+ 1~2 个品牌/原创标签\n\n每部分单独成块，标题加粗，清晰分隔。',
+        userPromptTemplate: '请为以下文章生成 SEO 元数据：\n\n{{prevOutput}}',
+        polishFromStepId: 'polish',
+      },
+      // Step 7: 微信排版预览（可选）
+      {
+        id: 'wechat_html',
+        kind: 'custom',
+        optional: true,
+        label: '排版预览',
+        description: '选择主题，生成微信图文 HTML，支持一键预览',
+        systemPrompt:
+          '你是微信公众号排版专家。将 Markdown 转换为微信公众号兼容的完整 HTML，严格遵守以下规范：\n\n【技术约束】\n- 所有样式使用 inline style，禁止 `<style>` 标签或 class\n- 只用 `<section><span><strong><em>` 标签\n- 禁用 `<div><p><ul><li>`，禁用 position 属性\n- 全局字体（每个元素都要加）：font-family:"mp-quote",PingFang SC,system-ui,-apple-system,BlinkMacSystemFont,"Helvetica Neue","Hiragino Sans GB","Microsoft YaHei UI","Microsoft YaHei",Arial,sans-serif\n\n【色彩系统】根据用户指定的主题色（Hex）：\n- 主色用于编号色块、标题装饰、高亮背景\n- 正文色 #3d3d3d，标题色 #1a1a1a\n\n【结构（依次输出）】\n1. 首段引言：font-size:19px，line-height:1.9，底部 1px solid #e8e8e8；字体同上（注意：不要输出文章标题，直接从引言正文开始）\n2. 正文：font-size:17px，line-height:1.9，letter-spacing:0.5px，text-align:justify；小标题用主色编号色块（01、02...）；字体同上\n3. 文末三圆点装饰\n4. 浅灰关注引导卡片；字体同上\n\n【转换规则】\n- `**加粗**` → font-weight:bold + background:rgba(主色,0.15) 荧光笔\n- `> 引用` → 浅色背景卡片，左侧主色竖线，font-style:normal\n- 列表项 → border-left:3px solid 主色 的独立卡片，带 ①②③\n- `---` → 三圆点替代\n\n直接输出 HTML，第一个字符必须是 `<`，不得有任何前言、思考过程、解释或 Markdown 代码块包裹。',
+        userPromptTemplate:
+          '主题色：{{themeColor}}\n\n请将以下文章转换为微信公众号排版 HTML：\n\n{{prevOutput}}',
+        polishFromStepId: 'polish',
+      },
+    ],
+    paletteEntries: [
+      { id: 'scenario-polish', label: '场景写作 · 润色当前选区', stepId: 'polish', inputAs: 'prevOutput' },
     ],
   },
   // ── 原有技术骨架 SKILL ──

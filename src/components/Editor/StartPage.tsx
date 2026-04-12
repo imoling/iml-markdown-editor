@@ -3,7 +3,7 @@ import { useAppStore } from '../../stores/appStore';
 import { Plus, FolderOpen, FileText, Settings, Clock, Star } from 'lucide-react';
 
 export const StartPage: React.FC = () => {
-  const { createNewFile, openDirectory, openFile, setSettingsModalOpen, recentFiles, starredFiles, openTab } = useAppStore();
+  const { createNewFile, openDirectory, openFile, recentFiles, starredFiles, openTab } = useAppStore();
   const [timeGreeting, setTimeGreeting] = useState('');
 
   useEffect(() => {
@@ -80,7 +80,7 @@ export const StartPage: React.FC = () => {
           <ActionButton icon={Plus} label="新建文档" hotkey="Cmd + N" onClick={createNewFile} />
           <ActionButton icon={FolderOpen} label="打开工作区" hotkey="Shift + Cmd + O" onClick={openDirectory} />
           <ActionButton icon={FileText} label="打开单文件" hotkey="Cmd + O" onClick={openFile} />
-          <ActionButton icon={Settings} label="全局设置" hotkey="Cmd + ," onClick={() => setSettingsModalOpen(true)} />
+          <ActionButton icon={Settings} label="全局设置" hotkey="Cmd + ," onClick={() => window.api.app.openSettings()} />
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>

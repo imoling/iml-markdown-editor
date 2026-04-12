@@ -179,6 +179,9 @@ let aboutWindow: BrowserWindow | null = null;
 let shortcutsWindow: BrowserWindow | null = null;
 let modelConfigWindow: BrowserWindow | null = null;
 let searchConfigWindow: BrowserWindow | null = null;
+let wechatConfigWindow: BrowserWindow | null = null;
+let imageConfigWindow: BrowserWindow | null = null;
+let settingsWindow: BrowserWindow | null = null;
 const aiAbortControllers = new Map<string, AbortController>();
 
 function createWindow() {
@@ -223,6 +226,9 @@ function createWindow() {
     if (aboutWindow) aboutWindow.close();
     if (shortcutsWindow) shortcutsWindow.close();
     if (modelConfigWindow) modelConfigWindow.close();
+    if (wechatConfigWindow) wechatConfigWindow.close();
+    if (imageConfigWindow) imageConfigWindow.close();
+    if (settingsWindow) settingsWindow.close();
   });
 }
 
@@ -350,6 +356,66 @@ function createSearchConfigWindow() {
   searchConfigWindow.on('closed', () => { searchConfigWindow = null; });
 }
 
+function createWechatConfigWindow() {
+  if (wechatConfigWindow) { wechatConfigWindow.focus(); return; }
+  const width = 520, height = 640;
+  const pos = getSubWindowPosition(width, height);
+  wechatConfigWindow = new BrowserWindow({
+    width, height, x: pos.x, y: pos.y,
+    resizable: true, title: '微信公众号配置',
+    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden',
+    vibrancy: 'window', visualEffectState: 'active', backgroundColor: '#00000000',
+    webPreferences: { preload: path.join(__dirname, 'preload.js') },
+    icon: path.join(__dirname, '../assets/logo.png'),
+  });
+  if (isDev) {
+    wechatConfigWindow.loadURL('http://localhost:5173?window=wechat-config');
+  } else {
+    wechatConfigWindow.loadFile(path.join(__dirname, '../dist/index.html'), { query: { window: 'wechat-config' } });
+  }
+  wechatConfigWindow.on('closed', () => { wechatConfigWindow = null; });
+}
+
+function createImageConfigWindow() {
+  if (imageConfigWindow) { imageConfigWindow.focus(); return; }
+  const width = 500, height = 680;
+  const pos = getSubWindowPosition(width, height);
+  imageConfigWindow = new BrowserWindow({
+    width, height, x: pos.x, y: pos.y,
+    resizable: true, title: '图片生成配置',
+    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden',
+    vibrancy: 'window', visualEffectState: 'active', backgroundColor: '#00000000',
+    webPreferences: { preload: path.join(__dirname, 'preload.js') },
+    icon: path.join(__dirname, '../assets/logo.png'),
+  });
+  if (isDev) {
+    imageConfigWindow.loadURL('http://localhost:5173?window=image-config');
+  } else {
+    imageConfigWindow.loadFile(path.join(__dirname, '../dist/index.html'), { query: { window: 'image-config' } });
+  }
+  imageConfigWindow.on('closed', () => { imageConfigWindow = null; });
+}
+
+function createSettingsWindow() {
+  if (settingsWindow) { settingsWindow.focus(); return; }
+  const width = 520, height = 680;
+  const pos = getSubWindowPosition(width, height);
+  settingsWindow = new BrowserWindow({
+    width, height, x: pos.x, y: pos.y,
+    resizable: true, title: '全局设置',
+    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden',
+    vibrancy: 'window', visualEffectState: 'active', backgroundColor: '#00000000',
+    webPreferences: { preload: path.join(__dirname, 'preload.js') },
+    icon: path.join(__dirname, '../assets/logo.png'),
+  });
+  if (isDev) {
+    settingsWindow.loadURL('http://localhost:5173?window=settings');
+  } else {
+    settingsWindow.loadFile(path.join(__dirname, '../dist/index.html'), { query: { window: 'settings' } });
+  }
+  settingsWindow.on('closed', () => { settingsWindow = null; });
+}
+
 function setupAppMenu() {
   if (process.platform !== 'darwin') return;
 
@@ -435,11 +501,11 @@ function setupAppMenu() {
         { type: 'separator' },
         {
           label: '微信公众号配置',
-          click: () => mainWindow?.webContents.send('menu:open-wechat-config'),
+          click: () => createWechatConfigWindow(),
         },
         {
           label: '图片生成配置',
-          click: () => mainWindow?.webContents.send('menu:open-image-config'),
+          click: () => createImageConfigWindow(),
         },
       ],
     },
@@ -475,7 +541,31 @@ app.whenReady().then(() => {
   
   // App Settings IPC
   ipcMain.handle('app:getSettings', () => getAppSettings());
-  ipcMain.handle('app:saveSettings', (_event, settings) => saveAppSettings(settings));
+  ipcMain.handle('app:saveSettings', (_event, settings) => {
+    const result = saveAppSettings(settings);
+    if (result.success && mainWindow) {
+      mainWindow.webContents.send('settings:changed', settings);
+    }
+    return result;
+  });
+
+  // 抓取网页正文（去除脚本/样式/标签，保留可读文本）
+  ipcMain.handle('ai:fetchUrl', async (_event, url: string) => {
+    const resp = await net.fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; iMLBot/1.0)' },
+    });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const html = await resp.text();
+    const text = html
+      .replace(/<script[\s\S]*?<\/script>/gi, '')
+      .replace(/<style[\s\S]*?<\/style>/gi, '')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+      .replace(/\s{2,}/g, ' ')
+      .trim()
+      .slice(0, 8000); // 最多 8000 字符
+    return text;
+  });
 
   // Web Search IPC (Tavily) - Moved to main process to avoid CORS and improve security
   ipcMain.handle('ai:webSearch', async (_event, query: string) => {
@@ -486,7 +576,7 @@ app.whenReady().then(() => {
     console.log(`[DEBUG] AI Web Search initiated for query: "${query}"`);
 
     try {
-      const response = await fetch('https://api.tavily.com/search', {
+      const response = await net.fetch('https://api.tavily.com/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -546,8 +636,9 @@ app.setName('iML Markdown Editor');
   ipcMain.on('ai:chat', async (event, { messages, requestId, maxTokens }) => {
     const config = getConfig();
     const apiKey = config.apiKey;
-    const endpoint = config.endpoint;
+    const endpoint = (config.endpoint || '').replace(/\/$/, '');
     const model = config.model || 'gpt-4o';
+    const protocol: 'openai' | 'anthropic' = config.protocol || 'openai';
 
     if (!apiKey || !endpoint) {
       event.sender.send(`ai:chat-error-${requestId}`, '请检查模型配置 (API Key 或 Endpoint 缺失)');
@@ -558,24 +649,51 @@ app.setName('iML Markdown Editor');
     aiAbortControllers.set(requestId, controller);
 
     try {
-      const response = await fetch(`${endpoint}/chat/completions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model,
-          messages,
-          stream: true,
-          ...(maxTokens ? { max_tokens: maxTokens } : {}),
-        }),
-        signal: controller.signal,
-      });
+      let response: Response;
+
+      if (protocol === 'anthropic') {
+        // ── Anthropic Messages API ────────────────────────────────────────
+        const systemMsg = messages.find((m: any) => m.role === 'system');
+        const chatMessages = messages.filter((m: any) => m.role !== 'system');
+        const url = `${endpoint}/messages`;
+        response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01',
+          },
+          body: JSON.stringify({
+            model,
+            max_tokens: maxTokens || 8192,
+            ...(systemMsg ? { system: systemMsg.content } : {}),
+            messages: chatMessages,
+            stream: true,
+          }),
+          signal: controller.signal,
+        });
+      } else {
+        // ── OpenAI-compatible (default) ───────────────────────────────────
+        response = await fetch(`${endpoint}/chat/completions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model,
+            messages,
+            stream: true,
+            ...(maxTokens ? { max_tokens: maxTokens } : {}),
+          }),
+          signal: controller.signal,
+        });
+      }
 
       if (!response.ok) {
         const errorData: any = await response.json().catch(() => ({}));
-        event.sender.send(`ai:chat-error-${requestId}`, errorData.error?.message || `API 请求失败: ${response.status}`);
+        const msg = errorData.error?.message || errorData.message || `API 请求失败: ${response.status}`;
+        event.sender.send(`ai:chat-error-${requestId}`, msg);
         return;
       }
 
@@ -588,6 +706,7 @@ app.setName('iML Markdown Editor');
       const decoder = new TextDecoder();
       let fullContent = '';
       let lineBuffer = '';
+      let currentEvent = '';
 
       while (true) {
         const { done, value } = await reader.read();
@@ -596,28 +715,40 @@ app.setName('iML Markdown Editor');
           break;
         }
 
-        const chunk = decoder.decode(value, { stream: true });
-        lineBuffer += chunk;
-        
+        lineBuffer += decoder.decode(value, { stream: true });
         const lines = lineBuffer.split('\n');
-        // Keep the last potentially incomplete line in the buffer
         lineBuffer = lines.pop() || '';
-        
+
         for (const line of lines) {
           const trimmed = line.trim();
-          if (!trimmed || trimmed === 'data: [DONE]') continue;
-          
+          if (!trimmed) { currentEvent = ''; continue; }
+
+          if (trimmed.startsWith('event: ')) {
+            currentEvent = trimmed.slice(7);
+            continue;
+          }
+
+          if (trimmed === 'data: [DONE]') continue;
+
           if (trimmed.startsWith('data: ')) {
             try {
               const json = JSON.parse(trimmed.slice(6));
-              const content = json.choices[0]?.delta?.content || '';
+              let content = '';
+
+              if (protocol === 'anthropic') {
+                // content_block_delta → text_delta
+                if (currentEvent === 'content_block_delta' && json.delta?.type === 'text_delta') {
+                  content = json.delta.text || '';
+                }
+              } else {
+                content = json.choices?.[0]?.delta?.content || '';
+              }
+
               if (content) {
                 fullContent += content;
                 event.sender.send(`ai:chat-chunk-${requestId}`, content);
               }
-            } catch (e) {
-              // Ignore partial JSON (should be handled by lineBuffer now, but defensive)
-            }
+            } catch (_) { /* partial JSON, skip */ }
           }
         }
       }
@@ -636,6 +767,18 @@ app.setName('iML Markdown Editor');
   ipcMain.on('open-shortcuts', () => createShortcutsWindow());
   ipcMain.on('open-ai-config', () => createModelConfigWindow());
   ipcMain.on('open-search-config', () => createSearchConfigWindow());
+  ipcMain.on('open:wechat-config', () => createWechatConfigWindow());
+  ipcMain.on('open:image-config', () => createImageConfigWindow());
+  ipcMain.on('open:settings', () => createSettingsWindow());
+
+  // Forward settings preview/revert from settings window to main window
+  ipcMain.on('settings:preview', (_event, settings) => {
+    if (mainWindow) mainWindow.webContents.send('settings:preview', settings);
+  });
+  ipcMain.on('settings:revert', () => {
+    if (mainWindow) mainWindow.webContents.send('settings:revert');
+  });
+
   ipcMain.handle('open-url', async (_event, url: string) => { shell.openExternal(url); });
   
   // App Update Check IPC
@@ -824,7 +967,10 @@ app.setName('iML Markdown Editor');
         assertAsciiHeader(cfg.apiKey || '', 'API Key');
         if (cfg.endpoint) assertAsciiHeader(cfg.endpoint, '端点 URL');
 
-        const stylePrompt = `${prompt}, professional tech article cover image, modern clean design, technology theme, suitable for WeChat official account, high quality, 16:9 aspect ratio, no text overlay`;
+        // rawPrompt=true 时直接使用原始 prompt（AIPalette 通用图片生成），否则追加 cover 专用描述
+        const stylePrompt = cfg.rawPrompt
+          ? prompt
+          : `${prompt}, professional tech article cover image, modern clean design, technology theme, suitable for WeChat official account, high quality, 16:9 aspect ratio, no text overlay`;
         const results: { url: string; localPath: string }[] = [];
 
         if (cfg.provider === 'gemini' || cfg.provider === 'gemini-imagen' || cfg.provider === 'gemini-flash') {
@@ -1065,12 +1211,14 @@ app.setName('iML Markdown Editor');
   ipcMain.handle('wechat:publishHtml', async (_event, {
     html,
     title,
+    abstract,
     accountId,
     coverLocalPath,
     inlineImageDataUrls,
   }: {
     html: string;
     title?: string;
+    abstract?: string;
     accountId?: string;
     coverLocalPath?: string;
     inlineImageDataUrls?: string[];
@@ -1181,6 +1329,7 @@ app.setName('iML Markdown Editor');
       articles: [{
         title: resolvedTitle,
         author: account.author || '',
+        digest: abstract?.trim() || '',
         content: processedHtml,
         thumb_media_id: thumbMediaId,
         need_open_comment: 0,

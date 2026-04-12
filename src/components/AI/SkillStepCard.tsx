@@ -16,9 +16,19 @@ import {
   X,
   Copy,
   ExternalLink,
+  FileDown,
 } from 'lucide-react';
+import { marked } from 'marked';
 import { SkillStep, POLISH_OPTIONS } from '../../data/skills';
 import { SkillStepRun } from '../../stores/appStore';
+
+// 过滤推理模型的 <think> 块，仅用于显示层
+function stripThink(text: string): string {
+  return text
+    .replace(/<think>[\s\S]*?<\/think>/gi, '')
+    .replace(/<think>[\s\S]*/i, '')
+    .trimStart();
+}
 
 interface Props {
   index: number;
@@ -37,6 +47,8 @@ interface Props {
   onPublish?: (theme: string, color: string) => Promise<void>;
   /** 按提示词生成一张图片 */
   onGenerateImage?: (prompt: string) => Promise<{ url: string; localPath: string }>;
+  /** polish 步骤完成后：写入当前活跃文档 */
+  onWriteToDoc?: (content: string) => void;
 }
 
 const statusBadge = (status: SkillStepRun['status']) => {
@@ -68,6 +80,7 @@ export const SkillStepCard: React.FC<Props> = ({
   onSelectCover,
   onPublish,
   onGenerateImage,
+  onWriteToDoc,
 }) => {
   const [expanded, setExpanded] = useState(isCurrent || run.status === 'error');
   const [rawExpanded, setRawExpanded] = useState(false);
@@ -488,7 +501,25 @@ export const SkillStepCard: React.FC<Props> = ({
                 {isRunning ? (
                   <><Loader2 size={12} className="animate-spin" style={{ flexShrink: 0 }} /> 正在写入文档…</>
                 ) : run.status === 'done' ? (
-                  <><Check size={12} style={{ color: '#10B981', flexShrink: 0 }} /> 已写入文档</>
+                  <>
+                    <Check size={12} style={{ color: '#10B981', flexShrink: 0 }} /> 已写入草稿
+                    {onWriteToDoc && (
+                      <button
+                        onClick={() => onWriteToDoc(run.output)}
+                        title="将润色结果覆盖写入当前编辑器文档"
+                        style={{
+                          marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4,
+                          padding: '3px 8px', borderRadius: 4,
+                          border: '1px solid var(--color-brand-indigo)',
+                          backgroundColor: 'rgba(99,102,241,0.08)',
+                          color: 'var(--color-brand-indigo)',
+                          fontSize: 10, cursor: 'pointer', lineHeight: 1,
+                        }}
+                      >
+                        <FileDown size={10} /> 写入当前文档
+                      </button>
+                    )}
+                  </>
                 ) : (
                   <span style={{ color: 'var(--text-muted)' }}>执行后内容将直接写入文档</span>
                 )}
@@ -520,8 +551,111 @@ export const SkillStepCard: React.FC<Props> = ({
             />
           )}
 
+          {/* structure_check：分卡片渲染，每个维度独立一张，供人工审核 */}
+          {step.id === 'structure_check' && step.kind === 'custom' && (run.output || isRunning) && (() => {
+            if (isRunning) {
+              return (
+                <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', borderRadius: 8, backgroundColor: 'var(--bg-main)', border: '1px solid var(--border-subtle)', fontSize: 12, color: 'var(--text-muted)' }}>
+                  <Loader2 size={13} className="animate-spin" style={{ flexShrink: 0 }} />
+                  正在诊断文章结构…
+                </div>
+              );
+            }
+            // 按加粗标题行分块解析：兼容 **标题**、**① 标题**、**1. 标题** 等格式
+            const cleaned = stripThink(run.output);
+            const sections: { title: string; body: string }[] = [];
+            // 找到所有以 ** 开头的标题行位置
+            const titlePattern = /^(?:\d+\.\s*)?\*\*([^*\n]+)\*\*/gm;
+            const matches: { index: number; title: string }[] = [];
+            let tm: RegExpExecArray | null;
+            while ((tm = titlePattern.exec(cleaned)) !== null) {
+              matches.push({ index: tm.index, title: tm[1].replace(/^[①-⑩\d]+[.、．\s]*/, '').trim() });
+            }
+            for (let i = 0; i < matches.length; i++) {
+              const start = cleaned.indexOf('\n', matches[i].index);
+              const end = i + 1 < matches.length ? matches[i + 1].index : cleaned.length;
+              const body = start !== -1 ? cleaned.slice(start, end).trim() : '';
+              if (body) sections.push({ title: matches[i].title, body });
+            }
+            if (!sections.length) {
+              return (
+                <div style={{ marginTop: 8, position: 'relative' }}>
+                  <button onClick={() => navigator.clipboard.writeText(run.output)} title="复制" style={{ position: 'absolute', top: 8, right: 8, display: 'flex', alignItems: 'center', gap: 3, padding: '3px 7px', borderRadius: 4, border: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-surface)', color: 'var(--text-muted)', fontSize: 10, cursor: 'pointer', lineHeight: 1 }}>
+                    <Copy size={10} /> 复制
+                  </button>
+                  <div className="skill-md-output" dangerouslySetInnerHTML={{ __html: marked.parse(cleaned) as string }} style={{ padding: '10px 36px 10px 12px', backgroundColor: 'var(--bg-main)', border: '1px solid var(--border-subtle)', borderRadius: 6, fontSize: 12, lineHeight: 1.7, color: 'var(--text-primary)' }} />
+                </div>
+              );
+            }
+            return (
+              <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {sections.map((sec, i) => (
+                  <div key={i} style={{ borderRadius: 8, border: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-main)', overflow: 'hidden' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 10px', backgroundColor: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)' }}>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-primary)' }}>{sec.title}</span>
+                      <button
+                        onClick={() => navigator.clipboard.writeText(sec.body.replace(/\*\*/g, ''))}
+                        title="复制此建议"
+                        style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '2px 6px', borderRadius: 4, border: '1px solid var(--border-subtle)', backgroundColor: 'transparent', color: 'var(--text-muted)', fontSize: 9, cursor: 'pointer', lineHeight: 1 }}
+                      >
+                        <Copy size={9} /> 复制
+                      </button>
+                    </div>
+                    <div
+                      className="skill-md-output"
+                      dangerouslySetInnerHTML={{ __html: marked.parse(sec.body) as string }}
+                      style={{ padding: '8px 10px', fontSize: 11, lineHeight: 1.7, color: 'var(--text-secondary)' }}
+                    />
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+
+          {/* seo（传播优化）：markdown 渲染 */}
+          {step.id === 'seo' && step.kind === 'custom' && (run.output || isRunning) && (
+            <div style={{ marginTop: 8, position: 'relative' }}>
+              {isRunning ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', borderRadius: 8, backgroundColor: 'var(--bg-main)', border: '1px solid var(--border-subtle)', fontSize: 12, color: 'var(--text-muted)' }}>
+                  <Loader2 size={13} className="animate-spin" style={{ flexShrink: 0 }} />
+                  正在生成传播元数据…
+                </div>
+              ) : (
+                <>
+                  <button
+                    onClick={() => navigator.clipboard.writeText(run.output)}
+                    title="复制全部"
+                    style={{
+                      position: 'absolute', top: 8, right: 8, zIndex: 1,
+                      display: 'flex', alignItems: 'center', gap: 3,
+                      padding: '3px 7px', borderRadius: 4, border: '1px solid var(--border-subtle)',
+                      backgroundColor: 'var(--bg-surface)', color: 'var(--text-muted)',
+                      fontSize: 10, cursor: 'pointer', lineHeight: 1,
+                    }}
+                  >
+                    <Copy size={10} /> 复制
+                  </button>
+                  <div
+                    className="skill-md-output"
+                    dangerouslySetInnerHTML={{ __html: marked.parse(stripThink(run.output)) as string }}
+                    style={{
+                      padding: '10px 36px 10px 12px',
+                      backgroundColor: 'var(--bg-main)',
+                      border: '1px solid var(--border-subtle)',
+                      borderRadius: 6,
+                      fontSize: 12,
+                      lineHeight: 1.7,
+                      color: 'var(--text-primary)',
+                      overflowX: 'auto',
+                    }}
+                  />
+                </>
+              )}
+            </div>
+          )}
+
           {/* custom：只读输出区域，带复制 + 预览（HTML）按钮（排除有专属 UI 的步骤；无输出时不渲染） */}
-          {step.kind === 'custom' && step.id !== 'illustrations' && step.id !== 'wechat_html' && (run.output || isRunning) && (
+          {step.kind === 'custom' && step.id !== 'illustrations' && step.id !== 'wechat_html' && step.id !== 'structure_check' && step.id !== 'seo' && (run.output || isRunning) && (
             <div style={{ marginTop: 8, position: 'relative' }}>
               {run.output && (
                 <div style={{
@@ -559,7 +693,7 @@ export const SkillStepCard: React.FC<Props> = ({
                 </div>
               )}
               <textarea
-                value={run.output}
+                value={stripThink(run.output)}
                 readOnly
                 rows={8}
                 placeholder={isRunning ? '正在生成...' : '尚未生成，可点击"执行"'}
@@ -582,6 +716,16 @@ export const SkillStepCard: React.FC<Props> = ({
 
           {/* ── illustrations：按图分卡片，含复制按钮 ── */}
           {step.id === 'illustrations' && step.kind === 'custom' && (() => {
+            // 生成中：只显示 loading 状态
+            if (isRunning) {
+              return (
+                <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', borderRadius: 8, backgroundColor: 'var(--bg-main)', border: '1px solid var(--border-subtle)', fontSize: 12, color: 'var(--text-muted)' }}>
+                  <Loader2 size={13} className="animate-spin" style={{ flexShrink: 0 }} />
+                  正在分析文章，生成插图建议…
+                </div>
+              );
+            }
+
             // 尝试解析 JSON，降级到纯文本
             let items: { n: number; position: string; prompt: string }[] = [];
             try {
@@ -599,8 +743,7 @@ export const SkillStepCard: React.FC<Props> = ({
                     style={{ position: 'absolute', top: 8, right: 8, zIndex: 1, display: 'flex', alignItems: 'center', gap: 3, padding: '3px 7px', borderRadius: 4, border: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-surface)', color: 'var(--text-muted)', fontSize: 10, cursor: 'pointer' }}>
                     <Copy size={10} /> 复制
                   </button>
-                  <textarea value={run.output} readOnly rows={8}
-                    placeholder={isRunning ? '正在生成...' : ''}
+                  <textarea value={stripThink(run.output)} readOnly rows={8}
                     style={{ width: '100%', fontSize: 11, padding: 8, backgroundColor: 'var(--bg-main)', border: '1px solid var(--border-subtle)', borderRadius: 6, color: 'var(--text-primary)', lineHeight: 1.6, outline: 'none', resize: 'vertical' }} />
                 </div>
               );

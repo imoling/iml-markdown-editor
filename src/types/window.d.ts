@@ -35,6 +35,7 @@ declare global {
         chat: (messages: any[], onStream: (chunk: string) => void, requestId: string, maxTokens?: number) => Promise<string>;
         stop: (requestId: string) => void;
         webSearch: (query: string) => Promise<string>;
+        fetchUrl: (url: string) => Promise<string>;
         openSearchConfig: () => void;
         getCoverImages: (params: { query: string; vibe: string; config: any }) => Promise<{ url: string; localPath: string }[]>;
       };
@@ -47,7 +48,7 @@ declare global {
         getConfig: () => Promise<{ accounts: WechatAccount[] }>;
         saveConfig: (config: { accounts: WechatAccount[] }) => Promise<{ success: boolean; error?: string }>;
         publish: (markdown: string, options?: { theme?: string; color?: string; accountId?: string; coverLocalPath?: string }) => Promise<{ success: boolean; output: string }>;
-        publishHtml: (html: string, options?: { title?: string; accountId?: string; coverLocalPath?: string; inlineImageDataUrls?: string[] }) => Promise<{ success: boolean; mediaId: string }>;
+        publishHtml: (html: string, options?: { title?: string; abstract?: string; accountId?: string; coverLocalPath?: string; inlineImageDataUrls?: string[] }) => Promise<{ success: boolean; mediaId: string }>;
       };
       events: {
         on: (channel: string, callback: (...args: any[]) => void) => void;
@@ -62,6 +63,11 @@ declare global {
         close: () => void;
         getSettings: () => Promise<any>;
         saveSettings: (settings: any) => Promise<{ success: boolean; error?: string }>;
+        openWechatConfig: () => void;
+        openImageConfig: () => void;
+        openSettings: () => void;
+        previewSettings: (settings: any) => void;
+        revertSettings: () => void;
       };
       appVersion: string;
     };

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Globe } from 'lucide-react';
+import { X } from 'lucide-react';
 
 interface SearchConfig {
   searchApiKey: string;
@@ -71,7 +71,7 @@ const SearchConfigModal: React.FC<SearchConfigModalProps> = ({ isOpen, onClose }
   };
 
   const modalStyle: React.CSSProperties = isStandalone ? {
-    width: '100%', height: '100%', padding: '40px 32px', display: 'flex', flexDirection: 'column',
+    width: '100%', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden',
   } : {
     backgroundColor: 'var(--bg-elevated)', borderRadius: 24, padding: 40, width: 440,
     boxShadow: '0 20px 50px rgba(0, 0, 0, 0.3)', border: '1px solid var(--border-subtle)',
@@ -80,22 +80,21 @@ const SearchConfigModal: React.FC<SearchConfigModalProps> = ({ isOpen, onClose }
 
   const inputStyle: React.CSSProperties = {
     width: '100%',
-    padding: '12px 16px',
-    borderRadius: 12,
+    padding: '10px 14px',
+    borderRadius: 10,
     border: '1px solid var(--border-subtle)',
     backgroundColor: 'var(--bg-main)',
-    color: 'var(--text-main)',
-    fontSize: 14,
-    marginBottom: 20,
+    color: 'var(--text-primary)',
+    fontSize: 13,
+    marginBottom: 16,
     outline: 'none',
-    transition: 'border-color 0.2s',
   };
 
   const labelStyle: React.CSSProperties = {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: 600,
     color: 'var(--text-muted)',
-    marginBottom: 8,
+    marginBottom: 6,
     display: 'block',
     textTransform: 'uppercase',
     letterSpacing: '0.05em',
@@ -107,6 +106,8 @@ const SearchConfigModal: React.FC<SearchConfigModalProps> = ({ isOpen, onClose }
         <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 40, WebkitAppRegion: 'drag', zIndex: 10 } as any} />
       )}
         <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
+          {/* 可滚动内容区 */}
+          <div style={isStandalone ? { flex: 1, overflowY: 'auto', padding: '40px 32px 24px', position: 'relative' } : {}}>
           {(!isStandalone || !isMac) && (
             <button 
               onClick={onClose}
@@ -132,103 +133,88 @@ const SearchConfigModal: React.FC<SearchConfigModalProps> = ({ isOpen, onClose }
               <X size={20} />
             </button>
           )}
-          <header style={{ marginBottom: 32 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
-            <Globe size={24} color="var(--color-accent-indigo)" />
-            <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700, color: 'var(--text-main)' }}>联网配置</h1>
-          </div>
-          <p style={{ margin: '8px 0 0 0', fontSize: 13, color: 'var(--text-muted)' }}>
-            配置您的智能联网服务（Tavily），为写作注入实时情报。
-          </p>
-        </header>
+          <header style={{ marginBottom: 24 }}>
+            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: 'var(--text-primary)' }}>联网配置</h1>
+            <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--text-muted)' }}>
+              配置智能联网服务（Tavily），为写作注入实时情报。
+            </p>
+          </header>
 
         {loading ? (
           <div style={{ display: 'flex', justifyContent: 'center', padding: 40, color: 'var(--text-muted)' }}>加载中...</div>
         ) : (
-          <div style={{ flex: 1, overflowY: 'auto' }}>
-            <label style={labelStyle}>Tavily API KEY</label>
-            <input 
-              style={inputStyle} 
+          <div>
+            <label style={labelStyle}>Tavily API Key</label>
+            <input
+              style={inputStyle}
               type="password"
-              value={config.searchApiKey} 
-              onChange={e => setConfig({...config, searchApiKey: e.target.value})}
+              value={config.searchApiKey}
+              onChange={e => setConfig({ ...config, searchApiKey: e.target.value })}
               placeholder="tvly-..."
             />
 
-            <div style={{ 
-              marginTop: 10, 
-              padding: '16px 20px', 
-              borderRadius: 12, 
-              backgroundColor: '#f5f7ff', 
-              border: '1px solid #ebf0ff',
-              fontSize: 13,
-              lineHeight: 1.6,
-              color: '#4b5563'
+            <div style={{
+              borderRadius: 10, border: '1px solid rgba(99,102,241,0.2)',
+              backgroundColor: 'rgba(99,102,241,0.04)',
+              padding: '10px 14px', fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.7,
             }}>
-              💡 <b>注意</b>：获取 API Key 请访问 <a href="#" onClick={(e) => { e.preventDefault(); window.api.shell.openExternal('https://tavily.com/'); }} style={{ color: 'var(--color-accent-indigo)', textDecoration: 'none' }}>tavily.com</a>。您的密钥将安全地加密保存在本地。
+              获取 API Key 请访问{' '}
+              <a
+                href="#"
+                onClick={e => { e.preventDefault(); window.api.shell.openExternal('https://tavily.com/'); }}
+                style={{ color: 'var(--color-brand-indigo)', textDecoration: 'none' }}
+              >
+                tavily.com
+              </a>。
+              <br />
+              🔒 密钥仅保存在本地，不会上传。
             </div>
           </div>
         )}
+          </div>{/* end scrollable */}
 
-        <footer style={{ marginTop: 32, display: 'flex', gap: 12, alignItems: 'center' }}>
-          <button 
-            onClick={handleSave}
-            disabled={saving || loading}
-            style={{
-              flex: 1,
-              padding: '12px',
-              borderRadius: 12,
-              backgroundColor: saving ? 'var(--text-muted)' : 'var(--color-accent-indigo)',
-              color: '#fff',
-              border: 'none',
-              fontWeight: 600,
-              cursor: saving ? 'default' : 'pointer',
-              transition: 'transform 0.2s',
-            }}
-            onMouseEnter={e => !saving && (e.currentTarget.style.transform = 'translateY(-1px)')}
-            onMouseLeave={e => !saving && (e.currentTarget.style.transform = 'translateY(0)')}
-          >
-            {saving ? '保存中...' : '保存配置'}
-          </button>
-          
-          {isStandalone && (
-            <button 
+          {/* 固定底部 footer */}
+          <div style={isStandalone
+            ? { padding: '16px 32px', borderTop: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-elevated)', display: 'flex', gap: 12 }
+            : { marginTop: 24, display: 'flex', gap: 10, alignItems: 'center' }
+          }>
+            <button
+              onClick={handleSave}
+              disabled={saving || loading}
+              style={{
+                flex: 1, padding: '12px', borderRadius: 12, fontSize: 14,
+                backgroundColor: saving ? 'var(--text-muted)' : 'var(--color-brand-indigo)',
+                color: '#fff', border: 'none', fontWeight: 600,
+                cursor: saving ? 'default' : 'pointer',
+                boxShadow: saving ? 'none' : '0 4px 12px var(--brand-glow)',
+              }}
+            >
+              {saving ? '保存中...' : '保存'}
+            </button>
+            <button
               onClick={() => window.close()}
               style={{
-                padding: '12px 20px',
-                borderRadius: 12,
-                backgroundColor: 'var(--bg-main)',
-                color: 'var(--text-main)',
-                border: '1px solid var(--border-subtle)',
-                fontWeight: 600,
-                cursor: 'pointer'
+                padding: '12px 24px', borderRadius: 12, fontSize: 14,
+                backgroundColor: 'var(--bg-card)', color: 'var(--text-secondary)',
+                border: '1px solid var(--border-subtle)', fontWeight: 500, cursor: 'pointer',
               }}
             >
               取消
             </button>
-          )}
-        </footer >
-
-        {message && (
-          <div style={{
-            position: 'absolute',
-            top: 80,
-            left: 32,
-            right: 32,
-            padding: '12px 16px',
-            borderRadius: 12,
-            backgroundColor: message.type === 'success' ? '#10b981' : '#ef4444',
-            color: '#fff',
-            fontSize: 14,
-            fontWeight: 500,
-            textAlign: 'center',
-            boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
-            zIndex: 100,
-            animation: 'fadeInDown 0.3s ease-out'
-          }}>
-            {message.text}
           </div>
-        )}
+
+          {message && (
+            <div style={{
+              position: 'absolute', bottom: 80, left: 32, right: 32,
+              padding: '10px 16px', borderRadius: 10,
+              backgroundColor: message.type === 'success' ? '#10b981' : '#ef4444',
+              color: '#fff', fontSize: 13, fontWeight: 500, textAlign: 'center',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.15)', zIndex: 100,
+              animation: 'fadeInDown 0.3s ease-out'
+            }}>
+              {message.text}
+            </div>
+          )}
       </div>
     </div>
   );

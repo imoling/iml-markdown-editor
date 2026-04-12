@@ -3,12 +3,10 @@ import { TitleBar } from './components/TitleBar/TitleBar';
 import { Sidebar, ActivityBar, RightPanel } from './components/Sidebar/Sidebar';
 import { EditorArea } from './components/Editor/EditorArea';
 import { StatusBar } from './components/StatusBar/StatusBar';
-import { useAppStore } from './stores/appStore';
+import { useAppStore, THEME_PRESETS } from './stores/appStore';
 import { extractHeadings } from './utils/outline';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { SettingsModal } from './components/Settings/SettingsModal';
-import { WechatConfigModal } from './components/AI/WechatConfigModal';
-import { ImageConfigModal } from './components/AI/ImageConfigModal';
 import './styles/layout.css';
 
 const App: React.FC = () => {
@@ -123,7 +121,7 @@ const App: React.FC = () => {
       // Cmd+, to open settings
       if (modKey && e.key === ',') {
         e.preventDefault();
-        useAppStore.getState().setSettingsModalOpen(true);
+        window.api.app.openSettings();
       }
 
       // Cmd+/ to open shortcuts
@@ -151,8 +149,6 @@ const App: React.FC = () => {
     window.api.events.on('menu:new-file', () => createNewFile());
     window.api.events.on('menu:open-file', () => openFile());
     window.api.events.on('menu:save', () => saveActiveFile());
-    window.api.events.on('menu:open-wechat-config', () => useAppStore.getState().setWechatConfigOpen(true));
-    window.api.events.on('menu:open-image-config', () => useAppStore.getState().setImageConfigOpen(true));
   }, [openFileByPath, createNewFile, openFile, saveActiveFile]);
 
   // Handle auto-update check on mount
@@ -174,6 +170,36 @@ const App: React.FC = () => {
       }
     };
     init();
+
+    // 监听设置窗口保存后的广播，重新加载设置到主窗口
+    window.api.events.on('settings:changed', () => {
+      useAppStore.getState().loadSettings();
+    });
+
+    // 实时预览：设置窗口每次改动都推送到主窗口
+    window.api.events.on('settings:preview', (settings: any) => {
+      const store = useAppStore.getState();
+      if (settings.appearanceMode) store.applyAppearance(settings.appearanceMode);
+      if (settings.themeId) {
+        // 直接应用 CSS 变量，不触发保存
+        const theme = THEME_PRESETS.find((t: any) => t.id === settings.themeId);
+        if (theme) {
+          const root = document.documentElement;
+          root.style.setProperty('--color-brand-indigo', theme.primary);
+          root.style.setProperty('--color-brand-purple', theme.secondary);
+          root.style.setProperty('--brand-gradient', theme.gradient);
+          root.style.setProperty('--brand-shadow', theme.shadow);
+          root.style.setProperty('--brand-glow', theme.shadow.replace('0.2', '0.4'));
+          root.style.setProperty('--color-accent-indigo', theme.primary);
+          root.style.setProperty('--color-accent-blue', theme.secondary);
+        }
+      }
+    });
+
+    // 取消：从磁盘重载，恢复原始设置
+    window.api.events.on('settings:revert', () => {
+      useAppStore.getState().loadSettings();
+    });
   }, []);
 
   // Listen for system theme changes
@@ -220,15 +246,6 @@ const App: React.FC = () => {
       {/* 全局设置弹窗 */}
       <SettingsModal />
 
-      {/* 微信公众号配置弹窗 */}
-      {useAppStore((s) => s.isWechatConfigOpen) && (
-        <WechatConfigModal onClose={() => useAppStore.getState().setWechatConfigOpen(false)} />
-      )}
-
-      {/* 封面图配置弹窗 */}
-      {useAppStore((s) => s.isImageConfigOpen) && (
-        <ImageConfigModal onClose={() => useAppStore.getState().setImageConfigOpen(false)} />
-      )}
     </div>
   );
 };

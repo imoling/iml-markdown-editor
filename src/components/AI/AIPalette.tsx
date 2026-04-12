@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Sparkles, Send, Loader2, BookOpen, Activity, FileCode, BrainCircuit, Wand2 } from 'lucide-react';
+import { Sparkles, Send, Loader2, BookOpen, Activity, FileCode, ImagePlus } from 'lucide-react';
 import { SKILLS } from '../../data/skills';
 
 export type PaletteSkillRef = { skillId: string; stepId: string; inputAs: 'vibe' | 'prevOutput' };
@@ -9,7 +9,7 @@ interface AIPaletteProps {
   onAction: (
     prompt: string,
     useContext: boolean,
-    mode: 'text' | 'mermaid' | 'svg' | 'outline' | 'skill',
+    mode: 'text' | 'mermaid' | 'svg' | 'outline' | 'skill' | 'image',
     skillRef?: PaletteSkillRef
   ) => void;
   onStop?: () => void;
@@ -19,7 +19,7 @@ interface AIPaletteProps {
 export const AIPalette: React.FC<AIPaletteProps> = ({ onClose, onAction, onStop, loading }) => {
   const [input, setInput] = useState('');
   const [useContext, setUseContext] = useState(false);
-  const [activeMode, setActiveMode] = useState<'text' | 'mermaid' | 'svg' | 'outline' | 'skill'>('text');
+  const [activeMode, setActiveMode] = useState<'text' | 'mermaid' | 'svg' | 'outline' | 'skill' | 'image'>('text');
   const [skillRef, setSkillRef] = useState<PaletteSkillRef | null>(null);
   const [skillMenuOpen, setSkillMenuOpen] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -124,7 +124,7 @@ export const AIPalette: React.FC<AIPaletteProps> = ({ onClose, onAction, onStop,
               onClick={() => setActiveMode(activeMode === 'mermaid' ? 'text' : 'mermaid')}
               style={{
                 display: 'flex', alignItems: 'center', gap: 6,
-                padding: '6px 12px', borderRadius: 8, border: '1px solid var(--border-subtle)', cursor: 'pointer',
+                padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border-subtle)', cursor: 'pointer',
                 fontSize: 12, fontWeight: 500,
                 backgroundColor: activeMode === 'mermaid' ? 'var(--color-accent-indigo)' : 'var(--bg-card)',
                 color: activeMode === 'mermaid' ? '#fff' : 'var(--text-secondary)',
@@ -134,7 +134,7 @@ export const AIPalette: React.FC<AIPaletteProps> = ({ onClose, onAction, onStop,
               }}
             >
               <Activity size={14} />
-              Mermaid
+              流程图
             </button>
 
             {/* SVG 模式按钮 */}
@@ -142,7 +142,7 @@ export const AIPalette: React.FC<AIPaletteProps> = ({ onClose, onAction, onStop,
               onClick={() => setActiveMode(activeMode === 'svg' ? 'text' : 'svg')}
               style={{
                 display: 'flex', alignItems: 'center', gap: 6,
-                padding: '6px 12px', borderRadius: 8, border: '1px solid var(--border-subtle)', cursor: 'pointer',
+                padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border-subtle)', cursor: 'pointer',
                 fontSize: 12, fontWeight: 500,
                 backgroundColor: activeMode === 'svg' ? 'var(--color-accent-orange)' : 'var(--bg-card)',
                 color: activeMode === 'svg' ? '#fff' : 'var(--text-secondary)',
@@ -152,87 +152,25 @@ export const AIPalette: React.FC<AIPaletteProps> = ({ onClose, onAction, onStop,
               }}
             >
               <FileCode size={14} />
-              SVG
+              插图
             </button>
 
-            {/* SKILL 模式按钮 + 下拉 */}
-            {allSkillEntries.length > 0 && (
-              <div style={{ position: 'relative' }}>
-                <button
-                  onClick={() => setSkillMenuOpen(v => !v)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 6,
-                    padding: '6px 12px', borderRadius: 8, border: '1px solid var(--border-subtle)', cursor: 'pointer',
-                    fontSize: 12, fontWeight: 500,
-                    backgroundColor: activeMode === 'skill' ? 'var(--color-brand-indigo)' : 'var(--bg-card)',
-                    color: activeMode === 'skill' ? '#fff' : 'var(--text-secondary)',
-                    boxShadow: activeMode === 'skill' ? '0 4px 12px var(--brand-glow)' : '0 1px 2px rgba(0,0,0,0.05)',
-                    outline: 'none',
-                  }}
-                >
-                  <Wand2 size={14} />
-                  {activeMode === 'skill' && skillRef
-                    ? (allSkillEntries.find(e => e.skillId === skillRef.skillId && e.stepId === skillRef.stepId)?.label || 'SKILL')
-                    : 'SKILL'}
-                </button>
-                {skillMenuOpen && (
-                  <div style={{
-                    position: 'absolute', bottom: 'calc(100% + 4px)', left: 0,
-                    minWidth: 200, backgroundColor: 'var(--bg-elevated)',
-                    border: '1px solid var(--border-subtle)', borderRadius: 8,
-                    boxShadow: '0 8px 24px rgba(0,0,0,0.15)', zIndex: 200,
-                    padding: 4, maxHeight: 240, overflowY: 'auto',
-                  }}>
-                    {allSkillEntries.map(entry => (
-                      <div
-                        key={`${entry.skillId}-${entry.id}`}
-                        onClick={() => {
-                          setActiveMode('skill');
-                          setSkillRef({ skillId: entry.skillId, stepId: entry.stepId, inputAs: entry.inputAs });
-                          setSkillMenuOpen(false);
-                        }}
-                        style={{
-                          padding: '6px 10px', borderRadius: 6, cursor: 'pointer',
-                          fontSize: 12, color: 'var(--text-primary)',
-                        }}
-                        onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--bg-card)'; }}
-                        onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; }}
-                      >
-                        {entry.label}
-                      </div>
-                    ))}
-                    {activeMode === 'skill' && (
-                      <div
-                        onClick={() => { setActiveMode('text'); setSkillRef(null); setSkillMenuOpen(false); }}
-                        style={{
-                          padding: '6px 10px', borderRadius: 6, cursor: 'pointer',
-                          fontSize: 11, color: 'var(--text-muted)', borderTop: '1px solid var(--border-subtle)', marginTop: 4,
-                        }}
-                      >
-                        清除选择
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* 智能大纲模式按钮 */}
+            {/* AI 图片生成按钮 */}
             <button
-              onClick={() => setActiveMode(activeMode === 'outline' ? 'text' : 'outline')}
+              onClick={() => setActiveMode(activeMode === 'image' ? 'text' : 'image')}
               style={{
                 display: 'flex', alignItems: 'center', gap: 6,
-                padding: '6px 12px', borderRadius: 8, border: '1px solid var(--border-subtle)', cursor: 'pointer',
+                padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border-subtle)', cursor: 'pointer',
                 fontSize: 12, fontWeight: 500,
-                backgroundColor: activeMode === 'outline' ? 'var(--color-brand-purple)' : 'var(--bg-card)',
-                color: activeMode === 'outline' ? '#fff' : 'var(--text-secondary)',
-                boxShadow: activeMode === 'outline' ? '0 4px 12px rgba(139, 92, 246, 0.3)' : '0 1px 2px rgba(0,0,0,0.05)',
+                backgroundColor: activeMode === 'image' ? '#10b981' : 'var(--bg-card)',
+                color: activeMode === 'image' ? '#fff' : 'var(--text-secondary)',
+                boxShadow: activeMode === 'image' ? '0 4px 12px rgba(16,185,129,0.3)' : '0 1px 2px rgba(0,0,0,0.05)',
                 transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
                 outline: 'none',
               }}
             >
-              <BrainCircuit size={14} />
-              智能大纲
+              <ImagePlus size={14} />
+              AI 图片
             </button>
           </div>
 

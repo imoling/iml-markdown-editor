@@ -662,8 +662,8 @@ export const TiptapEditor: React.FC = () => {
   const [palettePos, setPalettePos] = useState<{ top: number; left: number } | null>(null);
   // 触发气泡时立即缓存光标前后的文本，避免提交时编辑器失焦导致位置丢失
   const [paletteContext, setPaletteContext] = useState<{ before: string; after: string }>({ before: '', after: '' });
-  const [docSnapshot, setDocSnapshot] = useState<string | null>(null);
-  const [activeRequestId, setActiveRequestId] = useState<string | null>(null);
+  const docSnapshotRef = useRef<string | null>(null);
+  const activeRequestIdRef2 = useRef<string | null>(null);
   const lastActiveTabIdRef = useRef<string | null>(null);
   const editorRef = useRef<any>(null);
   const activeTabIdRef = useRef<string | null>(null);
@@ -931,10 +931,10 @@ export const TiptapEditor: React.FC = () => {
     setAiGenerating(true);
     setAIStatus({ generating: true, onStop: handleAIPaletteStop });
 
-    // 开启生成前保存文档快照，以便由于“停止”时回滚
-    setDocSnapshot(editor.getHTML());
+    // 开启生成前保存文档快照，以便由于”停止”时回滚
+    docSnapshotRef.current = editor.getHTML();
     const rid = Math.random().toString(36).substring(7);
-    setActiveRequestId(rid);
+    activeRequestIdRef2.current = rid;
     
     let systemPrompt = `您是一位卓越的文档编辑专家。
 您的任务是根据用户的要求处理文本。
@@ -984,19 +984,21 @@ export const TiptapEditor: React.FC = () => {
     } finally {
       setAiGenerating(false);
       setAIStatus({ generating: false, onStop: null });
-      setActiveRequestId(null);
-      setDocSnapshot(null);
+      activeRequestIdRef2.current = null;
+      docSnapshotRef.current = null;
     }
   };
 
   const handleAIPaletteStop = () => {
-    if (activeRequestId) {
-      stop(activeRequestId);
-      setActiveRequestId(null);
+    const rid = activeRequestIdRef2.current;
+    if (rid) {
+      stop(rid);
+      activeRequestIdRef2.current = null;
     }
-    if (docSnapshot && editor) {
-      editor.commands.setContent(docSnapshot);
-      setDocSnapshot(null);
+    const snap = docSnapshotRef.current;
+    if (snap && editor) {
+      editor.commands.setContent(snap);
+      docSnapshotRef.current = null;
     }
     setAiGenerating(false);
     setAIStatus({ generating: false, onStop: null });
@@ -1047,19 +1049,53 @@ export const TiptapEditor: React.FC = () => {
   const handleAIPaletteAction = async (
     prompt: string,
     useCtx: boolean = false,
-    mode: 'text' | 'mermaid' | 'svg' | 'outline' | 'skill' = 'text',
+    mode: 'text' | 'mermaid' | 'svg' | 'outline' | 'skill' | 'image' = 'text',
     skillRef?: { skillId: string; stepId: string; inputAs: 'vibe' | 'prevOutput' }
   ) => {
     if (!editor) return;
+
+    // AI 图片生成模式：独立处理，不走文本流式生成
+    if (mode === 'image') {
+      if (!prompt.trim()) return;
+      setAiGenerating(true);
+      setAIStatus({ generating: true, onStop: () => { setAiGenerating(false); setAIStatus({ generating: false, onStop: null }); } });
+      try {
+        const imageGenConfig = useAppStore.getState().imageGenConfig;
+        const results = await window.api.ai.getCoverImages({
+          query: prompt,
+          vibe: prompt,
+          config: { ...imageGenConfig, source: 'generate', rawPrompt: true },
+        });
+        if (results && results.length > 0) {
+          const { url } = results[0]; // data:image/...;base64,... 格式，renderer 可直接渲染
+          const { schema } = editor.state;
+          const node = schema.nodes.image.create({ src: url, alt: prompt });
+          const tr = editor.state.tr.replaceSelectionWith(node);
+          editor.view.dispatch(tr);
+          // 同步到 store
+          const tabId = activeTabIdRef.current;
+          if (tabId) updateTabContent(tabId, htmlToMarkdown(editor.getHTML()));
+        } else {
+          alert('图片生成失败：服务未返回结果，请检查图片配置或稍后重试。');
+        }
+      } catch (err: any) {
+        console.error('[AI Image] 生成失败:', err);
+        alert(`图片生成失败：${err?.message || '未知错误'}\n\n请检查图片配置中的 API Key 和服务商设置。`);
+      } finally {
+        setAiGenerating(false);
+        setAIStatus({ generating: false, onStop: null });
+      }
+      return;
+    }
 
     setShowAIPalette(true); // 保持气泡开启
     setAiGenerating(true);
     setAIStatus({ generating: true, onStop: handleAIPaletteStop });
 
-    // 开启生成前保存文档快照，以便由于“停止”时回滚
-    setDocSnapshot(editor.getHTML());
+    // 开启生成前保存文档快照，以便由于”停止”时回滚
+    docSnapshotRef.current = editor.getHTML();
     const requestId = Math.random().toString(36).substring(7);
-    setActiveRequestId(requestId);
+    activeRequestIdRef2.current = requestId;
 
     // 使用触发时缓存的前后文（在编辑器有焦点时已计算好，不受后续失焦影响）
     const { before: textBefore, after: textAfter } = paletteContext;
@@ -1161,8 +1197,11 @@ ${textAfter || '（文档末尾，无后文）'}
         { role: 'user', content: userMessage }
       ], (chunk) => {
         accumulated += chunk;
-        // 头部清洗：移除 AI 可能输出的起始换行符
-        const processedMarkdown = accumulated.trimStart();
+        // 去掉完整 <think> 块；若 <think> 尚未闭合则暂时隐藏该段
+        const processedMarkdown = accumulated
+          .replace(/<think>[\s\S]*?<\/think>/gi, '')
+          .replace(/<think>[\s\S]*$/i, '')
+          .trimStart();
         if (!processedMarkdown) return;
         
         const html = markdownToHtml(processedMarkdown);
@@ -1194,6 +1233,23 @@ ${textAfter || '（文档末尾，无后文）'}
 
       setAiGenerating(false);
       setAIStatus({ generating: false, onStop: null });
+
+      // 生成完成后：用干净内容重写编辑器（去 <think> + 非上下文模式时去标题前前言）
+      let finalMarkdown = accumulated
+        .replace(/<think>[\s\S]*?<\/think>/gi, '')
+        .trimStart();
+      if (!useCtx) {
+        const headingIdx = finalMarkdown.search(/^#{1,6}\s/m);
+        if (headingIdx > 0) finalMarkdown = finalMarkdown.slice(headingIdx);
+      }
+      if (finalMarkdown !== accumulated.trimStart()) {
+        try {
+          editor.chain()
+            .insertContentAt({ from: finalStartPos, to: currentEndPos }, markdownToHtml(finalMarkdown))
+            .run();
+          currentEndPos = editor.state.selection.to;
+        } catch (_) { /* 忽略位置越界 */ }
+      }
 
       // 生成完成后，执行一次最终的显式同步
       const finalTabId = activeTabIdRef.current;
@@ -1276,9 +1332,9 @@ ${textAfter || '（文档末尾，无后文）'}
       }
     } finally {
       setAiGenerating(false);
-      setActiveRequestId(null);
+      activeRequestIdRef2.current = null;
       // 生成完成后延迟清除 snapshot，防止 handleAIPaletteStop 在此时被意外触发导致回滚
-      setTimeout(() => setDocSnapshot(null), 100);
+      setTimeout(() => { docSnapshotRef.current = null; }, 100);
       // 注意：根据用户需求，不关闭气泡，也不在 AI 操作成功后清除 PalettePos 缓存的坐标
     }
   };
@@ -1310,10 +1366,17 @@ ${textAfter || '（文档末尾，无后文）'}
       after: mdAfter.slice(0, 1000),  // 后文前 1000 字
     });
     
-    setPalettePos({ 
-      top: cursorCoords.bottom + 12, 
-      left: Math.max(cursorCoords.left, 20) 
-    });
+    const PALETTE_HEIGHT = 130; // 气泡高度估算值
+    const PALETTE_WIDTH = 480;
+    const spaceBelow = window.innerHeight - cursorCoords.bottom;
+    const top = spaceBelow >= PALETTE_HEIGHT + 12
+      ? cursorCoords.bottom + 12
+      : cursorCoords.top - PALETTE_HEIGHT - 12;
+    const left = Math.min(
+      Math.max(cursorCoords.left, 20),
+      window.innerWidth - PALETTE_WIDTH - 20
+    );
+    setPalettePos({ top: Math.max(8, top), left });
     setShowAIPalette(true);
   }, [editor]);
 

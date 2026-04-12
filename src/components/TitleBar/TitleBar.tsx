@@ -238,14 +238,14 @@ export const TitleBar: React.FC = () => {
                  <div style={{ height: 1, backgroundColor: 'var(--border-subtle)', margin: '6px 4px' }} />
                  <div
                    className="menu-item"
-                   onClick={() => { setActiveMenu(null); useAppStore.getState().setWechatConfigOpen(true); }}
+                   onClick={() => { setActiveMenu(null); window.api.app.openWechatConfig(); }}
                    style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', fontSize: 13, cursor: 'pointer', borderRadius: 6 }}
                  >
                    <Sparkles size={14} /> 微信公众号配置
                  </div>
                  <div
                    className="menu-item"
-                   onClick={() => { setActiveMenu(null); useAppStore.getState().setImageConfigOpen(true); }}
+                   onClick={() => { setActiveMenu(null); window.api.app.openImageConfig(); }}
                    style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', fontSize: 13, cursor: 'pointer', borderRadius: 6 }}
                  >
                    <Image size={14} /> 图片生成配置
@@ -280,7 +280,7 @@ export const TitleBar: React.FC = () => {
                   <RotateCw size={14} /> 检查更新
                   {hasUpdate && <div className="notification-dot" />}
                 </div>
-                <div className="menu-item" onClick={() => { setActiveMenu(null); setSettingsModalOpen(true); }} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', fontSize: 13, cursor: 'pointer', borderRadius: 6 }}>
+                <div className="menu-item" onClick={() => { setActiveMenu(null); window.api.app.openSettings(); }} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', fontSize: 13, cursor: 'pointer', borderRadius: 6 }}>
                   <Settings size={14} /> 设置
                 </div>
                 <div style={{ height: 1, backgroundColor: 'var(--border-subtle)', margin: '6px 4px' }}></div>

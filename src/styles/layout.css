@@ -478,3 +478,17 @@
   background: var(--border-subtle);
   pointer-events: none;
 }
+
+/* structure_check / seo markdown 渲染区 */
+.skill-md-output h1, .skill-md-output h2, .skill-md-output h3 {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 10px 0 4px;
+}
+.skill-md-output h2:first-child, .skill-md-output h3:first-child { margin-top: 0; }
+.skill-md-output p { margin: 0 0 6px; }
+.skill-md-output strong { font-weight: 700; color: var(--text-primary); }
+.skill-md-output ul, .skill-md-output ol { margin: 4px 0 6px 16px; padding: 0; }
+.skill-md-output li { margin: 2px 0; }
+.skill-md-output hr { border: none; border-top: 1px solid var(--border-subtle); margin: 8px 0; }
