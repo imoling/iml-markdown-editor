@@ -1,6 +1,7 @@
 import { useAppStore } from '../stores/appStore';
 import { markdownToStaticHtml } from './markdown';
 import { expandEmbedsForExport } from './exportEmbeds';
+import { katexStyles } from './katexExport';
 import { resolveAssetUrl, noteDirOf } from './assetUrl';
 import type { NoticeAction } from '../stores/appStore';
 
@@ -18,6 +19,16 @@ function notifyExported(text: string, paths: string[]) {
   useAppStore.getState().notify(text, undefined, actions);
 }
 
+/**
+ * 文档里有公式时，把 KaTeX 的样式和字体随导出的 HTML 一起带上（放在正文前面的 <style> 里，外壳不用改）：
+ * 导出是在另一个隐藏窗口里排版、或者拿到别的电脑上看的，界面已经加载的字体帮不上忙。没有公式的文档一个字节都不多带
+ */
+async function withMathStyles(html: string): Promise<string> {
+  if (!/class="katex/.test(html)) return html;
+  const css = await katexStyles(true);
+  return css ? `<style>${css}</style>${html}` : html;
+}
+
 /** 把当前活动文档导出为 PDF（菜单与 ⌘P 共用） */
 export async function exportActiveTabToPdf(): Promise<void> {
   // 编辑器写回是防抖的，导出前先刷新到 store
@@ -25,7 +36,7 @@ export async function exportActiveTabToPdf(): Promise<void> {
   const { tabs, activeTabId } = useAppStore.getState();
   const tab = tabs.find((t) => t.id === activeTabId);
   if (!tab) return;
-  const staticHtml = await expandEmbedsForExport(await markdownToStaticHtml(tab.content), tab.id);
+  const staticHtml = await withMathStyles(await expandEmbedsForExport(await markdownToStaticHtml(tab.content), tab.id));
   const result = await window.api.export.pdf(staticHtml, tab.title, tab.id);
   if (result?.success && result.path) notifyExported('已导出 PDF', [result.path]);
   else if (result && !result.canceled) useAppStore.getState().notify(`导出失败：${result.error || '未知错误'}`);
@@ -38,7 +49,7 @@ export async function exportActiveTabToImage(): Promise<void> {
   const tab = tabs.find((t) => t.id === activeTabId);
   if (!tab) return;
   notify('正在生成长图…', 60000);
-  const staticHtml = await expandEmbedsForExport(await markdownToStaticHtml(tab.content), tab.id);
+  const staticHtml = await withMathStyles(await expandEmbedsForExport(await markdownToStaticHtml(tab.content), tab.id));
   const result = await window.api.export.image(staticHtml, tab.title, tab.id);
   if (result?.success && result.path) notifyExported(result.paths && result.paths.length > 1 ? `笔记很长，分成了 ${result.paths.length} 张图` : '已导出长图', result.paths?.length ? result.paths : [result.path]);
   else if (result?.canceled) useAppStore.setState({ notice: null });
@@ -109,7 +120,7 @@ export async function exportActiveTabToHtml(): Promise<void> {
   const { tabs, activeTabId, notify } = useAppStore.getState();
   const tab = tabs.find((t) => t.id === activeTabId);
   if (!tab) return;
-  const staticHtml = await expandEmbedsForExport(await markdownToStaticHtml(tab.content, { keepFrontmatter: true }), tab.id);
+  const staticHtml = await withMathStyles(await expandEmbedsForExport(await markdownToStaticHtml(tab.content, { keepFrontmatter: true }), tab.id));
   const result = await window.api.export.html(staticHtml, tab.title, tab.id);
   if (result?.success && result.path) notifyExported('已导出 HTML', [result.path]);
   else if (result && !result.canceled) notify(`导出失败：${result.error || '未知错误'}`);

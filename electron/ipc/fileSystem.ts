@@ -251,8 +251,11 @@ export function setupFileSystemIPC(deps: FileSystemDeps = {}) {
          fs.promises.unlink(tmpFile).catch(() => {});
        }
        
-       // Wait for images
-       await new Promise(resolve => setTimeout(resolve, 800));
+       // 图片、字体到位了再打印（公式的字体是内联在页面里的，也要等它解码完）；最多等 6 秒，坏掉的图不能把导出卡死
+       await printWindow.webContents.executeJavaScript(`Promise.race([
+         Promise.all([document.fonts ? document.fonts.ready : null, ...Array.from(document.images).map((img) => img.complete ? null : new Promise((r) => { img.onload = img.onerror = r; }))]),
+         new Promise((r) => setTimeout(r, 6000)),
+       ]).then(() => true)`).catch(() => {});
 
        const pdfBuffer = await printWindow.webContents.printToPDF({
           printBackground: true,
@@ -319,7 +322,9 @@ export function setupFileSystemIPC(deps: FileSystemDeps = {}) {
         Promise.all([document.fonts ? document.fonts.ready : null, ...Array.from(document.images).map((img) => img.complete ? null : new Promise((r) => { img.onload = img.onerror = r; }))]),
         new Promise((r) => setTimeout(r, 6000)),
       ]).then(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => {
-        const docHeight = Math.ceil(document.documentElement.scrollHeight);
+        // 量正文的实际高度，不能用 scrollHeight：页面比窗口矮时 scrollHeight 是窗口的高度（4000），
+        // 短笔记导出来就是一张下面大片空白的长图
+        const docHeight = Math.ceil(Math.max(document.documentElement.getBoundingClientRect().height, document.body.getBoundingClientRect().bottom + window.scrollY));
         const brand = document.querySelector('.export-brand');
         const box = brand ? brand.getBoundingClientRect() : null;
         // 分张时可以切的位置：段落、列表项、表格行、代码块这些的底边（文档坐标）
