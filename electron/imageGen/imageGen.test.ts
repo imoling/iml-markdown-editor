@@ -12,20 +12,27 @@ describe('本机生图：清单', () => {
   it('尺寸都能被 32 整除；认不出的 id 退回默认', () => {
     for (const s of SIZE_OPTIONS) { expect(s.width % 32).toBe(0); expect(s.height % 32).toBe(0); }
     expect(sizeOf('nope').id).toBe(DEFAULT_SIZE);
+    expect(DEFAULT_SIZE).toBe('768x768');   // 降分辨率省不了多少时间，默认就用模型推荐的
     expect(stepsOf(undefined).id).toBe(DEFAULT_STEPS);
     expect(stepsOf('standard').steps).toBe(20);
   });
 
-  it('估时间：没画过按保守基准，画过一张之后按那次折算（像素数 × 步数）', () => {
+  it('估时间：按「每步固定开销 + 每像素」的实测曲线，步数是主要变量；第一次多算一次模型加载', () => {
     const s512 = sizeOf('512x512'), s768 = sizeOf('768x768');
-    const fast = stepsOf('fast'), standard = stepsOf('standard');
-    // 没有实测：按 M4 基础款的基准，512 × 12 步约 5.7 分钟；768 是它的 2.25 倍像素
-    expect(estimateMs(s512, fast)).toBe(12 * 28600);
-    expect(estimateMs(s768, fast) / estimateMs(s512, fast)).toBeCloseTo(2.25, 5);
-    // 有实测（768 二十步花了 1200 秒）：512 十二步应按比例缩到约 320 秒
-    const sample = { ms: 1200_000, pixels: 768 * 768, steps: 20 };
-    expect(Math.round(estimateMs(s512, fast, sample) / 1000)).toBe(320);
-    expect(estimateMs(s768, standard, sample)).toBe(1200_000);
+    const draft = stepsOf('draft'), standard = stepsOf('standard');
+    // 两次实测都落在曲线上（512×512 八步 7.6 分、768×768 二十步 21.4 分），允许 8% 误差
+    expect(estimateMs(s512, draft) / 1000).toBeCloseTo(419, -2);
+    expect(estimateMs(s768, standard) / 1000).toBeCloseTo(1259, -2);
+    // 步数翻倍接近翻倍；分辨率翻倍远远不到翻倍（每步的固定开销压倒一切）
+    const bySteps = estimateMs(s768, stepsOf('fine')) / estimateMs(s768, standard);
+    const bySize = estimateMs(sizeOf('1024x1024'), standard) / estimateMs(s768, standard);
+    expect(bySteps).toBeGreaterThan(1.4);
+    expect(bySize).toBeLessThan(1.4);
+    // 第一次出图要先加载模型
+    expect(estimateMs(s768, standard, null, { includeModelLoad: true })).toBeGreaterThan(estimateMs(s768, standard) + 30000);
+    // 有实测就把整条曲线缩放到这台机器上：快一倍的机器，别的组合也估成一半
+    const twiceAsFast = { ms: estimateMs(s768, standard) / 2, pixels: 768 * 768, steps: 20 };
+    expect(estimateMs(s512, draft, twiceAsFast)).toBeCloseTo(estimateMs(s512, draft) / 2, -1);
   });
 
   it('时长说人话', () => {

@@ -12,8 +12,9 @@ export function isLocalImage(cfg: Pick<ImageGenConfig, 'provider'>): boolean {
 /** 「约 5 分钟」：问一次主进程拿上一次的实测；问不到就按保守基准 */
 export async function localImageEta(cfg: ImageGenConfig): Promise<string> {
   let lastRun = null;
-  try { lastRun = (await window.api.image.getState()).lastRun; } catch { /* 用基准 */ }
-  return formatDuration(estimateMs(sizeOf(cfg.localSize), stepsOf(cfg.localSteps), lastRun));
+  let loading = true;   // 服务没在跑的话，这一张还要先等模型加载
+  try { const st = await window.api.image.getState(); lastRun = st.lastRun; loading = st.server.status !== 'running'; } catch { /* 用基准 */ }
+  return formatDuration(estimateMs(sizeOf(cfg.localSize), stepsOf(cfg.localSteps), lastRun, { includeModelLoad: loading }));
 }
 
 /** mm:ss */

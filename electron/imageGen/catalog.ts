@@ -53,37 +53,49 @@ export function runtimeAssetFor(platform: string, arch: string): string | null {
 export interface SizeOption { id: string; width: number; height: number; label: string }
 /** 尺寸都能被 32 整除（模型的要求） */
 export const SIZE_OPTIONS: SizeOption[] = [
-  { id: '512x512', width: 512, height: 512, label: '512 × 512（最快，细节少）' },
   { id: '768x768', width: 768, height: 768, label: '768 × 768（方）' },
-  { id: '1024x1024', width: 1024, height: 1024, label: '1024 × 1024（方）' },
+  { id: '1024x1024', width: 1024, height: 1024, label: '1024 × 1024（方，更清楚）' },
   { id: '768x1024', width: 768, height: 1024, label: '768 × 1024（竖）' },
   { id: '1024x768', width: 1024, height: 768, label: '1024 × 768（横）' },
+  { id: '512x512', width: 512, height: 512, label: '512 × 512（省不了多少时间，细节明显变差）' },
 ];
-export const DEFAULT_SIZE = '512x512';
+export const DEFAULT_SIZE = '768x768';
 
 export interface StepOption { id: string; steps: number; label: string }
+// 步数是快慢的真正旋钮：每一步的开销和分辨率几乎无关，步数翻倍时间就翻倍
 export const STEP_OPTIONS: StepOption[] = [
-  { id: 'draft', steps: 8, label: '草稿（8 步）' },
+  { id: 'draft', steps: 8, label: '草稿（8 步，看个意思）' },
   { id: 'fast', steps: 12, label: '快（12 步）' },
-  { id: 'standard', steps: 20, label: '标准（20 步）' },
+  { id: 'standard', steps: 20, label: '标准（20 步，模型推荐）' },
   { id: 'fine', steps: 30, label: '精细（30 步）' },
 ];
-export const DEFAULT_STEPS = 'fast';
+export const DEFAULT_STEPS = 'standard';
 
 export function sizeOf(id: string | undefined): SizeOption { return SIZE_OPTIONS.find((s) => s.id === id) || SIZE_OPTIONS[0]; }
 export function stepsOf(id: string | undefined): StepOption { return STEP_OPTIONS.find((s) => s.id === id) || STEP_OPTIONS.find((s) => s.id === DEFAULT_STEPS)!; }
 
 /**
- * 估计这一张要画多久（毫秒）。没画过的时候按基准算：M4 基础款实测 768 × 768 二十步共 1287 秒，
- * 合每像素每步 0.109 毫秒（换算到 512 × 512 是每步 28.6 秒）。耗时大致跟「像素数 × 步数」走。
- * 画过一张之后改按那一次的实测折算，越用越准；GPU 核心多的机器第一张之后估得就对了
+ * 估计这一张要画多久。实测出来的形状是「每步一笔固定开销 + 一笔跟像素走的开销，最后加一次 VAE 解码」：
+ * M4 基础款上每步 32 秒的固定开销压倒一切（权重来回搬），所以**步数才是快慢的旋钮，分辨率影响很小**。
+ * 两次实测（768×768 二十步 21.4 分、512×512 八步 7.6 分）都落在这条曲线上。
+ * 画过一张之后，用那一次的实测和这条曲线的比值把整条曲线缩放到这台机器上——GPU 核心多的机器第一张之后就估得准了。
  */
-export function estimateMs(size: SizeOption, steps: StepOption, sample?: { ms: number; pixels: number; steps: number } | null): number {
-  const pixels = size.width * size.height;
-  const perPixelStep = sample && sample.ms > 0 && sample.pixels > 0 && sample.steps > 0
-    ? sample.ms / (sample.pixels * sample.steps)
-    : 28600 / (512 * 512);
-  return Math.round(perPixelStep * pixels * steps.steps);
+const STEP_FIXED_MS = 32000;          // 每步与分辨率无关的那部分
+const STEP_PER_PIXEL_MS = 0.0357;     // 每步每像素（毫秒）
+const VAE_PER_PIXEL_MS = 0.336;       // 解码一次，只跟像素走（毫秒）
+const MODEL_LOAD_MS = 40000;          // 第一次出图要先把模型读进来
+
+function rawEstimate(pixels: number, steps: number): number {
+  return steps * (STEP_FIXED_MS + STEP_PER_PIXEL_MS * pixels) + VAE_PER_PIXEL_MS * pixels;
+}
+
+export function estimateMs(size: SizeOption, steps: StepOption, sample?: { ms: number; pixels: number; steps: number } | null, opts: { includeModelLoad?: boolean } = {}): number {
+  const base = rawEstimate(size.width * size.height, steps.steps);
+  // 上一次实测比这条曲线快多少 / 慢多少，等比例折算过来
+  const scale = sample && sample.ms > 0 && sample.pixels > 0 && sample.steps > 0
+    ? sample.ms / rawEstimate(sample.pixels, sample.steps)
+    : 1;
+  return Math.round(base * scale + (opts.includeModelLoad ? MODEL_LOAD_MS * scale : 0));
 }
 
 /** 「约 6 分钟」「约 40 秒」 */
