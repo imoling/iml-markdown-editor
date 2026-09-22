@@ -179,7 +179,7 @@
 | 本机智能：实时转写、区分说话人、问你的笔记 | ✅ | — |
 | 导出 | PDF、HTML、Word、长图 | PDF、HTML、Word、长图 |
 | 标签页、文件树、大纲 | ✅（文件树就是笔记库） | ✅（`⌘⇧O` 打开任意文件夹，不建索引） |
-| 安装包 | 80 ~ 90 MB（Electron） | **3.4 ~ 3.7 MB**（Tauri） |
+| 安装包 | 80 ~ 90 MB（Electron） | **3.5 ~ 3.9 MB**（Tauri） |
 
 **[⬇ 下载轻量版](https://github.com/imoling/iml-editor-lite/releases)**　·　[轻量版的说明与源码](https://github.com/imoling/iml-editor-lite#readme)
 
