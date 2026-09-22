@@ -35,6 +35,7 @@ const CFG_SCALE = 6.0;
 const PORT = 18280;
 
 const rootDir = () => path.join(app.getPath('userData'), 'image-gen');
+const pidFile = () => path.join(rootDir(), 'server.pid');
 const modelsDir = () => path.join(rootDir(), 'models');
 const runtimeDir = () => path.join(rootDir(), 'runtime', SD_RUNTIME.version);
 const filePathOf = (f: ImageFileSpec) => path.join(modelsDir(), path.basename(f.file));
@@ -112,6 +113,24 @@ server.on('state', broadcast);
 server.on('log', broadcast);
 
 const exec = (cmd: string, args: string[]) => new Promise<void>((resolve) => execFile(cmd, args, { timeout: 60000 }, () => resolve()));
+const execOut = (cmd: string, args: string[]) => new Promise<string>((resolve) => execFile(cmd, args, { timeout: 5000 }, (err, stdout) => resolve(err ? '' : String(stdout))));
+
+/**
+ * 上次没正常退出时留下的 sd-server（应用崩了、被系统按内存杀了）：它会一直占着几个 GB 和 GPU。
+ * 按 pid 文件找回来，确认进程名真是它，再杀掉
+ */
+export async function killStaleServer(): Promise<void> {
+  let rec: { pid?: number } | null = null;
+  try { rec = JSON.parse(fs.readFileSync(pidFile(), 'utf8')); } catch { return; }
+  const pid = rec?.pid;
+  if (!pid) { fs.rmSync(pidFile(), { force: true }); return; }
+  try { process.kill(pid, 0); } catch { fs.rmSync(pidFile(), { force: true }); return; }
+  const name = process.platform === 'win32'
+    ? await execOut('tasklist', ['/FI', `PID eq ${pid}`, '/FO', 'CSV', '/NH'])
+    : await execOut('ps', ['-p', String(pid), '-o', 'comm=']);
+  if (/sd-server/i.test(name)) { try { process.kill(pid, 'SIGKILL'); } catch { /* 已经走了 */ } }
+  fs.rmSync(pidFile(), { force: true });
+}
 
 /** 下载下来的二进制在 Apple 芯片上得有签名才让跑：ad-hoc 签一下，顺手去掉隔离标记 */
 async function prepareBinaries(dir: string) {
@@ -188,13 +207,15 @@ async function ensureServer(steps: number): Promise<void> {
     const bin = runtimeBin();
     if (!bin || !isReady()) throw new Error('本机生图还没准备好：到「智能 → AI 配图」里下载模型（约 10 GB）');
     if (server.isRunning) await server.stop();
+    await killStaleServer();
     const files = Object.fromEntries(IMAGE_MODEL.files.map((f) => [f.key, filePathOf(f)]));
     await server.start({ bin, diffusion: files.diffusion, textEncoder: files.textEncoder, vae: files.vae, port: await findFreePort(PORT), steps, cfgScale: CFG_SCALE, threads: getDownloadSettings().threads });
+    if (server.state.pid) { try { fs.mkdirSync(rootDir(), { recursive: true }); fs.writeFileSync(pidFile(), JSON.stringify({ pid: server.state.pid }), 'utf8'); } catch { /* 记不住下次就靠端口占用发现 */ } }
   })().finally(() => { startPromise = null; broadcast(); });
   await startPromise;
 }
 
-export async function stopImageServer() { await server.stop(); }
+export async function stopImageServer() { await server.stop(); fs.rmSync(pidFile(), { force: true }); }
 
 /** ai:generateImage 的本机分支 */
 export async function generateLocalImage(prompt: string, cfg: { localSize?: string; localSteps?: string }): Promise<string[]> {
@@ -223,6 +244,7 @@ export async function generateLocalImage(prompt: string, cfg: { localSize?: stri
 export function cancelGeneration() { genController?.abort(); genController = null; }
 
 export function setupImageGen() {
+  void killStaleServer();   // 上次崩溃留下的孤儿，启动时收拾掉
   scheduler.register({
     id: 'image', label: '本机生图', note: '出图时才需要；一张 768 的图在 M 系列上要一两分钟',
     running: () => server.state.status === 'running' || server.state.status === 'starting',
