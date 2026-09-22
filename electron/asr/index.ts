@@ -1,5 +1,6 @@
 import { app, dialog, ipcMain, BrowserWindow, shell, systemPreferences, utilityProcess, type UtilityProcess } from 'electron';
 import { scheduler } from '../localModel/scheduler';
+import { startSystemAudio, systemAudioSupported, type SystemAudio } from './systemAudio';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -35,6 +36,8 @@ export interface AsrState {
   install: { active: boolean; received: number; total: number; step: string; error: string | null } | null;
   session: AsrSessionStatus;
   error: string | null;
+  /** 这台电脑能不能收系统声音（macOS 且捕获工具在） */
+  systemAudio: boolean;
 }
 
 interface Deps { isAiEnabled: () => boolean }
@@ -73,6 +76,7 @@ function micAccess(): MicAccess {
 export function getAsrState(): AsrState {
   const installed = isInstalled();
   return {
+    systemAudio: systemAudioSupported(),
     supported: !!nativePackageFor(process.platform, process.arch),
     installed,
     downloadBytes: totalDownloadBytes(process.platform, process.arch),
@@ -209,19 +213,23 @@ async function startSpeakerInstall() {
 
 // ── 识别进程 ─────────────────────────────────────────────────────────────────
 
+let sysAudio: SystemAudio | null = null;
+function stopSystemAudio() { sysAudio?.stop(); sysAudio = null; }
+
 function killWorker() {
+  stopSystemAudio();
   if (!worker) return;
   try { worker.kill(); } catch { /* 已经退出 */ }
   worker = null;
 }
 
-async function startSession(opts: { speakers?: boolean; source?: 'mic' | 'file' } = {}): Promise<AsrState> {
+async function startSession(opts: { speakers?: boolean; source?: 'mic' | 'file' | 'system' } = {}): Promise<AsrState> {
   if (session !== 'idle') return getAsrState();
   if (deps && !deps.isAiEnabled()) throw new Error('AI 功能已在设置里关闭');
   if (!isInstalled()) throw new Error('还没有下载转写组件');
 
   // macOS：麦克风要过系统这一关。用户之前点过「不允许」的话这里直接返回 false，只能去系统设置里改
-  if (process.platform === 'darwin' && opts.source !== 'file') {   // 转写录音文件用不着麦克风
+  if (process.platform === 'darwin' && opts.source !== 'file' && opts.source !== 'system') {   // 转写录音文件、收系统声音都用不着麦克风
     const granted = await systemPreferences.askForMediaAccess('microphone');
     if (!granted) throw new Error('没有麦克风权限：请到「系统设置 → 隐私与安全性 → 麦克风」里允许 iML Markdown Editor');
   }
@@ -284,6 +292,7 @@ async function startSession(opts: { speakers?: boolean; source?: 'mic' | 'file' 
 }
 
 async function stopSession(): Promise<AsrState> {
+  stopSystemAudio();
   const child = worker;
   if (!child || session === 'idle') { session = 'idle'; return getAsrState(); }
   session = 'stopping';
@@ -402,7 +411,27 @@ export function setupAsr(d: Deps) {
   ipcMain.handle('asr:installSpeaker', () => { void startSpeakerInstall(); return true; });
   ipcMain.handle('asr:cancelSpeakerInstall', () => { speakerController?.abort(); return true; });
   ipcMain.handle('asr:uninstallSpeaker', async () => { await fs.promises.rm(modelPath(SPEAKER_MODEL.file), { force: true }); speakerInstall = null; broadcast(); return getAsrState(); });
-  ipcMain.handle('asr:start', (_e, opts?: { speakers?: boolean; source?: 'mic' | 'file' }) => startSession(opts));
+  ipcMain.handle('asr:start', async (e, opts?: { speakers?: boolean; source?: 'mic' | 'file' | 'system' }) => {
+    const state = await startSession(opts);
+    if (opts?.source !== 'system') return state;
+    // 系统声音：识别进程就绪之后再起捕获工具，PCM 块送回窗口，由它和麦克风一样喂识别进程、算电平、录音
+    const sender = e.sender;
+    try {
+      stopSystemAudio();
+      sysAudio = await startSystemAudio(
+        (chunk) => { if (!sender.isDestroyed()) sender.send('asr:syspcm', chunk.buffer); },
+        (reason) => { lastError = reason; sendEvent({ type: 'error', message: reason }); void stopSession(); },
+      );
+    } catch (err) {
+      await stopSession();
+      throw err;
+    }
+    return getAsrState();
+  });
+  ipcMain.handle('asr:openScreenSettings', () => {
+    if (process.platform === 'darwin') void shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture');
+    return true;
+  });
   ipcMain.handle('asr:stop', () => stopSession());
   // 音频块：每 100 ms 一块，用单向消息，不要回执
   ipcMain.on('asr:pcm', (_e, samples: Float32Array | ArrayBuffer) => {

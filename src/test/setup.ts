@@ -67,7 +67,7 @@ export function createMockApi(initialFiles: Record<string, string> = {}) {
     history: { list: vi.fn(async () => []), read: vi.fn(async () => null) },
     web: { fetchTitle: vi.fn(async () => null) },
     asr: {
-      getState: vi.fn(async () => null), install: vi.fn(), cancelInstall: vi.fn(), uninstall: vi.fn(), installSpeaker: vi.fn(), cancelSpeakerInstall: vi.fn(), uninstallSpeaker: vi.fn(), requestMicAccess: vi.fn(), openMicSettings: vi.fn(), start: vi.fn(), stop: vi.fn(),
+      getState: vi.fn(async () => null), install: vi.fn(), cancelInstall: vi.fn(), uninstall: vi.fn(), installSpeaker: vi.fn(), cancelSpeakerInstall: vi.fn(), uninstallSpeaker: vi.fn(), requestMicAccess: vi.fn(), openMicSettings: vi.fn(), openScreenSettings: vi.fn(async () => true), onSystemPcm: vi.fn(() => () => {}), start: vi.fn(), stop: vi.fn(),
       sendPcm: vi.fn(), setUnsaved: vi.fn(), saveDraftAudio: vi.fn(async () => null), getDraftAudio: vi.fn(async () => null), clearDraft: vi.fn(async () => true), copyDraftAudio: vi.fn(async () => ({ success: true, path: 'assets/rec.webm' })), onState: vi.fn(() => () => {}), onEvent: vi.fn(() => () => {}),
     },
     semantic: {

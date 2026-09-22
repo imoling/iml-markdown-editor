@@ -5,10 +5,10 @@
   "main": "dist-electron/main.js",
   "scripts": {
     "test": "vitest run",
-    "predev": "npx tsc -p electron/tsconfig.json",
+    "predev": "node scripts/build-syscap.mjs && npx tsc -p electron/tsconfig.json",
     "dev": "concurrently \"vite\" \"npx tsc -p electron/tsconfig.json -w\" \"(wait-on tcp:5173 || wait-on tcp:5174) && cross-env NODE_ENV=development ELECTRON_RUN_AS_NODE= electron .\"",
     "build": "tsc && vite build && tsc -p electron/tsconfig.json && electron-builder",
-    "build:mac": "tsc && vite build && tsc -p electron/tsconfig.json && electron-builder --mac",
+    "build:mac": "tsc && vite build && tsc -p electron/tsconfig.json && node scripts/build-syscap.mjs && electron-builder --mac",
     "build:win": "tsc && vite build && tsc -p electron/tsconfig.json && electron-builder --win",
     "test:watch": "vitest",
     "lint": "eslint .",
@@ -175,7 +175,13 @@
       },
       "hardenedRuntime": true,
       "entitlements": "build/entitlements.mac.plist",
-      "entitlementsInherit": "build/entitlements.mac.plist"
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "extraResources": [
+        {
+          "from": "build/bin/syscap",
+          "to": "bin/syscap"
+        }
+      ]
     },
     "win": {
       "icon": "assets/logo.ico",

@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import type { AsrState, AsrEvent } from '../types/window';
 import { startMicCapture, MIC_SILENCE_LEVEL, type MicCapture } from '../utils/micCapture';
+import { startSystemCapture } from '../utils/systemCapture';
+import { SYSTEM_AUDIO_ID } from '../utils/micDevices';
 import { getPreferredMic, setPreferredMic, listMics, type MicList } from '../utils/micDevices';
 import { SessionRecorder } from '../utils/sessionRecorder';
 import { noteDirOf, toAssetUrl } from '../utils/assetUrl';
@@ -274,16 +276,23 @@ export const useTranscribeStore = create<TranscribeState>((set, get) => ({
     try {
       const wantSpeakers = get().speakersOn && !!get().asr?.speaker?.installed;
       if (get().segments.length === 0) set({ speakers: wantSpeakers ? initialSpeakers() : [] });
-      await window.api.asr.start({ speakers: wantSpeakers });   // 识别进程就绪（含 macOS 的麦克风授权）
       let lastSignalAt = Date.now();
-      capture = await startMicCapture((samples, level) => {
+      const onChunk = (samples: Float32Array, level: number) => {
         window.api.asr.sendPcm(samples);
         if (Math.abs(level - get().level) > 0.04) set({ level });
         // 再安静的房间也有底噪；电平贴着 0 超过几秒，说明根本没有声音进来
         if (level > MIC_SILENCE_LEVEL) { lastSignalAt = Date.now(); if (!get().heardSignal) set({ heardSignal: true }); }
         const silent = Date.now() - lastSignalAt > SILENCE_MS;
         if (silent !== get().silent) set({ silent });
-      }, get().micId);
+      };
+      if (get().micId === SYSTEM_AUDIO_ID) {
+        // 系统声音：先把接收端摆好，再让主进程起捕获工具（识别进程就绪 + 屏幕录制权限）
+        capture = await startSystemCapture(onChunk);
+        await window.api.asr.start({ speakers: wantSpeakers, source: 'system' });
+      } else {
+        await window.api.asr.start({ speakers: wantSpeakers });   // 识别进程就绪（含 macOS 的麦克风授权）
+        capture = await startMicCapture(onChunk, get().micId);
+      }
       // 留不留录音在一场开始时定：中途变卦的话录音和时间戳就对不上了
       if (get().segments.length === 0 && !recorder && get().keepRecording && SessionRecorder.supported()) recorder = new SessionRecorder();
       recorder?.attach(capture.stream);

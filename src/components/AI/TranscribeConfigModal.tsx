@@ -3,7 +3,8 @@ import { X, Activity, AudioLines, Mic, Check, CircleAlert, Play, Square, Headpho
 import { useAppStore } from '../../stores/appStore';
 import { useTranscribeStore } from '../../stores/transcribeStore';
 import { startMicCapture, MIC_SILENCE_LEVEL, type MicCapture } from '../../utils/micCapture';
-import { currentMicLabel, resolveMic, micPermission } from '../../utils/micDevices';
+import { currentMicLabel, resolveMic, micPermission, SYSTEM_AUDIO_ID } from '../../utils/micDevices';
+import { startSystemCapture } from '../../utils/systemCapture';
 import { formatClock } from '../../utils/transcript';
 import { stripIpcError } from './ModelConfigModal';
 import { LevelBars } from './MicLevel';
@@ -66,10 +67,20 @@ export const TranscribeConfigModal: React.FC<Props> = ({ onClose }) => {
 
   const startTest = async () => {
     try {
-      const cap = await startMicCapture((_s, level) => {
+      const onLevel = (_s: Float32Array, level: number) => {
         testLevel.current = level;
         if (level > MIC_SILENCE_LEVEL && !useTranscribeStore.getState().heardSignal) useTranscribeStore.setState({ heardSignal: true });
-      }, t.micId);
+      };
+      let cap: MicCapture;
+      if (t.micId === SYSTEM_AUDIO_ID) {
+        // 试听系统声音：起捕获工具（会顺带起识别进程，停下来一起退）
+        cap = await startSystemCapture(onLevel);
+        try { await window.api.asr.start({ source: 'system' }); } catch (err) { cap.stop(); throw err; }
+        const inner = cap.stop;
+        cap = { ...cap, stop: () => { inner(); void window.api.asr.stop().catch(() => {}); } };
+      } else {
+        cap = await startMicCapture(onLevel, t.micId);
+      }
       testRef.current = cap;
       setTestLabel(cap.label);
       setTesting(true);
@@ -277,6 +288,7 @@ export const TranscribeConfigModal: React.FC<Props> = ({ onClose }) => {
                       >
                         <option value="">跟随系统{t.mics.systemDefault ? `（现在是 ${t.mics.systemDefault}）` : ''}</option>
                         {t.mics.mics.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
+                        {asr.systemAudio && <option value={SYSTEM_AUDIO_ID}>系统声音（网课、线上会议里电脑放出来的声音）</option>}
                       </select>
                       {recording
                         ? <span className="lm-line lm-line--muted">转写中</span>
@@ -293,7 +305,9 @@ export const TranscribeConfigModal: React.FC<Props> = ({ onClose }) => {
                     </div>
                   </>
                 )}
-                <div className="lm-line lm-line--muted">目前只收麦克风的声音；戴耳机开线上会议时，对方的声音进不来（系统声音在计划中）。</div>
+                {asr.systemAudio
+                  ? <div className="lm-line lm-line--muted">选「系统声音」收的是电脑放出来的声音（网课、线上会议里对方说的话）；第一次用系统会请求「屏幕录制」权限，声音只在本机识别，不会传出去。{t.micId === SYSTEM_AUDIO_ID && <> 没收到声音的话，<button className="btn-link" onClick={() => void window.api.asr.openScreenSettings()}>打开屏幕录制设置</button></>}</div>
+                  : <div className="lm-line lm-line--muted">目前只收麦克风的声音；戴耳机开线上会议时，对方的声音进不来（Windows 上的系统声音在计划中）。</div>}
               </div>
             </section>
           )}

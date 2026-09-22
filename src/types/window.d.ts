@@ -5,7 +5,7 @@ export type { LocalState, LocalModelConfig, CustomModel, ServerState, LocalModel
 
 import type { SemanticState, SemanticHit, AskSource } from '../../electron/semantic/index';
 import type { HistoryEntry } from '../../electron/history';
-import type { ResourceState, SchedulerConfig, ServiceId } from '../../electron/localModel/scheduler';
+import type { ResourceState, ServiceId } from '../../electron/localModel/scheduler';
 import type { OrphanImage } from '../../electron/assets';
 export type { SemanticState, SemanticHit, EmbedModelEntry, AskSource } from '../../electron/semantic/index';
 export type { HistoryEntry } from '../../electron/history';
@@ -145,7 +145,9 @@ declare global {
         uninstall: () => Promise<AsrState>;
         requestMicAccess: () => Promise<AsrState>;
         openMicSettings: () => Promise<boolean>;
-        start: (opts?: { speakers?: boolean; source?: 'mic' | 'file' }) => Promise<AsrState>;
+        openScreenSettings: () => Promise<boolean>;
+        onSystemPcm: (callback: (buf: ArrayBuffer) => void) => () => void;
+        start: (opts?: { speakers?: boolean; source?: 'mic' | 'file' | 'system' }) => Promise<AsrState>;
         installSpeaker: () => Promise<boolean>;
         cancelSpeakerInstall: () => Promise<boolean>;
         uninstallSpeaker: () => Promise<AsrState>;

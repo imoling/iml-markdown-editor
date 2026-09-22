@@ -117,7 +117,14 @@ contextBridge.exposeInMainWorld('api', {
     uninstall: () => ipcRenderer.invoke('asr:uninstall'),
     requestMicAccess: () => ipcRenderer.invoke('asr:requestMicAccess'),
     openMicSettings: () => ipcRenderer.invoke('asr:openMicSettings'),
-    start: (opts?: { speakers?: boolean; source?: 'mic' | 'file' }) => ipcRenderer.invoke('asr:start', opts),
+    start: (opts?: { speakers?: boolean; source?: 'mic' | 'file' | 'system' }) => ipcRenderer.invoke('asr:start', opts),
+    openScreenSettings: () => ipcRenderer.invoke('asr:openScreenSettings'),
+    // 系统声音的 PCM 块（macOS）：每 100 ms 一块 16 kHz float32
+    onSystemPcm: (callback: (buf: ArrayBuffer) => void) => {
+      const listener = (_event: any, buf: ArrayBuffer) => callback(buf);
+      ipcRenderer.on('asr:syspcm', listener);
+      return () => ipcRenderer.removeListener('asr:syspcm', listener);
+    },
     installSpeaker: () => ipcRenderer.invoke('asr:installSpeaker'),
     cancelSpeakerInstall: () => ipcRenderer.invoke('asr:cancelSpeakerInstall'),
     uninstallSpeaker: () => ipcRenderer.invoke('asr:uninstallSpeaker'),

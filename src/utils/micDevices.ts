@@ -14,6 +14,8 @@ export interface MicList {
 }
 
 const PREF_KEY = 'iml.micDeviceId';
+/** 「收音设备」选这个 = 收系统声音（网课、线上会议里对方的声音），不是某个麦克风 */
+export const SYSTEM_AUDIO_ID = 'system';
 
 /** 空串 = 跟随系统 */
 export function getPreferredMic(): string {
@@ -53,12 +55,13 @@ export async function listMics(): Promise<MicList> {
 
 /** 用户选的那个还在不在：拔掉了就退回跟随系统（但不清掉他的选择，插回来还用它） */
 export function resolveMic(preferred: string, list: MicList): { deviceId: string; missing: boolean } {
-  if (!preferred) return { deviceId: '', missing: false };
+  if (!preferred || preferred === SYSTEM_AUDIO_ID) return { deviceId: preferred, missing: false };
   return list.mics.some((m) => m.id === preferred) ? { deviceId: preferred, missing: false } : { deviceId: '', missing: true };
 }
 
 /** 面板上显示的「现在用的是哪个麦克风」 */
 export function currentMicLabel(preferred: string, list: MicList): string {
+  if (preferred === SYSTEM_AUDIO_ID) return '系统声音';
   const chosen = list.mics.find((m) => m.id === preferred);
   if (chosen) return chosen.label;
   return list.systemDefault || (list.labelsAvailable ? '系统默认麦克风' : '');

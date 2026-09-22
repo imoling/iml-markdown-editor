@@ -62,3 +62,6 @@ build_mac_final.log
 build_mac.log
 build_win_final.log
 build_win.log
+
+# 编译出来的原生小工具（scripts/build-syscap.mjs）
+build/bin/

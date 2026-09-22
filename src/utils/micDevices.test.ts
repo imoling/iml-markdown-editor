@@ -55,3 +55,13 @@ describe('收音设备', () => {
     expect(resolveMic('', list)).toEqual({ deviceId: '', missing: false });
   });
 });
+
+describe('系统声音当作一路收音设备', () => {
+  it('选了「system」：不算设备丢了，面板上显示「系统声音」', async () => {
+    const { resolveMic, currentMicLabel, SYSTEM_AUDIO_ID } = await import('./micDevices');
+    const list = { systemDefault: 'MacBook Air 麦克风', mics: [{ id: 'abc', label: 'USB 麦' }], labelsAvailable: true };
+    expect(resolveMic(SYSTEM_AUDIO_ID, list)).toEqual({ deviceId: 'system', missing: false });
+    expect(currentMicLabel(SYSTEM_AUDIO_ID, list)).toBe('系统声音');
+    expect(currentMicLabel('', list)).toBe('MacBook Air 麦克风');
+  });
+});
