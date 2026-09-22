@@ -19,8 +19,8 @@ describe('本机生图：清单', () => {
   it('估时间：没画过按保守基准，画过一张之后按那次折算（像素数 × 步数）', () => {
     const s512 = sizeOf('512x512'), s768 = sizeOf('768x768');
     const fast = stepsOf('fast'), standard = stepsOf('standard');
-    // 没有实测：512 × 12 步约 4.8 分钟；768 是它的 2.25 倍像素
-    expect(estimateMs(s512, fast)).toBe(12 * 24000);
+    // 没有实测：按 M4 基础款的基准，512 × 12 步约 5.7 分钟；768 是它的 2.25 倍像素
+    expect(estimateMs(s512, fast)).toBe(12 * 28600);
     expect(estimateMs(s768, fast) / estimateMs(s512, fast)).toBeCloseTo(2.25, 5);
     // 有实测（768 二十步花了 1200 秒）：512 十二步应按比例缩到约 320 秒
     const sample = { ms: 1200_000, pixels: 768 * 768, steps: 20 };
@@ -44,10 +44,10 @@ describe('本机生图：清单', () => {
 });
 
 describe('本机生图：sd-server', () => {
-  it('启动参数：三个模型、端口、euler + CFG + 默认步数、flash attention、VAE 直接卷积；统一内存上不能有 offload-to-cpu', () => {
+  it('启动参数：三个模型、端口、euler + CFG + 默认步数、offload-to-cpu + flash attention（实测最快、最省内存的组合）', () => {
     const args = buildSdServerArgs({ bin: '/x/sd-server', diffusion: '/m/d.gguf', textEncoder: '/m/t.gguf', vae: '/m/v.safetensors', port: 18280, steps: 20, cfgScale: 6, threads: 4 });
-    expect(args.join(' ')).toBe('--listen-ip 127.0.0.1 --listen-port 18280 --diffusion-model /m/d.gguf --llm /m/t.gguf --vae /m/v.safetensors --diffusion-fa --vae-conv-direct --sampling-method euler --cfg-scale 6 --steps 20 -t 4');
-    expect(args).not.toContain('--offload-to-cpu');
+    expect(args.join(' ')).toBe('--listen-ip 127.0.0.1 --listen-port 18280 --diffusion-model /m/d.gguf --llm /m/t.gguf --vae /m/v.safetensors --offload-to-cpu --diffusion-fa --sampling-method euler --cfg-scale 6 --steps 20 -t 4');
+    expect(args).not.toContain('--vae-conv-direct');   // 实测 VAE 解码反而从 198s 慢到 329s
     expect(buildSdServerArgs({ bin: '', diffusion: '', textEncoder: '', vae: '', port: 1, steps: 1, cfgScale: 1, threads: null })).not.toContain('-t');
   });
   it('出图任务的回包：完成了取 result.images[].b64_json，还在跑给 null，失败 / 取消抛错', () => {

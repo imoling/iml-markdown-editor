@@ -74,14 +74,15 @@ export function sizeOf(id: string | undefined): SizeOption { return SIZE_OPTIONS
 export function stepsOf(id: string | undefined): StepOption { return STEP_OPTIONS.find((s) => s.id === id) || STEP_OPTIONS.find((s) => s.id === DEFAULT_STEPS)!; }
 
 /**
- * 估计这一张要画多久（毫秒）。没画过的时候按一个保守的基准算：一张 512 的图每步约 24 秒（M4 基础款实测 768 每步 53 秒，
- * 耗时大致跟像素数走）。画过一张之后按那一次的实测折算，越用越准
+ * 估计这一张要画多久（毫秒）。没画过的时候按基准算：M4 基础款实测 768 × 768 二十步共 1287 秒，
+ * 合每像素每步 0.109 毫秒（换算到 512 × 512 是每步 28.6 秒）。耗时大致跟「像素数 × 步数」走。
+ * 画过一张之后改按那一次的实测折算，越用越准；GPU 核心多的机器第一张之后估得就对了
  */
 export function estimateMs(size: SizeOption, steps: StepOption, sample?: { ms: number; pixels: number; steps: number } | null): number {
   const pixels = size.width * size.height;
   const perPixelStep = sample && sample.ms > 0 && sample.pixels > 0 && sample.steps > 0
     ? sample.ms / (sample.pixels * sample.steps)
-    : 24000 / (512 * 512);
+    : 28600 / (512 * 512);
   return Math.round(perPixelStep * pixels * steps.steps);
 }
 

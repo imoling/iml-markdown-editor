@@ -25,10 +25,11 @@ export function buildSdServerArgs(o: SdServerOptions): string[] {
   const args = [
     '--listen-ip', '127.0.0.1', '--listen-port', String(o.port),
     '--diffusion-model', o.diffusion, '--llm', o.textEncoder, '--vae', o.vae,
-    // 扩散部分开 flash attention；VAE 用直接卷积（默认那条 im2col 的路在大潜空间上慢得多）；
-    // 不用 --offload-to-cpu：那是给独显显存不够时用的，Apple 的统一内存上反而每步都白搬一遍权重。
-    // Qwen-Image 2.1 推荐 euler + CFG 6
-    '--diffusion-fa', '--vae-conv-direct',
+    // 权重留在内存、用到时再进显存；扩散部分开 flash attention；Qwen-Image 2.1 推荐 euler + CFG 6。
+    // 这两个组合是实测出来的（M4 24 GB，768 二十步）：带 --offload-to-cpu 总 21.4 分、峰值 5.6 GB；
+    // 去掉它并改用 --vae-conv-direct 反而是 26.0 分、峰值 10.1 GB（内存吃紧时换页，VAE 那条直接卷积的路也更慢）。
+    // 想在显存充裕的机器上试试不 offload，得先量一遍再改
+    '--offload-to-cpu', '--diffusion-fa',
     '--sampling-method', 'euler', '--cfg-scale', String(o.cfgScale), '--steps', String(o.steps),
   ];
   if (o.threads && o.threads > 0) args.push('-t', String(o.threads));
