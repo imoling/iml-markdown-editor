@@ -16,7 +16,7 @@
 本地 Markdown 编辑器，为长期写作和记笔记设计。界面只保留必要的东西：左边一棵笔记库树，中间一页纸，其余交给快捷键、斜杠菜单和侧边栏。笔记就是普通的 `.md` 文件，放在你自己的文件夹里，随时可以用别的工具打开。
 
 > [!TIP]
-> **只想要一个纯粹的 Markdown 编辑器？** 另有轻量版 **[iML 编辑器](#轻量版iml-编辑器)**：没有笔记库、没有 AI、没有后台进程，像记事本一样打开、写、保存，安装包不到 4 MB。→ [下载轻量版](https://github.com/imoling/iml-markdown-editor/releases/tag/lite-v26.4.0) · [了解更多](https://github.com/imoling/iml-markdown-editor/tree/lite#readme)
+> **只想要一个纯粹的 Markdown 编辑器？** 另有轻量版 **[iML 编辑器](#轻量版iml-编辑器)**：没有笔记库、没有 AI、没有后台进程，像记事本一样打开、写、保存，安装包不到 4 MB。→ [下载轻量版](https://github.com/imoling/iml-editor-lite/releases) · [了解更多](https://github.com/imoling/iml-editor-lite#readme)
 
 > **26.4 · 本机智能，笔记不出门。** 开会时**谁说的一眼看清**（声纹在这台电脑上算、只存在这台电脑上）；手机录的会议、课程音频**选个文件就转成笔记**，约 40 倍速，全程离线；一场转写就是一篇笔记，正文里的时间戳点一下录音就跳到那一刻。和 26.3 的实时转写、整理纪要、问你的笔记一起，听、认、记、问全在本机完成。编辑器这边**搬来就能用**：从 Obsidian 搬来的笔记库，`[[笔记#小节]]`、`![[嵌入]]`、别名、悬浮预览、未链接提及都认得；日历、全库待办、标签改名、快速捕获、属性面板这些最常装的插件功能直接内置；再加上命令面板（`⌘⇧P`）、导出 Word / 长图。安装包仍在 80 ~ 90 MB。
 >
@@ -163,13 +163,13 @@
 
 ## 轻量版：iML 编辑器
 
-<img src="https://cdn.jsdelivr.net/gh/imoling/iml-markdown-editor@lite/src/assets/logo.png" width="72" align="left" alt="iML 编辑器的图标：白底紫色的 M↓，右上角绿色的 LITE 角标" />
+<img src="https://cdn.jsdelivr.net/gh/imoling/iml-editor-lite@main/src/assets/logo.png" width="72" align="left" alt="iML 编辑器的图标：白底紫色的 M↓，右上角绿色的 LITE 角标" />
 
 同一个编辑内核，去掉笔记库和所有智能功能，只留「**打开，写，保存**」：双击一个 `.md`，改，保存，关掉。外壳换成了 [Tauri](https://tauri.app)（用系统自带的 WebView，不再自己带一个 Chromium），**安装包不到 4 MB**。两个版本可以装在同一台电脑上，互不干扰。
 
 <br clear="left" />
 
-![iML 编辑器：富文本模式下的属性卡片、提示块、表格、任务列表](https://cdn.jsdelivr.net/gh/imoling/iml-markdown-editor@lite/screenshots/lite-富文本.png)
+![iML 编辑器：富文本模式下的属性卡片、提示块、表格、任务列表](https://cdn.jsdelivr.net/gh/imoling/iml-editor-lite@main/screenshots/lite-富文本.png)
 
 | | iML Markdown Editor（本页，主版本） | iML 编辑器（轻量版） |
 |---|---|---|
@@ -181,9 +181,9 @@
 | 标签页、文件树、大纲 | ✅（文件树就是笔记库） | ✅（`⌘⇧O` 打开任意文件夹，不建索引） |
 | 安装包 | 80 ~ 90 MB（Electron） | **3.4 ~ 3.7 MB**（Tauri） |
 
-**[⬇ 下载轻量版](https://github.com/imoling/iml-markdown-editor/releases/tag/lite-v26.4.0)**　·　[轻量版的说明与源码（`lite` 分支）](https://github.com/imoling/iml-markdown-editor/tree/lite#readme)
+**[⬇ 下载轻量版](https://github.com/imoling/iml-editor-lite/releases)**　·　[轻量版的说明与源码](https://github.com/imoling/iml-editor-lite#readme)
 
-在 [Releases](https://github.com/imoling/iml-markdown-editor/releases) 里，标题以「iML 编辑器」开头、标签是 `lite-v…` 的是轻量版；`v…` 开头的是主版本。两边各自检查更新，互不串台。
+轻量版有自己的仓库和 Releases：[imoling/iml-editor-lite](https://github.com/imoling/iml-editor-lite)。两边各自检查更新，互不串台。
 
 ---
 
