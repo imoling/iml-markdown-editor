@@ -78,6 +78,28 @@ describe('原文保留：没编辑的块逐字写回', () => {
     expect(out).toBe(STYLED.replace('上面空了两行。', '改：上面空了两行。'));
   });
 
+  it('文档里有独占一行的图片：别处改一个字，对齐过的表格、文件末尾的换行照样一个字符不动', () => {
+    // 图片在编辑器里是块级节点，<p><img></p> 解析时会在图片前面多出一个空段落：顶层节点比原文的块多一个，
+    // 对照表整篇作废，表格一保存就被「规范化」。26.4.0 就是这样——只要文档里有一张独占一行的图片
+    for (const md of [
+      '# 标题\n\n改这一段。\n\n|:---|---:|\n| a  |  b |\n'.replace('|:---', '| 左 | 右 |\n|:---') + '\n![图](assets/pic.png)\n',
+      '![图](assets/pic.png)\n\n改这一段。\n\n* 星号列表\n* 第二项\n',
+      '改这一段。\n\n![图](<assets/带 空格.png>)\n\n1) 括号编号\n2) 第二项\n\n![另一张](b.png "标题")\n',
+    ]) {
+      const ed = open(md);
+      expect(getSourceMap(ed)).not.toBeNull();
+      // 图片就是一个图片节点，前面没有多出来的空段落
+      const types: string[] = [];
+      ed.state.doc.forEach((node) => types.push(node.type.name));
+      expect(types.filter((t) => t === 'image').length).toBe((md.match(/!\[/g) || []).length);
+      expect(types.length).toBe(md.trim().split(/\n\n+/).length);
+      let target = -1;
+      ed.state.doc.descendants((node, pos) => { if (target < 0 && node.isText && node.text === '改这一段。') target = pos; return true; });
+      ed.commands.insertContentAt(target, '已');
+      expect(serializeDoc(ed).markdown).toBe(md.replace('改这一段。', '已改这一段。'));
+    }
+  });
+
   it('CRLF 文件保持 CRLF', () => {
     const crlf = '# 标题\r\n\r\n第一段\r\n\r\n* 列表\r\n';
     const ed = open(crlf);

@@ -928,6 +928,14 @@ export const markdownToHtml = (markdownContent: string, inlineActual: boolean = 
   transformCallouts(doc, inlineActual);
   transformToc(doc, mode);
   transformEmbeds(doc);
+  // 独占一段的图片：编辑器里图片是块级节点，外面的 <p> 留着的话，解析时图片前面会多出一个空段落——
+  // 顶层节点数和原文的块数对不上，整篇的「原样保存」就此失效（别处的表格、列表一保存全被重新生成）
+  if (mode === 'rich') {
+    doc.body.querySelectorAll(':scope > p').forEach((p) => {
+      const kids = Array.from(p.childNodes).filter((n) => !(n.nodeType === Node.TEXT_NODE && !n.textContent?.trim()));
+      if (kids.length === 1 && kids[0].nodeName === 'IMG') p.replaceWith(kids[0]);
+    });
+  }
   if (mode === 'preview') linkFootnotes(doc);
 
   // 表格对齐：marked 输出 align 属性。Tiptap 的 TextAlign 只认 style；预览里样式表的 text-align 也会盖过 align 属性
