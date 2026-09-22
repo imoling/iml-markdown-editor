@@ -82,7 +82,7 @@ export const LocalImageSection: React.FC<Props> = ({ cfg, update }) => {
           </select>
         </div>
         <div className="lm-line">按这个设置，一张图{st.lastRun ? '大约要 ' : '预计 '}<strong>{eta}</strong>{st.lastRun ? `（上一张 ${sizeOf(cfg.localSize).width === Math.round(Math.sqrt(st.lastRun.pixels)) ? '' : '换算后 '}实测 ${formatDuration(st.lastRun.ms)}）` : '，第一次还要先花半分钟加载模型'}。</div>
-        <div className="lm-line lm-line--muted">尺寸和步数都是越大越慢：像素数翻倍、步数翻倍，时间就跟着翻倍。出图途中可以取消。</div>
+        <div className="lm-line lm-line--muted">尺寸和步数都是越大越慢：像素数翻倍、步数翻倍，时间就跟着翻倍。出图途中可以取消：那张图不要了，生图服务会一起停掉（下次出图重新加载模型，多花半分钟）。</div>
       </div>
     </section>
   );

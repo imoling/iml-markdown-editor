@@ -52,7 +52,7 @@ describe('本机生图：sd-server', () => {
   });
   it('出图任务的回包：完成了取 result.images[].b64_json，还在跑给 null，失败 / 取消抛错', () => {
     expect(parseJob({ status: 'queued' })).toBeNull();
-    expect(parseJob({ status: 'running' })).toBeNull();
+    expect(parseJob({ status: 'generating' })).toBeNull();   // 实测的状态字是 generating，不是文档写的 running
     expect(parseJob({ status: 'completed', result: { output_format: 'png', images: [{ index: 0, b64_json: 'AAA' }, { b64_json: '' }] } })).toEqual(['AAA']);
     expect(() => parseJob({ status: 'failed', error: { code: 'generation_failed', message: '显存不够' } })).toThrow('显存不够');
     expect(() => parseJob({ status: 'cancelled', error: { message: 'job cancelled by client' } })).toThrow('job cancelled by client');

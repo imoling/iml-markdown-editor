@@ -36,7 +36,10 @@ export function buildSdServerArgs(o: SdServerOptions): string[] {
   return args;
 }
 
-/** 出图任务的回包 → 一张或几张 PNG 的 base64；还没完成返回 null；失败 / 取消抛错 */
+/**
+ * 出图任务的回包 → 一张或几张 PNG 的 base64；还没画完返回 null（状态是 queued / generating）；失败、被取消则抛错。
+ * 状态字符串以实测为准：排队是 queued，正在画是 generating（不是文档里写的 running）
+ */
 export function parseJob(json: any): string[] | null {
   const status = String(json?.status || '');
   if (status === 'failed' || status === 'cancelled') throw new Error(json?.error?.message || (status === 'cancelled' ? '已取消' : '出图失败'));
@@ -117,21 +120,34 @@ export class SdServer extends EventEmitter {
     }, 30000);
     if (status < 200 || status >= 300 || !json?.id) throw new Error(`本机生图提交失败（HTTP ${status}）：${json?.error?.message || json?.message || this.lastLog(2)}`);
     const id = String(json.id);
-    const cancel = () => { void httpJson('POST', `${base}/jobs/${id}/cancel`, {}, 5000).catch(() => {}); };
-    opts.signal?.addEventListener('abort', cancel, { once: true });
+    let aborting: Promise<void> | null = null;
+    const onAbort = () => { aborting = this.abortJob(base, id); };
+    opts.signal?.addEventListener('abort', onAbort, { once: true });
     try {
       for (;;) {
-        if (opts.signal?.aborted) throw new Error('已取消');
+        if (opts.signal?.aborted) { await aborting; throw new Error('已取消'); }
         if (!this.isRunning) throw new Error(this.state.error || '生图服务已停止');
         await new Promise((r) => setTimeout(r, 1000));
-        const res = await httpJson('GET', `${base}/jobs/${id}`, undefined, 15000);
+        const res = await httpJson('GET', `${base}/jobs/${id}`, undefined, 15000).catch(() => ({ status: 0, json: null }));
         if (res.status === 404 || res.status === 410) throw new Error('出图任务丢了（服务可能重启过）');
+        if (res.status !== 200) continue;   // 一次问不到不算数，下一秒再问
         const images = parseJob(res.json);
         if (typeof res.json?.queue_position === 'number' && res.json.queue_position > 0) opts.onQueue?.(res.json.queue_position);
         if (images) return images.map((b64) => `data:image/png;base64,${b64}`);
       }
     } finally {
-      opts.signal?.removeEventListener('abort', cancel);
+      opts.signal?.removeEventListener('abort', onAbort);
     }
+  }
+
+  /**
+   * 真的把这一张停下来。服务端的 cancel 只能撤还在排队的任务：已经在画的会回 409、继续占着 GPU 画完
+   * （实测如此）。所以 409 时直接把服务进程停掉——那张图反正也不要了，下次出图再起（要多花半分钟加载模型）
+   */
+  private async abortJob(base: string, id: string): Promise<void> {
+    const { status } = await httpJson('POST', `${base}/jobs/${id}/cancel`, {}, 5000).catch(() => ({ status: 0 }));
+    if (status === 200) return;
+    this.emit('log', `取消出图：任务已经在画了（HTTP ${status}），停掉生图服务`);
+    await this.stop();
   }
 }
