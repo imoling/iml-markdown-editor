@@ -27,6 +27,7 @@ import { FootnoteLinks } from '../../extensions/FootnoteLinks';
 import { MoveBlock } from '../../extensions/MoveBlock';
 import { RawBlock, RawInline } from '../../extensions/RawHtml';
 import { TimestampLinks } from '../../extensions/TimestampLinks';
+import { Folding } from '../../extensions/Folding';
 import { InlineMath } from '../../extensions/InlineMath';
 import { TagHighlight } from '../../extensions/TagHighlight';
 import { Kbd, Subscript, Superscript, Highlight, SoftAwareHardBreak, NoteLink } from '../../extensions/InlineMarks';
@@ -52,6 +53,7 @@ export const editorExtensions = [
   RawBlock,
   RawInline,
   TimestampLinks,
+  Folding,
   InlineMath,
   TagHighlight,
   FocusMode,

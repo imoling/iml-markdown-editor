@@ -220,7 +220,7 @@ export interface AppState {
   editorFlush: (() => void) | null;
   /** 当前编辑器提供的两个动作：往光标处插一段文字（返回是否插成功）、在文末另起一个空的列表项并把光标放进去。侧边栏功能（转写）要用 */
   /** runSlash：按 id 执行一条斜杠菜单里的命令（命令面板的「插入…」靠它）；只有富文本编辑器提供 */
-  editorActions: { insertText: (text: string) => boolean; startList: () => void; runSlash?: (id: string) => boolean } | null;
+  editorActions: { insertText: (text: string) => boolean; startList: () => void; runSlash?: (id: string) => boolean; fold?: (what: 'section' | 'all', open: boolean) => boolean } | null;
   /** 编辑器里当前选中的文字；没有选区时是空串。状态栏据此显示「选中 N 字」 */
   selectionText: string;
   setSelectionText: (text: string) => void;

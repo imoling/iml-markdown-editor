@@ -55,6 +55,7 @@ const ShortcutsModal: React.FC<ShortcutsModalProps> = ({ isOpen, onClose }) => {
           { label: '切换富文本 / 源码模式', keys: [modKey, 'E'] },
           { label: '显示 / 隐藏侧边栏', keys: [modKey, '\\'] },
           { label: '专注模式（Esc 退出）', keys: [modKey, '⇧', '.'] },
+          { label: '折叠 / 展开当前小节（标题、列表；也可点左边的箭头）', keys: [altKey, modKey, '[', '·', altKey, modKey, ']'] },
           { label: '文档内查找', keys: [modKey, 'F'] },
           { label: '查找并替换', keys: [altKey, modKey, 'F'] },
           { label: '搜索所有笔记', keys: [modKey, '⇧', 'F'] },

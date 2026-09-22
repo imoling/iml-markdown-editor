@@ -1061,3 +1061,26 @@ span > .source-node__input { display: inline-block; width: auto; min-width: 160p
 .focus-mode .tiptap-prosemirror > .is-focus-block { opacity: 1; transition: opacity 0.2s; }
 .focus-mode .tiptap-page { box-shadow: none; }
 .focus-mode .tiptap-container { background-color: var(--bg-page); }
+
+/* 折叠：标题和有子项的列表项左边有个箭头，悬停出现；收起来的块 display:none，文件里什么都不变 */
+.tiptap-prosemirror .fold-hidden { display: none !important; }
+.tiptap-prosemirror .fold-anchor { position: relative; }
+.tiptap-prosemirror .fold-toggle {
+  position: absolute; left: -26px; top: calc(0.5lh - 9px); width: 18px; height: 18px;
+  display: inline-flex; align-items: center; justify-content: center; border-radius: 4px;
+  color: var(--text-muted); cursor: pointer; opacity: 0; user-select: none; font-size: 14px; line-height: 1;
+  transform: rotate(90deg); transition: opacity 0.15s ease, transform 0.15s ease, background-color 0.15s ease;
+}
+.tiptap-prosemirror .fold-anchor:hover > .fold-toggle,
+.tiptap-prosemirror li.fold-anchor:hover > p > .fold-toggle,
+.tiptap-prosemirror li.fold-anchor:hover > div > p > .fold-toggle,
+.tiptap-prosemirror .is-folded .fold-toggle { opacity: 1; }
+.tiptap-prosemirror .fold-toggle:hover { background-color: var(--bg-hover-editor); color: var(--text-primary); }
+.tiptap-prosemirror .is-folded > .fold-toggle,
+.tiptap-prosemirror li.is-folded > p > .fold-toggle,
+.tiptap-prosemirror li.is-folded > div > p > .fold-toggle { transform: rotate(0deg); }
+.tiptap-prosemirror h1.is-folded::after, .tiptap-prosemirror h2.is-folded::after, .tiptap-prosemirror h3.is-folded::after,
+.tiptap-prosemirror h4.is-folded::after, .tiptap-prosemirror h5.is-folded::after, .tiptap-prosemirror h6.is-folded::after,
+.tiptap-prosemirror li.is-folded > p:first-child::after, .tiptap-prosemirror li.is-folded > div > p:first-child::after {
+  content: '…'; margin-left: 8px; color: var(--text-muted); font-weight: 400; font-size: 0.9em;
+}

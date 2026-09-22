@@ -28,6 +28,7 @@ const store = () => useAppStore.getState();
 const hasTab = () => !!store().activeTabId;
 const hasSavedTab = () => { const id = store().activeTabId; return !!id && !id.startsWith('new-'); };
 const aiOn = () => store().aiEnabled;
+const canFold = () => !!store().activeTabId && store().mode === 'word' && !!store().editorActions?.fold;
 const showSidebar = (tab: SidebarTab) => () => useAppStore.setState({ sidebarTab: tab, sidebarVisible: true, focusMode: false });
 
 /**
@@ -78,6 +79,10 @@ export const COMMANDS: AppCommand[] = [
   { id: 'view.toggle-sidebar', group: '视图', title: '显示 / 隐藏侧边栏', shortcut: '⌘\\', keywords: ['cbl', 'sidebar'], run: () => store().toggleSidebar() },
   { id: 'view.focus', group: '视图', title: '专注模式', shortcut: '⇧⌘.', keywords: ['zz', 'focus', 'zen', '打字机', '无干扰'], run: () => store().toggleFocusMode() },
   { id: 'view.toggle-toolbar', group: '视图', title: '显示 / 隐藏工具栏', keywords: ['gjl', 'toolbar'], run: () => store().toggleToolbar() },
+  { id: 'view.fold-section', group: '视图', title: '折叠当前小节', shortcut: '⌥⌘[', keywords: ['zd', 'fold', 'collapse', '收起', '标题', '列表'], enabled: canFold, run: () => { store().editorActions?.fold?.('section', false); } },
+  { id: 'view.unfold-section', group: '视图', title: '展开当前小节', shortcut: '⌥⌘]', keywords: ['zk', 'unfold', 'expand', '展开'], enabled: canFold, run: () => { store().editorActions?.fold?.('section', true); } },
+  { id: 'view.fold-all', group: '视图', title: '全部折叠', keywords: ['qbzd', 'fold all', 'collapse all', '收起全部', '大纲'], enabled: canFold, run: () => { store().editorActions?.fold?.('all', false); } },
+  { id: 'view.unfold-all', group: '视图', title: '全部展开', keywords: ['qbzk', 'unfold all', 'expand all', '展开全部'], enabled: canFold, run: () => { store().editorActions?.fold?.('all', true); } },
   { id: 'view.toggle-statusbar', group: '视图', title: '显示 / 隐藏状态栏', keywords: ['ztl', 'status'], run: () => store().toggleStatusBar() },
 
   // ── 侧边栏 ──

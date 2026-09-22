@@ -142,6 +142,12 @@ export const TiptapEditor: React.FC = () => {
     const { registerEditorActions } = useAppStore.getState();
     registerEditorActions({
       insertText: (text) => { const ed = editorRef.current as Editor | null; if (!ed || ed.isDestroyed) return false; return ed.chain().focus().insertContent(text).run(); },
+      // 折叠：命令面板的「折叠 / 展开当前小节」「全部折叠 / 展开」
+      fold: (what, open) => {
+        const ed = editorRef.current as Editor | null;
+        if (!ed || ed.isDestroyed) return false;
+        return what === 'all' ? (open ? ed.commands.unfoldAll() : ed.commands.foldAll()) : (open ? ed.commands.unfoldSection() : ed.commands.foldSection());
+      },
       // 命令面板的「插入…」：和在正文里敲 / 选同一项走的是同一段代码，只是没有要先删掉的 `/xxx`
       runSlash: (id) => {
         const ed = editorRef.current as Editor | null;
