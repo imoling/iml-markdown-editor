@@ -125,10 +125,13 @@ export interface NavigationRequest {
 }
 
 export interface ImageGenConfig {
-  provider: 'agnes-cn' | 'agnes' | 'gemini' | 'gemini-imagen' | 'gemini-flash' | 'volcengine' | 'minimax' | 'custom';
+  provider: 'local' | 'agnes-cn' | 'agnes' | 'gemini' | 'gemini-imagen' | 'gemini-flash' | 'volcengine' | 'minimax' | 'custom';
   apiKey: string;
   model: string;
   endpoint: string;
+  /** 本机生图：尺寸与步数（见 electron/imageGen/catalog.ts 的选项） */
+  localSize?: string;
+  localSteps?: string;
 }
 
 // 全新安装默认 Agnes 国内站：有免费额度，填个 Key 就能出图（已保存过配置的用户不受影响）

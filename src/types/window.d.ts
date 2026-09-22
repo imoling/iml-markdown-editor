@@ -6,6 +6,7 @@ export type { LocalState, LocalModelConfig, CustomModel, ServerState, LocalModel
 import type { SemanticState, SemanticHit, AskSource } from '../../electron/semantic/index';
 import type { HistoryEntry } from '../../electron/history';
 import type { ResourceState, ServiceId } from '../../electron/localModel/scheduler';
+import type { ImageGenState } from '../../electron/imageGen/index';
 import type { OrphanImage } from '../../electron/assets';
 export type { SemanticState, SemanticHit, EmbedModelEntry, AskSource } from '../../electron/semantic/index';
 export type { HistoryEntry } from '../../electron/history';
@@ -201,6 +202,15 @@ declare global {
       };
       clipboard?: {
         writeHtml: (html: string, text: string) => Promise<boolean>;
+      };
+      image: {
+        getState: () => Promise<ImageGenState>;
+        install: () => Promise<boolean>;
+        cancelInstall: () => Promise<boolean>;
+        delete: () => Promise<ImageGenState>;
+        start: () => Promise<ImageGenState>;
+        stop: () => Promise<ImageGenState>;
+        onState: (cb: (state: ImageGenState) => void) => () => void;
       };
       resources: {
         getState: () => Promise<ResourceState>;

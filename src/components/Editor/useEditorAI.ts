@@ -181,6 +181,8 @@ export function useEditorAI({ editor, outline, activeTabIdRef, pushToStore }: Pa
       setAIStatus({ generating: true, onStop: () => { setAiGenerating(false); setAIStatus({ generating: false, onStop: null }); } });
       try {
         const imageGenConfig = useAppStore.getState().imageGenConfig;
+        // 本机生图慢：先说一声，别让人以为卡住了
+        if (imageGenConfig.provider === 'local') useAppStore.getState().notify('本机生图中，约需一两分钟；第一次还要先加载模型', 180000);
         const results = await window.api.ai.generateImage({ prompt, config: imageGenConfig });
         if (results && results.length > 0) {
           // 生成结果是 data URL：存成笔记旁的文件，正文里只留相对路径

@@ -139,7 +139,7 @@ export const ImageInsertDialog: React.FC<ImageInsertDialogProps> = ({ onConfirm,
                   className="field-input field-input--xs flex-1"
                 />
                 <button onClick={handleGenerate} disabled={!aiPrompt.trim() || aiLoading} className="btn btn-gradient btn-xs image-dialog__generate">
-                  {aiLoading ? <><Loader2 size={13} className="animate-spin" /> 生成中</> : <><Sparkles size={13} /> 生成</>}
+                  {aiLoading ? <><Loader2 size={13} className="animate-spin" /> {imageGenConfig.provider === 'local' ? '本机生图中，约一两分钟' : '生成中'}</> : <><Sparkles size={13} /> 生成</>}
                 </button>
               </div>
 

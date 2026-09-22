@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { useAppStore, type ImageGenConfig } from '../../stores/appStore';
+import { LocalImageSection } from './LocalImageSection';
 
 interface Props {
   onClose: () => void;
@@ -9,6 +10,7 @@ interface Props {
 // Agnes 有免费额度，排最前；国内站 (.cn) 与国际站 (.com) 域名不同、Key 不通用（与写作助手里的一致）
 const PROVIDERS = [
   { id: 'agnes-cn', name: 'Agnes 国内站', desc: '有免费额度，国内直连' },
+  { id: 'local', name: '本机生图', desc: 'Qwen-Image 2.1，不联网；模型约 10 GB，出图要一两分钟' },
   { id: 'agnes', name: 'Agnes 国际站', desc: '有免费额度，需境外访问' },
   { id: 'gemini', name: 'Google Gemini', desc: 'Imagen / Flash，需境外访问' },
   { id: 'volcengine', name: '火山引擎 豆包', desc: 'Seedream 系列，国内稳定' },
@@ -101,11 +103,15 @@ export const ImageConfigModal: React.FC<Props> = ({ onClose }) => {
             })}
           </div>
 
+          {cfg.provider === 'local' && <LocalImageSection cfg={cfg} update={update} />}
+
+          {cfg.provider !== 'local' && (<>
           <label className="field-label">API Key</label>
           <input type="password" value={cfg.apiKey} onChange={(e) => update({ apiKey: e.target.value })} placeholder={apiKeyPlaceholder} className="field-input" />
           {apiKeyHint && <div className="field-hint">{apiKeyHint}</div>}
+          </>)}
 
-          {presets && (
+          {cfg.provider !== 'local' && presets && (
             <>
               <label className="field-label">模型</label>
               <div className="chip-row mb-8">
@@ -126,7 +132,7 @@ export const ImageConfigModal: React.FC<Props> = ({ onClose }) => {
             </>
           )}
 
-          <div className="info-box">🔒 API Key 加密后保存在本机（macOS 钥匙串 / Windows DPAPI），不会上传。</div>
+          {cfg.provider !== 'local' && <div className="info-box">🔒 API Key 加密后保存在本机（macOS 钥匙串 / Windows DPAPI），不会上传。</div>}
 
           {!isStandalone && <div className="hint text-center mt-16">配置变更自动生效</div>}
         </div>

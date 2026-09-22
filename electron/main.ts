@@ -8,6 +8,7 @@ import { SearchIndex } from './searchIndex';
 import { setupLocalModel, ensureBuiltinEndpoint, builtinNotReadyHint, isBuiltinService, isLocalServerActive, stopServer as stopLocalServer } from './localModel';
 import { scheduler } from './localModel/scheduler';
 import { setupResources } from './localModel/resources';
+import { setupImageGen, generateLocalImage, stopImageServer } from './imageGen';
 import { setupSemantic, syncSemanticIndex, stopSemanticServer, isSemanticServerActive } from './semantic';
 import { setupAsr, stopAsr, confirmDiscardTranscript, forgetUnsavedTranscript } from './asr';
 import { describeRelease } from './update';
@@ -673,6 +674,7 @@ app.whenReady().then(() => {
   try {
     setupAsr({ isAiEnabled: () => getAppSettings().aiEnabled !== false });
     setupResources(path.join(app.getPath('userData'), 'resources.json'));
+    setupImageGen();
   } catch (err) {
     console.error('Failed to setup transcription:', err);
   }
@@ -689,7 +691,7 @@ app.whenReady().then(() => {
     if (quitting || (!isLocalServerActive() && !isSemanticServerActive())) return;
     quitting = true;
     event.preventDefault();
-    Promise.allSettled([stopLocalServer(), stopSemanticServer()]).finally(() => app.quit());
+    Promise.allSettled([stopLocalServer(), stopSemanticServer(), stopImageServer()]).finally(() => app.quit());
   });
 
   // 测试连接：按表单里的（未保存的）配置发一条极短的对话，返回耗时
@@ -1139,7 +1141,10 @@ app.whenReady().then(() => {
 
       const results: { url: string }[] = [];
 
-      if (cfg.provider === 'agnes-cn' || cfg.provider === 'agnes') {
+      if (cfg.provider === 'local') {
+        // 本机生图：走调度（24 GB 以下先停对话模型）、按需起 sd-server
+        for (const url of await generateLocalImage(prompt, cfg)) results.push({ url });
+      } else if (cfg.provider === 'agnes-cn' || cfg.provider === 'agnes') {
         // Agnes：OpenAI 兼容的 /images/generations；国内站与国际站只是域名不同（与写作助手里的 Base URL 同源）
         const site = cfg.provider === 'agnes-cn' ? '国内站' : '国际站';
         const base = cfg.provider === 'agnes-cn' ? 'https://api.agnes-ai.cn/v1' : 'https://apihub.agnes-ai.com/v1';

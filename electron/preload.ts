@@ -33,6 +33,16 @@ contextBridge.exposeInMainWorld('api', {
   clipboard: {
     writeHtml: (html: string, text: string): Promise<boolean> => ipcRenderer.invoke('clipboard:writeHtml', html, text),
   },
+  // 本机生图：运行时与模型的下载、服务状态
+  image: {
+    getState: () => ipcRenderer.invoke('image:getState'),
+    install: () => ipcRenderer.invoke('image:install'),
+    cancelInstall: () => ipcRenderer.invoke('image:cancelInstall'),
+    delete: () => ipcRenderer.invoke('image:delete'),
+    start: () => ipcRenderer.invoke('image:start'),
+    stop: () => ipcRenderer.invoke('image:stop'),
+    onState: (cb: (state: any) => void) => { const l = (_e: any, s: any) => cb(s); ipcRenderer.on('image:state', l); return () => ipcRenderer.removeListener('image:state', l); },
+  },
   // 本机资源：几个本机模型的启停、内存、空闲超时
   resources: {
     getState: () => ipcRenderer.invoke('resources:getState'),
