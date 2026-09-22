@@ -1,4 +1,4 @@
-# iML Markdown Editor · [![Release v26.4.0](https://img.shields.io/badge/Release-v26.4.0-indigo?style=for-the-badge&logo=github)](https://github.com/imoling/iml-markdown-editor/releases)
+# iML Markdown Editor · [![Release v26.4.1](https://img.shields.io/badge/Release-v26.4.1-indigo?style=for-the-badge&logo=github)](https://github.com/imoling/iml-markdown-editor/releases)
 <!--
   图片为什么不用相对路径（screenshots/xxx.png）：
   相对路径会被 GitHub 发到 raw.githubusercontent.com，而这个域名在国内多数网络下被 DNS 污染（解析到 0.0.0.0），
@@ -191,10 +191,10 @@
 
 | 平台 | 安装包 |
 |---|---|
-| macOS Apple Silicon（M 系列） | `iML.Markdown.Editor-26.4.0-arm64.dmg` |
-| macOS Intel（x64） | `iML.Markdown.Editor-26.4.0-x64.dmg` |
-| Windows（绝大多数电脑选这个） | `iML.Markdown.Editor-Setup-26.4.0-x64.exe` |
-| Windows on ARM（骁龙本等） | `iML.Markdown.Editor-Setup-26.4.0-arm64.exe` |
+| macOS Apple Silicon（M 系列） | `iML.Markdown.Editor-26.4.1-arm64.dmg` |
+| macOS Intel（x64） | `iML.Markdown.Editor-26.4.1-x64.dmg` |
+| Windows（绝大多数电脑选这个） | `iML.Markdown.Editor-Setup-26.4.1-x64.exe` |
+| Windows on ARM（骁龙本等） | `iML.Markdown.Editor-Setup-26.4.1-arm64.exe` |
 
 前往 [Releases](https://github.com/imoling/iml-markdown-editor/releases) 下载最新版本（80 ~ 90 MB）。已经装了的，应用会在发现新版本时提醒一次，并直接给出对应的安装包。安装包由 GitHub Actions 在打 `v*` 标签时自动构建并发布。
 
@@ -265,6 +265,12 @@ Windows 上把 `⌘` 换成 `Ctrl`，`⌥` 换成 `Alt`。
 ---
 
 ## 版本历史
+
+**26.4.1（2026-09-22）— 导出的文档和编辑器里看到的一样**
+
+- 导出 PDF / HTML / 长图：代码块长行换行、表格照编辑器的列宽与线条（#2）、公式带上 KaTeX 的样式与字体（`src/utils/katexExport.ts`，和轻量版同一份）；长图按正文实际高度截，短笔记不再拖一大截空白
+- 原样保存：独占一行的图片不再让整篇对照表作废（从轻量版搬回）
+- 导出的样式与文档外壳抽到 `electron/shared/exportDoc.ts`，和轻量版「iML 编辑器」逐字相同；轻量版拆到了独立仓库 [imoling/iml-editor-lite](https://github.com/imoling/iml-editor-lite)
 
 **26.4.0（2026-09-21）— 本机智能，笔记不出门**
 
