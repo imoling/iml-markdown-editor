@@ -36,6 +36,7 @@ contextBridge.exposeInMainWorld('api', {
   // 本机生图：运行时与模型的下载、服务状态
   image: {
     getState: () => ipcRenderer.invoke('image:getState'),
+    setModel: (id: string) => ipcRenderer.invoke('image:setModel', id),
     install: () => ipcRenderer.invoke('image:install'),
     cancelInstall: () => ipcRenderer.invoke('image:cancelInstall'),
     delete: () => ipcRenderer.invoke('image:delete'),

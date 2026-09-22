@@ -2,7 +2,7 @@
  * 本机生图要等很久，界面上得随时说清楚「还要多久」。这里管两件事：
  * 按当前设置估一次时长（用上一次的实测折算），以及出图时那句会自己走秒的提示。
  */
-import { sizeOf, stepsOf, estimateMs, formatDuration } from '../../electron/imageGen/catalog';
+import { sizeOf, stepsForModel, estimateMs, formatDuration, imageModelOf } from '../../electron/imageGen/catalog';
 import type { ImageGenConfig } from '../stores/appStore';
 
 export function isLocalImage(cfg: Pick<ImageGenConfig, 'provider'>): boolean {
@@ -13,8 +13,13 @@ export function isLocalImage(cfg: Pick<ImageGenConfig, 'provider'>): boolean {
 export async function localImageEta(cfg: ImageGenConfig): Promise<string> {
   let lastRun = null;
   let loading = true;   // 服务没在跑的话，这一张还要先等模型加载
-  try { const st = await window.api.image.getState(); lastRun = st.lastRun; loading = st.server.status !== 'running'; } catch { /* 用基准 */ }
-  return formatDuration(estimateMs(sizeOf(cfg.localSize), stepsOf(cfg.localSteps), lastRun, { includeModelLoad: loading }));
+  let modelId = cfg.localModel;
+  try {
+    const st = await window.api.image.getState();
+    lastRun = st.lastRun; loading = st.server.status !== 'running'; modelId = modelId || st.modelId;
+  } catch { /* 用基准 */ }
+  const model = imageModelOf(modelId);
+  return formatDuration(estimateMs(model, sizeOf(cfg.localSize), stepsForModel(model, cfg.localSteps), lastRun, { includeModelLoad: loading }));
 }
 
 /** mm:ss */

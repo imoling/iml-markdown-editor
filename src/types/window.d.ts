@@ -205,6 +205,7 @@ declare global {
       };
       image: {
         getState: () => Promise<ImageGenState>;
+        setModel: (id: string) => Promise<ImageGenState>;
         install: () => Promise<boolean>;
         cancelInstall: () => Promise<boolean>;
         delete: () => Promise<ImageGenState>;

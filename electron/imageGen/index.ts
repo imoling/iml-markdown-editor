@@ -7,7 +7,7 @@ import os from 'os';
 import fs from 'fs';
 import path from 'path';
 import { execFile } from 'child_process';
-import { IMAGE_MODEL, SD_RUNTIME, runtimeAssetFor, sizeOf, stepsOf, localImageEstimateBytes, IMAGE_MODEL_TOTAL_BYTES, TEXT_ENCODER_APPROX, type ImageFileSpec } from './catalog';
+import { IMAGE_MODELS, SD_RUNTIME, runtimeAssetFor, sizeOf, stepsForModel, localImageEstimateBytes, imageModelOf, modelTotalBytes, DEFAULT_IMAGE_MODEL, type ImageFileSpec, type ImageModelSpec } from './catalog';
 import { SdServer, type SdState } from './server';
 import { downloadFile, DownloadError } from '../localModel/download';
 import { resolveModelUrl } from '../localModel/catalog';
@@ -16,40 +16,57 @@ import { extractArchive, applyProxy } from '../localModel/runtime';
 import { findFreePort } from '../localModel/server';
 import { scheduler } from '../localModel/scheduler';
 
+export interface ImageModelView {
+  id: string;
+  name: string;
+  vendor: string;
+  quant: string;
+  note: string;
+  cfgScale: number;
+  totalBytes: number;
+  installedBytes: number;
+  /** 三个文件都在 */
+  downloaded: boolean;
+  files: { key: string; label: string; size: number; downloaded: boolean; bytes: number }[];
+}
+
 export interface ImageGenState {
   /** 这个平台有没有运行时可下 */
   supported: boolean;
   runtime: { installed: boolean; version: string; path: string | null };
+  /** 可选的模型（默认那个排前面） */
+  models: ImageModelView[];
+  /** 正在用哪个 */
+  modelId: string;
   files: { key: string; label: string; size: number; downloaded: boolean; bytes: number }[];
   installedBytes: number;
   totalBytes: number;
-  /** 运行时和三个文件都齐了 */
+  /** 运行时和当前模型的三个文件都齐了 */
   ready: boolean;
   install: { active: boolean; step: string; received: number; total: number; speed: number; error: string | null } | null;
   server: SdState;
   lastLog: string;
-  /** 上一次真的画完用了多久：界面拿它估下一张要多久 */
+  /** 当前模型上一次真的画完用了多久：界面拿它估下一张要多久 */
   lastRun: { ms: number; pixels: number; steps: number } | null;
 }
 
-const CFG_SCALE = 6.0;
 const PORT = 18280;
 /** 32 GB 以上的机器不 offload：快约 15%，峰值 10 GB 它扛得住（实测见 server.ts 的参数注释） */
 const ROOMY_MEMORY_BYTES = 32 * 1024 ** 3;
 
 const rootDir = () => path.join(app.getPath('userData'), 'image-gen');
 const pidFile = () => path.join(rootDir(), 'server.pid');
-const modelsDir = () => path.join(rootDir(), 'models');
+const modelsDir = (modelId: string) => path.join(rootDir(), 'models', modelId);
 const runtimeDir = () => path.join(rootDir(), 'runtime', SD_RUNTIME.version);
-const filePathOf = (f: ImageFileSpec) => path.join(modelsDir(), path.basename(f.file));
+const filePathOf = (model: ImageModelSpec, f: ImageFileSpec) => path.join(modelsDir(model.id), path.basename(f.file));
 
 const server = new SdServer();
 let install: ImageGenState['install'] = null;
 let installController: AbortController | null = null;
 let generating = 0;
 let genController: AbortController | null = null;
-let lastRun: ImageGenState['lastRun'] = null;
 const lastRunFile = () => path.join(rootDir(), 'last-run.json');
+type LastRunMap = Record<string, { ms: number; pixels: number; steps: number }>;
 let startPromise: Promise<void> | null = null;
 
 /** 找解压出来的 sd-server（压缩包里可能套一层目录） */
@@ -64,43 +81,64 @@ export function findSdServer(dir: string, depth = 0): string | null {
   return null;
 }
 
-function fileBytes(f: ImageFileSpec): number {
-  try { return fs.statSync(filePathOf(f)).size; } catch { return 0; }
+function fileBytes(model: ImageModelSpec, f: ImageFileSpec): number {
+  try { return fs.statSync(filePathOf(model, f)).size; } catch { return 0; }
 }
-function fileDownloaded(f: ImageFileSpec): boolean {
-  const bytes = fileBytes(f);
-  return bytes > 0 && (f.size ? bytes === f.size : bytes > TEXT_ENCODER_APPROX * 0.9);
+function fileDownloaded(model: ImageModelSpec, f: ImageFileSpec): boolean {
+  return fileBytes(model, f) === f.size;
 }
-function installedBytes(): number { return IMAGE_MODEL.files.reduce((sum, f) => sum + (fileDownloaded(f) ? fileBytes(f) : 0), 0); }
+function installedBytesOf(model: ImageModelSpec): number {
+  return model.files.reduce((sum, f) => sum + (fileDownloaded(model, f) ? fileBytes(model, f) : 0), 0);
+}
+function modelReady(model: ImageModelSpec): boolean { return model.files.every((f) => fileDownloaded(model, f)); }
 function runtimeBin(): string | null { return findSdServer(runtimeDir()); }
-export function isReady(): boolean { return !!runtimeBin() && IMAGE_MODEL.files.every(fileDownloaded); }
+
+/** 现在选的是哪个模型（设置里存的，坏值退回默认） */
+let currentModelId = DEFAULT_IMAGE_MODEL;
+export function setImageModel(id: string) {
+  const next = imageModelOf(id).id;
+  if (next === currentModelId) return;
+  currentModelId = next;
+  void stopImageServer();   // 换模型就得换服务
+  broadcast();
+}
+const currentModel = () => imageModelOf(currentModelId);
+export function isReady(): boolean { return !!runtimeBin() && modelReady(currentModel()); }
+
+const viewOf = (m: ImageModelSpec): ImageModelView => ({
+  id: m.id, name: m.name, vendor: m.vendor, quant: m.quant, note: m.note, cfgScale: m.cfgScale,
+  totalBytes: modelTotalBytes(m), installedBytes: installedBytesOf(m), downloaded: modelReady(m),
+  files: m.files.map((f) => ({ key: f.key, label: f.label, size: f.size, downloaded: fileDownloaded(m, f), bytes: fileBytes(m, f) })),
+});
 
 export function getImageGenState(): ImageGenState {
   const bin = runtimeBin();
+  const model = currentModel();
   return {
     supported: !!runtimeAssetFor(process.platform, process.arch),
     runtime: { installed: !!bin, version: SD_RUNTIME.version, path: bin },
-    files: IMAGE_MODEL.files.map((f) => ({ key: f.key, label: f.label, size: f.size || TEXT_ENCODER_APPROX, downloaded: fileDownloaded(f), bytes: fileBytes(f) })),
-    installedBytes: installedBytes(),
-    totalBytes: IMAGE_MODEL_TOTAL_BYTES,
+    models: IMAGE_MODELS.map(viewOf),
+    modelId: model.id,
+    files: viewOf(model).files,
+    installedBytes: installedBytesOf(model),
+    totalBytes: modelTotalBytes(model),
     ready: isReady(),
     install,
     server: server.state,
     lastLog: server.lastLog(6),
-    lastRun: lastRun ?? readLastRun(),
+    lastRun: readLastRun(),
   };
 }
 
+function readAllRuns(): LastRunMap {
+  try { return JSON.parse(fs.readFileSync(lastRunFile(), 'utf8')) || {}; } catch { return {}; }
+}
 function readLastRun(): ImageGenState['lastRun'] {
-  try {
-    const raw = JSON.parse(fs.readFileSync(lastRunFile(), 'utf8'));
-    if (raw && raw.ms > 0 && raw.pixels > 0 && raw.steps > 0) { lastRun = raw; return raw; }
-  } catch { /* 没画过 */ }
-  return null;
+  const run = readAllRuns()[currentModelId];
+  return run && run.ms > 0 && run.pixels > 0 && run.steps > 0 ? run : null;
 }
 function saveLastRun(run: NonNullable<ImageGenState['lastRun']>) {
-  lastRun = run;
-  try { fs.mkdirSync(rootDir(), { recursive: true }); fs.writeFileSync(lastRunFile(), JSON.stringify(run), 'utf8'); } catch { /* 记不住就算了 */ }
+  try { fs.mkdirSync(rootDir(), { recursive: true }); fs.writeFileSync(lastRunFile(), JSON.stringify({ ...readAllRuns(), [currentModelId]: run }), 'utf8'); } catch { /* 记不住就算了 */ }
 }
 
 let broadcastTimer: ReturnType<typeof setTimeout> | null = null;
@@ -156,7 +194,8 @@ export async function startInstall(): Promise<void> {
   installController = controller;
   const { source, customBase } = getDownloadSettings();
   const proxyPrefix = '';
-  const total = IMAGE_MODEL_TOTAL_BYTES;
+  const model = currentModel();
+  const total = modelTotalBytes(model);
   let done = 0;
   const progress = (step: string, received: number, speed: number) => { install = { active: true, step, received: done + received, total, speed, error: null }; broadcast(); };
   install = { active: true, step: '准备', received: 0, total, speed: 0, error: null };
@@ -173,15 +212,15 @@ export async function startInstall(): Promise<void> {
       fs.rmSync(zip, { force: true });
       if (!runtimeBin()) throw new Error('运行时压缩包里没有 sd-server');
     }
-    for (const f of IMAGE_MODEL.files) {
-      if (fileDownloaded(f)) { done += fileBytes(f); continue; }
+    for (const f of model.files) {
+      if (fileDownloaded(model, f)) { done += fileBytes(model, f); continue; }
       const label = `下载${f.label}`;
       progress(label, 0, 0);
-      await downloadFile(resolveModelUrl({ repo: f.repo, file: f.file }, source, customBase), filePathOf(f), {
-        signal: controller.signal, expectedSize: f.size || undefined, sha256: f.sha256, checkGguf: f.gguf,
+      await downloadFile(resolveModelUrl({ repo: f.repo, file: f.file }, source, customBase), filePathOf(model, f), {
+        signal: controller.signal, expectedSize: f.size, sha256: f.sha256, checkGguf: f.gguf,
         onProgress: (p) => progress(label, p.received, p.speed),
       });
-      done += fileBytes(f);
+      done += fileBytes(model, f);
     }
     install = null;
   } catch (err: any) {
@@ -195,9 +234,10 @@ export async function startInstall(): Promise<void> {
 
 export function cancelInstall() { installController?.abort(); }
 
+/** 删掉当前模型的三个文件（运行时留着，别的模型也要用） */
 export async function deleteAll() {
   await stopImageServer();
-  fs.rmSync(rootDir(), { recursive: true, force: true });
+  fs.rmSync(modelsDir(currentModelId), { recursive: true, force: true });
   install = null;
   broadcast();
 }
@@ -208,11 +248,12 @@ async function ensureServer(steps: number): Promise<void> {
   if (startPromise) { await startPromise; if (server.isRunning) return; }
   startPromise = (async () => {
     const bin = runtimeBin();
-    if (!bin || !isReady()) throw new Error('本机生图还没准备好：到「智能 → AI 配图」里下载模型（约 10 GB）');
+    const model = currentModel();
+    if (!bin || !isReady()) throw new Error(`本机生图还没准备好：到「智能 → AI 配图」里下载 ${model.name}（约 ${(modelTotalBytes(model) / 1024 ** 3).toFixed(1)} GB）`);
     if (server.isRunning) await server.stop();
     await killStaleServer();
-    const files = Object.fromEntries(IMAGE_MODEL.files.map((f) => [f.key, filePathOf(f)]));
-    await server.start({ bin, diffusion: files.diffusion, textEncoder: files.textEncoder, vae: files.vae, port: await findFreePort(PORT), steps, cfgScale: CFG_SCALE, threads: getDownloadSettings().threads, offloadToCpu: os.totalmem() < ROOMY_MEMORY_BYTES });
+    const files = Object.fromEntries(model.files.map((f) => [f.key, filePathOf(model, f)]));
+    await server.start({ bin, diffusion: files.diffusion, textEncoder: files.textEncoder, vae: files.vae, port: await findFreePort(PORT), steps, cfgScale: model.cfgScale, threads: getDownloadSettings().threads, offloadToCpu: os.totalmem() < ROOMY_MEMORY_BYTES });
     if (server.state.pid) { try { fs.mkdirSync(rootDir(), { recursive: true }); fs.writeFileSync(pidFile(), JSON.stringify({ pid: server.state.pid }), 'utf8'); } catch { /* 记不住下次就靠端口占用发现 */ } }
   })().finally(() => { startPromise = null; broadcast(); });
   await startPromise;
@@ -221,9 +262,11 @@ async function ensureServer(steps: number): Promise<void> {
 export async function stopImageServer() { await server.stop(); fs.rmSync(pidFile(), { force: true }); }
 
 /** ai:generateImage 的本机分支 */
-export async function generateLocalImage(prompt: string, cfg: { localSize?: string; localSteps?: string }): Promise<string[]> {
-  if (!isReady()) throw new Error('本机生图还没准备好：到「智能 → AI 配图」里下载模型（约 10 GB）');
-  const steps = stepsOf(cfg.localSteps).steps;
+export async function generateLocalImage(prompt: string, cfg: { localSize?: string; localSteps?: string; localModel?: string }): Promise<string[]> {
+  if (cfg.localModel) setImageModel(cfg.localModel);
+  const model = currentModel();
+  if (!isReady()) throw new Error(`本机生图还没准备好：到「智能 → AI 配图」里下载 ${model.name}`);
+  const steps = stepsForModel(model, cfg.localSteps).steps;
   const size = sizeOf(cfg.localSize);
   await scheduler.ensureCapacity('image');
   scheduler.beginWork('image');
@@ -253,11 +296,12 @@ export function setupImageGen() {
     running: () => server.state.status === 'running' || server.state.status === 'starting',
     busy: () => generating > 0 || server.state.status === 'starting',
     pid: () => server.state.pid,
-    estimateBytes: () => localImageEstimateBytes(installedBytes()),
+    estimateBytes: () => localImageEstimateBytes(currentModel(), modelReady(currentModel())),
     stop: () => server.stop(),
-    start: async () => { await ensureServer(stepsOf(undefined).steps); },
+    start: async () => { const m = currentModel(); await ensureServer(stepsForModel(m, m.defaultStepsId).steps); },
   });
   ipcMain.handle('image:getState', () => getImageGenState());
+  ipcMain.handle('image:setModel', (_e, id: string) => { setImageModel(String(id || '')); return getImageGenState(); });
   ipcMain.handle('image:install', () => { void startInstall(); return true; });
   ipcMain.handle('image:cancelInstall', () => { cancelInstall(); return true; });
   ipcMain.handle('image:delete', async () => { await deleteAll(); return getImageGenState(); });

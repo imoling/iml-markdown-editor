@@ -129,7 +129,8 @@ export interface ImageGenConfig {
   apiKey: string;
   model: string;
   endpoint: string;
-  /** 本机生图：尺寸与步数（见 electron/imageGen/catalog.ts 的选项） */
+  /** 本机生图：用哪个模型、多大、多少步（见 electron/imageGen/catalog.ts 的选项） */
+  localModel?: string;
   localSize?: string;
   localSteps?: string;
 }
