@@ -93,6 +93,16 @@ async function loadImageAsPng(src: string, noteDir: string | null): Promise<{ da
   }
 }
 
+/** 同上，但直接给 data: 地址（公众号排版：本地图片、流程图都要内嵌成 PNG） */
+export async function loadImageAsDataUrl(src: string, noteDir: string | null): Promise<string | null> {
+  const png = await loadImageAsPng(src, noteDir);
+  if (!png) return null;
+  let bin = '';
+  const bytes = png.data;
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return `data:image/png;base64,${btoa(bin)}`;
+}
+
 /** 导出为 Word（.docx）：标题、列表、表格、代码、图片都转成 Word 自己的结构，WPS / Pages 也能开 */
 export async function exportActiveTabToDocx(): Promise<void> {
   useAppStore.getState().editorFlush?.();

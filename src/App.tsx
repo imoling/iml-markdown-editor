@@ -7,6 +7,7 @@ import { useAppStore, THEME_PRESETS, clearSessionAndReload, type DialogId } from
 import { useTranscribeStore } from './stores/transcribeStore';
 import AboutModal from './components/About/AboutModal';
 import ShortcutsModal from './components/Help/ShortcutsModal';
+import WechatCopyModal from './components/Export/WechatCopyModal';
 import ModelConfigModal from './components/AI/ModelConfigModal';
 import { ImageConfigModal } from './components/AI/ImageConfigModal';
 import { SettingsModal } from './components/Settings/SettingsModal';
@@ -515,6 +516,7 @@ const App: React.FC = () => {
       {dialog === 'settings' && <SettingsModal onClose={closeDialog} />}
       {dialog === 'whats-new' && whatsNewEntry && <WhatsNewModal entry={whatsNewEntry} onClose={closeDialog} />}
       {dialog === 'history' && <HistoryModal onClose={closeDialog} />}
+      {dialog === 'wechat-copy' && <WechatCopyModal onClose={closeDialog} />}
       {dialog === 'image-cleanup' && <ImageCleanupModal onClose={closeDialog} />}
       {dialog === 'semantic-config' && <SemanticIndexModal onClose={closeDialog} />}
       {dialog === 'transcribe-config' && <TranscribeConfigModal onClose={closeDialog} />}

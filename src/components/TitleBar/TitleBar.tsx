@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAppStore, needsSavePrompt } from '../../stores/appStore';
-import {
-  FileCode, X, FileDown, Plus, Save, FileUp, Sidebar as SidebarIcon, Layout, RotateCw, Minus, Square, Settings, Image, CalendarDays, Sparkles, History, Focus, ImageOff, Network, Wand2, Search, MessageCircleQuestion, Mic, ChevronRight,
-} from 'lucide-react';
+import { FileCode, X, FileDown, Plus, Save, FileUp, Sidebar as SidebarIcon, Layout, RotateCw, Minus, Square, Settings, Image, CalendarDays, Sparkles, History, Focus, ImageOff, Network, Wand2, Search, MessageCircleQuestion, Mic, ChevronRight, Copy } from 'lucide-react';
 import { exportActiveTabToPdf, exportActiveTabToHtml, exportActiveTabToDocx, exportActiveTabToImage } from '../../utils/exportPdf';
 import { isNewerVersion } from '../../utils/version';
 
@@ -133,6 +131,7 @@ export const TitleBar: React.FC = () => {
           <MenuItem icon={<FileDown size={14} />} label="导出为 HTML" hint="⇧⌘E" disabled={!activeTab} onClick={run(exportActiveTabToHtml)} />
           <MenuItem icon={<FileDown size={14} />} label="导出为 Word" disabled={!activeTab} onClick={run(() => void exportActiveTabToDocx())} />
           <MenuItem icon={<FileDown size={14} />} label="导出为长图" disabled={!activeTab} onClick={run(() => void exportActiveTabToImage())} />
+          <MenuItem icon={<Copy size={14} />} label="复制为公众号格式…" disabled={!activeTab} onClick={run(() => openDialog('wechat-copy'))} />
           <MenuDivider />
           {/* Windows 没有原生菜单，这几项得在这里也能找到；关闭右侧 / 已保存 / 全部 留在标签页右键里 */}
           <MenuItem icon={<X size={14} />} label="关闭标签页" hint="⌘W" disabled={!activeTab} onClick={run(() => activeTabId && requestCloseTab(activeTabId))} />

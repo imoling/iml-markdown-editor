@@ -498,6 +498,7 @@ function setupAppMenu() {
         },
         { label: '导出为 Word…', click: () => mainWindow?.webContents.send('menu:export', 'docx') },
         { label: '导出为长图…', click: () => mainWindow?.webContents.send('menu:export', 'image') },
+        { label: '复制为公众号格式…', click: () => mainWindow?.webContents.send('dialog:open', 'wechat-copy') },
         { type: 'separator' },
         // 标签页是渲染进程管的，但 Cmd+W 得在这里占住：否则 role:'close' 会拿走它去关窗口
         {

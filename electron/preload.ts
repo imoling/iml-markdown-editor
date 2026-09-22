@@ -29,6 +29,10 @@ contextBridge.exposeInMainWorld('api', {
     open: (filePath: string): Promise<boolean> => ipcRenderer.invoke('export:open', filePath),
     reveal: (filePath: string): Promise<boolean> => ipcRenderer.invoke('export:reveal', filePath),
   },
+  // 富文本进剪贴板由主进程写：不挑焦点、不要用户手势（复制为公众号格式）
+  clipboard: {
+    writeHtml: (html: string, text: string): Promise<boolean> => ipcRenderer.invoke('clipboard:writeHtml', html, text),
+  },
   ai: {
     getConfig: () => ipcRenderer.invoke('ai:getConfig'),
     saveConfig: (config: any) => ipcRenderer.invoke('ai:saveConfig', config),

@@ -1,4 +1,4 @@
-import { ipcMain, dialog, BrowserWindow, shell, nativeImage } from 'electron';
+import { ipcMain, dialog, BrowserWindow, shell, nativeImage, clipboard } from 'electron';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -408,6 +408,8 @@ export function setupFileSystemIPC(deps: FileSystemDeps = {}) {
 
   // 状态栏「已导出」提示上的两个按钮
   ipcMain.handle('export:open', (_event, target: string) => openExported(target, 'open'));
+  // 富文本进剪贴板（复制为公众号格式）：主进程写，不挑窗口焦点
+  ipcMain.handle('clipboard:writeHtml', (_event, html: string, text: string) => { clipboard.write({ html: String(html || ''), text: String(text || '') }); return true; });
   ipcMain.handle('export:reveal', (_event, target: string) => openExported(target, 'reveal'));
 
   // Read directory

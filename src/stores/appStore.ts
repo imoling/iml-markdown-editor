@@ -15,7 +15,7 @@ import { applyUserCss, snippetsPathOf, SNIPPETS_TEMPLATE } from '../utils/userCs
 const FILE_SORT_KEY = 'iml.fileSort';
 import { renameTagInMarkdown, isValidTagName, tagMatches } from '../../electron/shared/noteMeta';
 
-export type DialogId = 'about' | 'shortcuts' | 'quick-open' | 'command-palette' | 'ai-config' | 'ai-setup' | 'image-config' | 'semantic-config' | 'transcribe-config' | 'settings' | 'whats-new' | 'history' | 'image-cleanup';
+export type DialogId = 'about' | 'shortcuts' | 'quick-open' | 'command-palette' | 'ai-config' | 'ai-setup' | 'image-config' | 'semantic-config' | 'transcribe-config' | 'settings' | 'whats-new' | 'history' | 'image-cleanup' | 'wechat-copy';
 import { DAILY_DIR, TEMPLATE_DIR, DEFAULT_DAILY_TEMPLATE, SAMPLE_TEMPLATES, renderNoteTemplate } from '../utils/noteTemplates';
 
 export interface FileNode {

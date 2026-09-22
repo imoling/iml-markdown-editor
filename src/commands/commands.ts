@@ -60,6 +60,7 @@ export const COMMANDS: AppCommand[] = [
   { id: 'file.export-html', group: '文件', title: '导出为 HTML', shortcut: '⇧⌘E', keywords: ['dc', 'export', '网页'], enabled: hasTab, run: () => { void exportActiveTabToHtml(); } },
   { id: 'file.export-docx', group: '文件', title: '导出为 Word', keywords: ['dc', 'export', 'word', 'docx', 'wps', '文档'], enabled: hasTab, run: () => { void exportActiveTabToDocx(); } },
   { id: 'file.export-image', group: '文件', title: '导出为长图', keywords: ['dc', 'export', 'image', 'png', 'ct', '图片', '截图', '朋友圈'], enabled: hasTab, run: () => { void exportActiveTabToImage(); } },
+  { id: 'file.copy-wechat', group: '文件', title: '复制为公众号格式', keywords: ['fz', 'gzh', 'wechat', 'weixin', 'mp', '微信', '公众号', '排版', '推文', '粘贴'], enabled: hasTab, run: () => store().openDialog('wechat-copy') },
   { id: 'file.reveal', group: '文件', title: window.api.app.platform === 'darwin' ? '在访达中显示当前笔记' : '在资源管理器中显示当前笔记', keywords: ['finder', 'reveal', 'fd', '文件夹'], enabled: hasSavedTab, run: () => { const id = store().activeTabId; if (id) window.api.shell.showItemInFolder(id); } },
   { id: 'file.duplicate', group: '文件', title: '给当前笔记创建副本', keywords: ['fb', 'duplicate', 'copy', '复制一份'], enabled: hasSavedTab, run: () => { const id = store().activeTabId; if (id) void store().duplicateFile(id); } },
   { id: 'file.star', group: '文件', title: '收藏 / 取消收藏当前笔记', keywords: ['sc', 'star', 'bookmark', '星标', '书签'], enabled: hasSavedTab, run: () => { const id = store().activeTabId; if (id) store().toggleStar(id); } },
