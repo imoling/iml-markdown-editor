@@ -786,7 +786,7 @@ button.transcribe-note--link:hover { filter: brightness(0.97); }
 .calendar-panel__grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
 .calendar-panel__weekday { text-align: center; font-size: 10px; color: var(--text-muted); padding-bottom: 2px; }
 .calendar-panel__day {
-  position: relative; aspect-ratio: 1; max-height: 34px; border: 1px solid transparent; border-radius: 8px; background: none;
+  position: relative; aspect-ratio: 1; max-height: 34px; border: 1px solid transparent; border-radius: 50%; background: none;
   font-size: 12px; font-variant-numeric: tabular-nums; color: var(--text-secondary); cursor: pointer; padding: 0;
 }
 .calendar-panel__day:hover { background-color: var(--bg-hover-editor); }
@@ -801,13 +801,15 @@ button.transcribe-note--link:hover { filter: brightness(0.97); }
 .calendar-panel__day--l1:hover, .calendar-panel__day--l2:hover { background-color: color-mix(in srgb, var(--color-brand-indigo) 42%, transparent); }
 /* 图例：少 ▫▫▪▪ 多 */
 .calendar-panel__legend { display: flex; align-items: center; justify-content: flex-end; gap: 3px; margin-top: 6px; padding-right: 2px; font-size: 9px; color: var(--text-muted); }
-.calendar-panel__swatch { width: 9px; height: 9px; border-radius: 2px; }
+.calendar-panel__swatch { width: 9px; height: 9px; border-radius: 50%; }
 .calendar-panel__swatch--l1 { background-color: color-mix(in srgb, var(--color-brand-indigo) 14%, transparent); }
 .calendar-panel__swatch--l2 { background-color: color-mix(in srgb, var(--color-brand-indigo) 32%, transparent); }
 .calendar-panel__swatch--l3 { background-color: color-mix(in srgb, var(--color-brand-indigo) 55%, transparent); }
 .calendar-panel__swatch--l4 { background-color: var(--color-brand-indigo); }
-/* 今天：一圈边框，填色的日子也看得出来是今天 */
-.calendar-panel__day--today { border-color: var(--color-brand-indigo); color: var(--color-brand-indigo); font-weight: 600; }
+/* 今天：圈画在格子外面（用 outline，不占 box-shadow，好和「正开着」的内圈共存）。
+   写过日记的日子本来就填了主题色，边框同色会看不见，所以画在外圈 */
+.calendar-panel__day--today { outline: 1.5px solid var(--color-brand-indigo); outline-offset: 1px; color: var(--color-brand-indigo); font-weight: 600; }
+.calendar-panel__day--today.calendar-panel__day--l1, .calendar-panel__day--today.calendar-panel__day--l2, .calendar-panel__day--today.calendar-panel__day--l3 { color: var(--text-primary); }
 .calendar-panel__day--today.calendar-panel__day--l4 { color: #fff; }
 /* 正开着的那篇：格子本来就有底色了，再加背景看不出来，改成内嵌一圈描边（深色格子上用白圈） */
 .calendar-panel__day--active { box-shadow: inset 0 0 0 2px var(--color-brand-indigo); }

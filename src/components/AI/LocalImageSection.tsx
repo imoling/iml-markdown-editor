@@ -86,7 +86,7 @@ export const LocalImageSection: React.FC<Props> = ({ cfg, update }) => {
           {(st.server.status === 'running' || st.server.status === 'starting') && <button className="btn btn-secondary btn-xs" disabled={pending} onClick={() => void act(() => window.api.image.stop())}><Square size={11} /> 停止服务</button>}
           {(view?.installedBytes || 0) > 0 && !inst?.active && <button className="btn-link" disabled={pending} onClick={() => void act(() => window.api.image.delete())}><Trash2 size={11} /> 删掉这个模型</button>}
         </div>
-        <div className="lm-line lm-line--muted">出图时服务自动启动，几分钟不用会自动停，内存小的电脑上出图前会先停掉对话模型——都在 <button className="btn-link" onClick={() => openDialog('resources')}>本机资源</button> 里管。</div>
+        <div className="lm-line lm-line--muted">出图时服务自动启动，几分钟不用会自动停；内存小的电脑上出图前会先请对话和嵌入模型让个位，出完图它们自己回来——都在 <button className="btn-link" onClick={() => openDialog('resources')}>本机资源</button> 里管。</div>
       </div>
 
       <div className="lm-card" style={{ marginTop: 10 }}>

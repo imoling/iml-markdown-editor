@@ -5,7 +5,7 @@ import { useAppStore } from '../../stores/appStore';
 interface Props { onClose: () => void }
 
 type ServiceId = 'chat' | 'embed' | 'asr' | 'image';
-interface ServiceView { id: ServiceId; label: string; note?: string; status: 'stopped' | 'running' | 'busy'; pid: number | null; rssBytes: number | null; estimateBytes: number; lastUsedAt: number | null; idleMinutes: number; canStart: boolean; canStop: boolean }
+interface ServiceView { id: ServiceId; label: string; note?: string; status: 'stopped' | 'running' | 'busy'; pid: number | null; rssBytes: number | null; estimateBytes: number; lastUsedAt: number | null; idleMinutes: number; canStart: boolean; canStop: boolean; displacedBy: ServiceId | null }
 interface ResourceState { totalBytes: number; availableBytes: number; exclusiveApplies: boolean; services: ServiceView[]; config: { idleMinutes: Record<ServiceId, number>; exclusiveImage: boolean } }
 
 const GB = 1024 ** 3;
@@ -64,7 +64,7 @@ const ResourcesModal: React.FC<Props> = ({ onClose }) => {
         <header className="modal-head">
           <div>
             <h1 className="modal-title">本机资源</h1>
-            <p className="modal-subtitle">几个本机模型各占多少内存、在不在跑。空闲的会自动停，下次用时再起；正在干活的不会被停</p>
+            <p className="modal-subtitle">几个本机模型各占多少内存、在不在跑。内存不够时会让路（对话、嵌入让完自动回来），空闲久了自动停；正在干活的不会被停</p>
           </div>
           <button className="icon-btn" onClick={onClose} aria-label="关闭"><X size={18} /></button>
         </header>
@@ -92,12 +92,16 @@ const ResourcesModal: React.FC<Props> = ({ onClose }) => {
                     <div className="res-row__main">
                       <div className="res-row__name">
                         <span className="res-row__label">{s.label}</span>
-                        {s.status === 'busy' ? <span className="lm-badge lm-badge--warn">正在用</span> : s.status === 'running' ? <span className="lm-badge lm-badge--run">运行中</span> : <span className="lm-badge lm-badge--muted">已停</span>}
+                        {s.status === 'busy' ? <span className="lm-badge lm-badge--warn">正在用</span>
+                          : s.status === 'running' ? <span className="lm-badge lm-badge--run">运行中</span>
+                            : s.displacedBy ? <span className="lm-badge lm-badge--info">让位中</span>
+                              : <span className="lm-badge lm-badge--muted">已停</span>}
                       </div>
                       {s.note && <div className="lm-line lm-line--muted">{s.note}</div>}
                       <div className="lm-line lm-line--muted">
                         {s.status === 'stopped' ? `启动后约占 ${fmtGB(s.estimateBytes)}` : s.rssBytes != null ? `占用 ${fmtGB(s.rssBytes)}` : `约占 ${fmtGB(s.estimateBytes)}`}
                         {' · '}最近使用：{fmtAgo(s.lastUsedAt)}
+                        {s.displacedBy && ` · 给${state?.services.find((x) => x.id === s.displacedBy)?.label || '别的服务'}腾了地方，完事自动回来`}
                       </div>
                     </div>
                     <div className="res-row__side">

@@ -281,7 +281,7 @@ export async function generateLocalImage(prompt: string, cfg: { localSize?: stri
     return images;
   } finally {
     if (genController === controller) genController = null;
-    scheduler.endWork('image');
+    scheduler.endWork('image');   // 让位的对话 / 嵌入模型会在这之后自己回来
     broadcast();
   }
 }

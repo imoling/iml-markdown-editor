@@ -369,6 +369,7 @@ export function setupSemantic(d: Deps) {
     estimateBytes: () => { try { return Math.round(fs.statSync(specPath(currentSpec())).size * 1.2 + 200 * 1024 * 1024); } catch { return 0; } },
     stop: () => stopSemanticServer(),
     start: async () => { await ensureServer(); },
+    restorable: true,
   });
   deps = d;
   fs.mkdirSync(embedDir(), { recursive: true });

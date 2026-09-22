@@ -1,15 +1,16 @@
 import { describe, expect, it, vi } from 'vitest';
-import { Scheduler, normalizeSchedulerConfig, formatGB, type ServiceDriver, type ServiceId } from './scheduler';
+import { Scheduler, normalizeSchedulerConfig, formatGB, RESTORE_DELAY_MS, type ServiceDriver, type ServiceId } from './scheduler';
 
 const GB = 1024 ** 3;
 
 /** 一个假服务：跑 / 停、忙不忙都由测试摆 */
-function fake(id: ServiceId, label: string, bytes: number, opts: { startable?: boolean } = {}) {
+function fake(id: ServiceId, label: string, bytes: number, opts: { startable?: boolean; restorable?: boolean } = {}) {
   const state = { running: false, busy: false };
   const driver: ServiceDriver & { state: typeof state; stop: ReturnType<typeof vi.fn> } = {
     id, label, estimateBytes: () => bytes, running: () => state.running, busy: () => state.busy, pid: () => (state.running ? 100 : null),
     stop: vi.fn(async () => { state.running = false; }),
     ...(opts.startable === false ? {} : { start: async () => { state.running = true; } }),
+    restorable: opts.restorable ?? false,
     state,
   } as any;
   return driver;
@@ -20,8 +21,8 @@ function make(total = 24 * GB) {
   let avail = 8 * GB;
   const log: string[] = [];
   const s = new Scheduler({ now: () => now, totalMemory: () => total, availableMemory: async () => avail, rssOf: async () => 1.5 * GB, log: (m) => log.push(m) });
-  const chat = fake('chat', '对话模型', 6 * GB);
-  const embed = fake('embed', '嵌入模型', 0.3 * GB);
+  const chat = fake('chat', '对话模型', 6 * GB, { restorable: true });
+  const embed = fake('embed', '嵌入模型', 0.3 * GB, { restorable: true });
   const asr = fake('asr', '实时转写', 0.7 * GB, { startable: false });
   const image = fake('image', '本机生图', 12 * GB);
   [chat, embed, asr, image].forEach((d) => s.register(d));
@@ -119,5 +120,71 @@ describe('本机模型调度', () => {
     expect(s.config.idleMinutes).toEqual({ chat: 30, embed: 10, asr: 0, image: 5 });
     expect(formatGB(0.7 * GB)).toBe('0.7 GB');
     expect(formatGB(12 * GB)).toBe('12 GB');
+  });
+});
+
+describe('让位与归位', () => {
+  it('给生图让位的对话、嵌入，等出图干完自己回来（不用等下次提问）', async () => {
+    const { s, chat, embed, image, setAvail } = make();
+    chat.state.running = true; embed.state.running = true; setAvail(20);
+    // 出图：先把这两位请下去
+    await s.ensureCapacity('image');
+    expect([chat.state.running, embed.state.running]).toEqual([false, false]);
+    let st = await s.getState();
+    expect(st.services.find((x) => x.id === 'chat')!.displacedBy).toBe('image');
+    // 出图中：不能提前叫回来
+    image.state.running = true;
+    s.beginWork('image');
+    expect(await s.restoreDisplaced('image')).toEqual([]);
+    expect(chat.state.running).toBe(false);
+    // 出完图：内存不到 32 GB，先把生图停掉，两位再回来
+    s.endWork('image');
+    expect(await s.restoreDisplaced('image')).toEqual(['chat', 'embed']);
+    expect([chat.state.running, embed.state.running, image.state.running]).toEqual([true, true, false]);
+    st = await s.getState();
+    expect(st.services.find((x) => x.id === 'chat')!.displacedBy).toBeNull();
+  });
+
+  it('用的时候才起的（生图、转写）不算让位，不会被叫回来', async () => {
+    const { s, chat, image, asr, setAvail } = make();
+    image.state.running = true; asr.state.running = true; setAvail(20);
+    await s.ensureCapacity('chat');     // 互斥把生图挤掉
+    expect(image.state.running).toBe(false);
+    const st = await s.getState();
+    expect(st.services.find((x) => x.id === 'image')!.displacedBy).toBeNull();
+    s.beginWork('chat'); s.endWork('chat');
+    expect(await s.restoreDisplaced('chat')).toEqual([]);
+    expect(image.state.running).toBe(false);
+    expect(chat.state.running).toBe(false);   // ensureCapacity 只腾地方，不负责启动
+  });
+
+  it('用户自己停掉的不会被自作主张叫回来；空闲停掉的也一样', async () => {
+    const { s, chat, embed, setAvail, tick } = make();
+    chat.state.running = true; embed.state.running = true; setAvail(20);
+    await s.ensureCapacity('image');
+    await s.start('chat');              // 用户手动起回来 → 不再是「让位中」
+    expect((await s.getState()).services.find((x) => x.id === 'chat')!.displacedBy).toBeNull();
+    await s.stop('chat');               // 手动停掉
+    expect(await s.restoreDisplaced('image')).toEqual(['embed']);
+    expect(chat.state.running).toBe(false);
+
+    const b = make();
+    b.chat.state.running = true; b.setAvail(20);
+    b.s.touch('chat'); b.tick(16);
+    await b.s.sweep();                  // 闲停
+    expect(await b.s.restoreDisplaced('image')).toEqual([]);
+    expect(tick).toBeDefined();
+  });
+
+  it('连着出好几张图不来回折腾：出图干完排了归位，新的一张开工就取消', async () => {
+    const { s, chat, image, setAvail } = make();
+    chat.state.running = true; setAvail(20);
+    await s.ensureCapacity('image');
+    image.state.running = true;
+    s.beginWork('image'); s.endWork('image');        // 第一张完了，排了个延迟归位
+    s.beginWork('image');                             // 第二张马上开工
+    await new Promise((r) => setTimeout(r, 30));
+    expect(chat.state.running).toBe(false);           // 没有被叫回来打断出图
+    expect(RESTORE_DELAY_MS).toBeGreaterThan(5000);
   });
 });

@@ -3,7 +3,9 @@
  * 这里记着每个服务在不在跑、忙不忙、最近什么时候用过、大概占多少内存，做三件事：
  * ① 空闲自动停：各有各的超时（0 = 不自动停），正在干活的不碰；
  * ② 启动前算预算：可用内存不够就先停掉空闲的、最久没用的，还不够就拒绝并把数字说清楚；
- * ③ 生图和对话互斥（内存不到 32 GB 时）：生图前先停对话与嵌入，反过来也一样，正在忙的不抢。
+ * ③ 生图和对话互斥（内存不到 32 GB 时）：生图前先停对话与嵌入，反过来也一样，正在忙的不抢；
+ * ④ **让位的会自己回来**：因为给别人腾地方被停掉的（对话、嵌入），等那件事干完就自动重新起来，
+ *    不用等到下次有人用它才慢吞吞加载。手动停掉的不算让位，不会被叫回来。
  * 各服务通过 register() 把自己接进来；这个模块本身不认识 llama-server，只认接口，所以能拿假的服务测。
  */
 import os from 'os';
@@ -29,6 +31,11 @@ export interface ServiceDriver {
   stop(): Promise<void>;
   /** 有的服务没有「单独启动」的意义（转写只随一场录音起） */
   start?: () => Promise<void>;
+  /**
+   * 给别人让位被停掉之后，等对方干完要不要自动回来。
+   * 对话、嵌入这种「随时可能用到」的要；生图、转写是用的时候才起，不必占着
+   */
+  restorable?: boolean;
 }
 
 export interface SchedulerConfig {
@@ -40,6 +47,8 @@ export interface SchedulerConfig {
 
 export const DEFAULT_SCHEDULER_CONFIG: SchedulerConfig = { idleMinutes: { chat: 15, embed: 10, asr: 0, image: 5 }, exclusiveImage: true };
 export const EXCLUSIVE_BELOW_BYTES = 32 * 1024 ** 3;
+/** 让位的等多久再回来：连着出好几张图时不来回折腾 */
+export const RESTORE_DELAY_MS = 20000;
 
 export type ServiceStatus = 'stopped' | 'running' | 'busy';
 export interface ServiceView {
@@ -55,6 +64,8 @@ export interface ServiceView {
   idleMinutes: number;
   canStart: boolean;
   canStop: boolean;
+  /** 被谁挤下去了（那件事干完会自动回来）；没让位就是 null */
+  displacedBy: ServiceId | null;
 }
 export interface ResourceState {
   totalBytes: number;
@@ -126,6 +137,9 @@ export class Scheduler extends EventEmitter {
   private lastUsed = new Map<ServiceId, number>();
   private firstSeenRunning = new Map<ServiceId, number>();
   private work = new Map<ServiceId, number>();
+  /** 给谁让的位：等那位干完就把它们叫回来 */
+  private displaced = new Map<ServiceId, ServiceId>();
+  private restoreTimers = new Map<ServiceId, ReturnType<typeof setTimeout>>();
   private timer: ReturnType<typeof setInterval> | null = null;
   private deps: SchedulerDeps;
 
@@ -139,8 +153,53 @@ export class Scheduler extends EventEmitter {
 
   /** 用到了某个服务：记时间，空闲计时从头算 */
   touch(id: ServiceId) { this.lastUsed.set(id, this.deps.now()); }
-  beginWork(id: ServiceId) { this.touch(id); this.work.set(id, (this.work.get(id) || 0) + 1); }
-  endWork(id: ServiceId) { this.touch(id); this.work.set(id, Math.max(0, (this.work.get(id) || 0) - 1)); }
+  beginWork(id: ServiceId) {
+    this.touch(id);
+    this.work.set(id, (this.work.get(id) || 0) + 1);
+    // 又开工了：别急着把让位的叫回来
+    const timer = this.restoreTimers.get(id);
+    if (timer) { clearTimeout(timer); this.restoreTimers.delete(id); }
+  }
+
+  endWork(id: ServiceId) {
+    this.touch(id);
+    this.work.set(id, Math.max(0, (this.work.get(id) || 0) - 1));
+    if (this.isBusy(id)) return;
+    if (![...this.displaced.values()].includes(id)) return;
+    // 干完了：稍等一下再让位的回来（连着出好几张图时不来回折腾）
+    const timer = setTimeout(() => { this.restoreTimers.delete(id); void this.restoreDisplaced(id); }, RESTORE_DELAY_MS);
+    (timer as any).unref?.();
+    this.restoreTimers.set(id, timer);
+  }
+
+  /**
+   * 把给 by 让位的那些叫回来。内存不到 32 GB 时得先把 by 停掉（它俩本来就互斥），
+   * 反正它的活已经干完了；内存不够就把能起的起起来，起不动的下次用时再说
+   */
+  async restoreDisplaced(by: ServiceId): Promise<ServiceId[]> {
+    const waiting = [...this.displaced.entries()].filter(([, who]) => who === by).map(([id]) => id);
+    if (!waiting.length || this.isBusy(by)) return [];
+    const restored: ServiceId[] = [];
+    const host = this.drivers.get(by);
+    if (host?.running() && this.exclusiveApplies && !this.isBusy(by)) {
+      try { await host.stop(); this.deps.log(`${host.label}用完了，让位的服务这就回来`); } catch { /* 停不掉就让下面的预算去处理 */ }
+    }
+    for (const id of waiting) {
+      this.displaced.delete(id);
+      const d = this.drivers.get(id);
+      if (!d?.start || d.running()) continue;
+      try {
+        await this.ensureCapacity(id);
+        await d.start();
+        restored.push(id);
+        this.deps.log(`${d.label}回来了`);
+      } catch (err: any) {
+        this.deps.log(`${d.label}没能回来：${err?.message || err}（下次用到时再起）`);
+      }
+    }
+    if (restored.length) { this.emit('restored', { ids: restored, by }); this.emit('change'); }
+    return restored;
+  }
   isBusy(id: ServiceId) { return (this.work.get(id) || 0) > 0 || !!this.drivers.get(id)?.busy(); }
 
   setConfig(patch: Partial<SchedulerConfig>) {
@@ -169,6 +228,7 @@ export class Scheduler extends EventEmitter {
       try {
         await d.stop();
         stopped.push(d.id);
+        this.displaced.delete(d.id);   // 自己闲停的，不是让位
         this.deps.log(`${d.label}空闲 ${idle} 分钟，已停掉`);
       } catch (err: any) {
         this.deps.log(`停 ${d.label} 失败：${err?.message || err}`);
@@ -184,7 +244,12 @@ export class Scheduler extends EventEmitter {
     this.timer = setInterval(() => { void this.sweep(); }, intervalMs);
     (this.timer as any).unref?.();
   }
-  stopSweeping() { if (this.timer) clearInterval(this.timer); this.timer = null; }
+  stopSweeping() {
+    if (this.timer) clearInterval(this.timer);
+    this.timer = null;
+    for (const t of this.restoreTimers.values()) clearTimeout(t);
+    this.restoreTimers.clear();
+  }
 
   /**
    * 要启动 target 之前叫这个：先处理互斥，再看内存够不够；不够就停空闲的、最久没用的；还不够就报错。
@@ -193,7 +258,13 @@ export class Scheduler extends EventEmitter {
   async ensureCapacity(target: ServiceId): Promise<{ stopped: ServiceId[] }> {
     const stopped: ServiceId[] = [];
     const targetLabel = this.drivers.get(target)?.label || target;
-    const stopOne = async (d: ServiceDriver) => { await d.stop(); stopped.push(d.id); this.deps.log(`为了${targetLabel}，先停掉${d.label}`); };
+    const stopOne = async (d: ServiceDriver) => {
+      await d.stop();
+      stopped.push(d.id);
+      // 还会用到的（对话、嵌入）记一笔，等 target 干完自动回来；用的时候才起的就算了
+      if (d.restorable) this.displaced.set(d.id, target);
+      this.deps.log(`为了${targetLabel}，先停掉${d.label}${d.restorable ? '（用完会自动回来）' : ''}`);
+    };
 
     if (this.exclusiveApplies) {
       const conflicts: ServiceId[] = target === 'image' ? ['chat', 'embed'] : target === 'chat' || target === 'embed' ? ['image'] : [];
@@ -234,6 +305,7 @@ export class Scheduler extends EventEmitter {
     await this.ensureCapacity(id);
     await d.start();
     this.touch(id);
+    this.displaced.delete(id);
     this.emit('change');
   }
 
@@ -242,6 +314,7 @@ export class Scheduler extends EventEmitter {
     if (!d) throw new Error('没有这个服务');
     if (this.isBusy(id)) throw new Error(`${d.label}正在忙，等它完成再停`);
     await d.stop();
+    this.displaced.delete(id);   // 用户自己停的，别再自作主张叫回来
     this.emit('change');
   }
 
@@ -262,6 +335,7 @@ export class Scheduler extends EventEmitter {
         idleMinutes: this.config.idleMinutes[id],
         canStart: !running && !!d.start,
         canStop: running && !this.isBusy(id),
+        displacedBy: this.displaced.get(id) ?? null,
       });
     }
     return { totalBytes: this.deps.totalMemory(), availableBytes: await this.deps.availableMemory(), exclusiveApplies: this.exclusiveApplies, services, config: this.config };

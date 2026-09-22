@@ -420,6 +420,7 @@ export function setupLocalModel(d: Deps) {
     },
     stop: () => stopServer(),
     start: async () => { await startServer(); },
+    restorable: true,   // 给生图让位之后自己回来，不用等下次提问才慢吞吞加载
   });
   ipcMain.handle('local:installRuntime', (_e, draft?: Partial<LocalModelConfig>) => {
     if (draft && typeof draft.proxyPrefix === 'string') saveLocalConfig({ proxyPrefix: draft.proxyPrefix });

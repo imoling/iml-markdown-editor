@@ -21,11 +21,17 @@ export function setupResources(configFile: string) {
   };
   scheduler.on('change', broadcast);
   // 空闲自动停的通知：状态栏提示一句，别悄悄没了
-  scheduler.on('stopped', ({ ids, reason }: { ids: ServiceId[]; reason: string }) => {
-    if (reason !== 'idle') return;
-    const labels = ids.map((id) => scheduler.get(id)?.label || id).join('、');
-    for (const w of BrowserWindow.getAllWindows()) if (!w.isDestroyed()) w.webContents.send('resources:notice', `${labels}空闲了一阵，已自动停掉，下次用时会重新启动`);
+  const notify = (text: string) => { for (const w of BrowserWindow.getAllWindows()) if (!w.isDestroyed()) w.webContents.send('resources:notice', text); };
+  const labelsOf = (ids: ServiceId[]) => ids.map((id) => scheduler.get(id)?.label || id).join('、');
+  scheduler.on('stopped', ({ ids, reason, target }: { ids: ServiceId[]; reason: string; target?: ServiceId }) => {
+    if (reason === 'idle') notify(`${labelsOf(ids)}空闲了一阵，已自动停掉，下次用时会重新启动`);
+    else if (reason === 'capacity') {
+      const back = ids.filter((id) => scheduler.get(id)?.restorable);
+      if (back.length) notify(`为了给${scheduler.get(target!)?.label || '刚才那件事'}腾内存，先停掉了${labelsOf(back)}，完事会自动回来`);
+    }
   });
+  // 让位的回来了：说一声，不然用户会以为还停着
+  scheduler.on('restored', ({ ids }: { ids: ServiceId[] }) => notify(`${labelsOf(ids)}已经回来了`));
 
   ipcMain.handle('resources:getState', () => scheduler.getState());
   ipcMain.handle('resources:start', async (_e, id: ServiceId) => { await scheduler.start(id); return scheduler.getState(); });
