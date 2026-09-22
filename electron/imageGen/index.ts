@@ -3,6 +3,7 @@
  * 接进本机资源调度：出图前先 ensureCapacity('image')（24 GB 以下会先停对话与嵌入），出图算「正在忙」，空闲几分钟自动停。
  */
 import { app, ipcMain, BrowserWindow } from 'electron';
+import os from 'os';
 import fs from 'fs';
 import path from 'path';
 import { execFile } from 'child_process';
@@ -33,6 +34,8 @@ export interface ImageGenState {
 
 const CFG_SCALE = 6.0;
 const PORT = 18280;
+/** 32 GB 以上的机器不 offload：快约 15%，峰值 10 GB 它扛得住（实测见 server.ts 的参数注释） */
+const ROOMY_MEMORY_BYTES = 32 * 1024 ** 3;
 
 const rootDir = () => path.join(app.getPath('userData'), 'image-gen');
 const pidFile = () => path.join(rootDir(), 'server.pid');
@@ -209,7 +212,7 @@ async function ensureServer(steps: number): Promise<void> {
     if (server.isRunning) await server.stop();
     await killStaleServer();
     const files = Object.fromEntries(IMAGE_MODEL.files.map((f) => [f.key, filePathOf(f)]));
-    await server.start({ bin, diffusion: files.diffusion, textEncoder: files.textEncoder, vae: files.vae, port: await findFreePort(PORT), steps, cfgScale: CFG_SCALE, threads: getDownloadSettings().threads });
+    await server.start({ bin, diffusion: files.diffusion, textEncoder: files.textEncoder, vae: files.vae, port: await findFreePort(PORT), steps, cfgScale: CFG_SCALE, threads: getDownloadSettings().threads, offloadToCpu: os.totalmem() < ROOMY_MEMORY_BYTES });
     if (server.state.pid) { try { fs.mkdirSync(rootDir(), { recursive: true }); fs.writeFileSync(pidFile(), JSON.stringify({ pid: server.state.pid }), 'utf8'); } catch { /* 记不住下次就靠端口占用发现 */ } }
   })().finally(() => { startPromise = null; broadcast(); });
   await startPromise;

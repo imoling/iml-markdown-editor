@@ -19,19 +19,24 @@ export interface SdServerOptions {
   steps: number;
   cfgScale: number;
   threads?: number | null;
+  /** 权重放内存、用时再搬（默认开）。内存充裕的机器关掉它能快约 15%，代价是峰值多 4.5 GB */
+  offloadToCpu?: boolean;
 }
 
 export function buildSdServerArgs(o: SdServerOptions): string[] {
   const args = [
     '--listen-ip', '127.0.0.1', '--listen-port', String(o.port),
     '--diffusion-model', o.diffusion, '--llm', o.textEncoder, '--vae', o.vae,
-    // 权重留在内存、用到时再进显存；扩散部分开 flash attention；Qwen-Image 2.1 推荐 euler + CFG 6。
-    // 这两个组合是实测出来的（M4 24 GB，768 二十步）：带 --offload-to-cpu 总 21.4 分、峰值 5.6 GB；
-    // 去掉它并改用 --vae-conv-direct 反而是 26.0 分、峰值 10.1 GB（内存吃紧时换页，VAE 那条直接卷积的路也更慢）。
-    // 想在显存充裕的机器上试试不 offload，得先量一遍再改
-    '--offload-to-cpu', '--diffusion-fa',
+    // 扩散部分开 flash attention；Qwen-Image 2.1 推荐 euler + CFG 6
+    '--diffusion-fa',
     '--sampling-method', 'euler', '--cfg-scale', String(o.cfgScale), '--steps', String(o.steps),
   ];
+  // 权重留在内存、用到时再搬进显存。同一台机器（M4 24 GB）实测 512 × 512 八步：
+  //   带 --offload-to-cpu：采样 41.4 s/步 + VAE 88 s ≈ 419 s，峰值 5.6 GB
+  //   不带：            采样 30.9 s/步 + VAE 110 s ≈ 357 s，峰值 10.1 GB（快 15%，多吃 4.5 GB）
+  // 所以内存小的机器一律 offload：省下的 4.5 GB 比那 15% 值钱得多（真机验证时就因为内存吃紧被系统杀过一次）；
+  // 32 GB 以上的机器放开跑。`--vae-conv-direct` 别加，实测 VAE 反而从 198 s 慢到 329 s
+  if (o.offloadToCpu !== false) args.push('--offload-to-cpu');
   if (o.threads && o.threads > 0) args.push('-t', String(o.threads));
   return args;
 }

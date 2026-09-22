@@ -51,10 +51,12 @@ describe('本机生图：清单', () => {
 });
 
 describe('本机生图：sd-server', () => {
-  it('启动参数：三个模型、端口、euler + CFG + 默认步数、offload-to-cpu + flash attention（实测最快、最省内存的组合）', () => {
-    const args = buildSdServerArgs({ bin: '/x/sd-server', diffusion: '/m/d.gguf', textEncoder: '/m/t.gguf', vae: '/m/v.safetensors', port: 18280, steps: 20, cfgScale: 6, threads: 4 });
-    expect(args.join(' ')).toBe('--listen-ip 127.0.0.1 --listen-port 18280 --diffusion-model /m/d.gguf --llm /m/t.gguf --vae /m/v.safetensors --offload-to-cpu --diffusion-fa --sampling-method euler --cfg-scale 6 --steps 20 -t 4');
-    expect(args).not.toContain('--vae-conv-direct');   // 实测 VAE 解码反而从 198s 慢到 329s
+  it('启动参数：三个模型、端口、euler + CFG + 默认步数、flash attention；内存小的机器加 offload-to-cpu', () => {
+    const base = { bin: '/x/sd-server', diffusion: '/m/d.gguf', textEncoder: '/m/t.gguf', vae: '/m/v.safetensors', port: 18280, steps: 20, cfgScale: 6, threads: 4 };
+    expect(buildSdServerArgs(base).join(' ')).toBe('--listen-ip 127.0.0.1 --listen-port 18280 --diffusion-model /m/d.gguf --llm /m/t.gguf --vae /m/v.safetensors --diffusion-fa --sampling-method euler --cfg-scale 6 --steps 20 --offload-to-cpu -t 4');
+    // 内存充裕的机器关掉：快约 15%，峰值多 4.5 GB
+    expect(buildSdServerArgs({ ...base, offloadToCpu: false })).not.toContain('--offload-to-cpu');
+    expect(buildSdServerArgs(base)).not.toContain('--vae-conv-direct');   // 实测 VAE 解码反而从 198s 慢到 329s
     expect(buildSdServerArgs({ bin: '', diffusion: '', textEncoder: '', vae: '', port: 1, steps: 1, cfgScale: 1, threads: null })).not.toContain('-t');
   });
   it('出图任务的回包：完成了取 result.images[].b64_json，还在跑给 null，失败 / 取消抛错', () => {
