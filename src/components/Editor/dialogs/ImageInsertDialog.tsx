@@ -1,5 +1,6 @@
 import React from 'react';
 import { Loader2, Sparkles, RotateCcw } from 'lucide-react';
+import { isLocalImage, localImageEta, clock } from '../../../utils/localImageEta';
 import { useAppStore } from '../../../stores/appStore';
 
 interface ImageInsertDialogProps {
@@ -29,6 +30,7 @@ export const ImageInsertDialog: React.FC<ImageInsertDialogProps> = ({ onConfirm,
   const [aiImages, setAiImages] = React.useState<{ url: string }[]>([]);
   const [aiSelected, setAiSelected] = React.useState<number | null>(null);
   const [aiLoading, setAiLoading] = React.useState(false);
+  const [aiElapsed, setAiElapsed] = React.useState('');
   const [aiError, setAiError] = React.useState('');
   const [lightboxSrc, setLightboxSrc] = React.useState<string | null>(null);
 
@@ -55,16 +57,29 @@ export const ImageInsertDialog: React.FC<ImageInsertDialogProps> = ({ onConfirm,
     setAiError('');
     setAiImages([]);
     setAiSelected(null);
+    const local = isLocalImage(imageGenConfig);
+    const startedAt = Date.now();
+    let timer: ReturnType<typeof setInterval> | null = null;
+    if (local) {
+      const eta = await localImageEta(imageGenConfig);
+      setAiElapsed(`0:00 / ${eta}`);
+      timer = setInterval(() => setAiElapsed(`${clock(Date.now() - startedAt)} / ${eta}`), 1000);
+    }
     try {
       const results = await window.api.ai.generateImage({ prompt: aiPrompt.trim(), config: imageGenConfig });
       setAiImages(results);
       if (results.length > 0) setAiSelected(0);
     } catch (err: any) {
-      setAiError(err.message || '生成失败，请检查 API Key 配置');
+      setAiError(err.message || (local ? '本机生图失败' : '生成失败，请检查 API Key 配置'));
     } finally {
+      if (timer) clearInterval(timer);
+      setAiElapsed('');
       setAiLoading(false);
     }
   };
+
+  /** 本机生图很慢，中途可以不要了 */
+  const cancelGenerate = () => { void window.api.image.cancelGeneration().catch(() => {}); };
 
   const canConfirm = tab === 'upload' ? !!preview : tab === 'url' ? !!url.trim() : aiSelected !== null && aiImages.length > 0;
 
@@ -139,8 +154,9 @@ export const ImageInsertDialog: React.FC<ImageInsertDialogProps> = ({ onConfirm,
                   className="field-input field-input--xs flex-1"
                 />
                 <button onClick={handleGenerate} disabled={!aiPrompt.trim() || aiLoading} className="btn btn-gradient btn-xs image-dialog__generate">
-                  {aiLoading ? <><Loader2 size={13} className="animate-spin" /> {imageGenConfig.provider === 'local' ? '本机生图中，约一两分钟' : '生成中'}</> : <><Sparkles size={13} /> 生成</>}
+                  {aiLoading ? <><Loader2 size={13} className="animate-spin" /> {aiElapsed || '生成中'}</> : <><Sparkles size={13} /> 生成</>}
                 </button>
+                {aiLoading && isLocalImage(imageGenConfig) && <button onClick={cancelGenerate} className="btn btn-secondary btn-xs">取消</button>}
               </div>
 
               {aiLoading && aiImages.length === 0 && (

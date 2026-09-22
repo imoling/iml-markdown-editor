@@ -27,6 +27,8 @@ export interface ImageGenState {
   install: { active: boolean; step: string; received: number; total: number; speed: number; error: string | null } | null;
   server: SdState;
   lastLog: string;
+  /** 上一次真的画完用了多久：界面拿它估下一张要多久 */
+  lastRun: { ms: number; pixels: number; steps: number } | null;
 }
 
 const CFG_SCALE = 6.0;
@@ -41,7 +43,9 @@ const server = new SdServer();
 let install: ImageGenState['install'] = null;
 let installController: AbortController | null = null;
 let generating = 0;
-let serverSteps = 0;
+let genController: AbortController | null = null;
+let lastRun: ImageGenState['lastRun'] = null;
+const lastRunFile = () => path.join(rootDir(), 'last-run.json');
 let startPromise: Promise<void> | null = null;
 
 /** 找解压出来的 sd-server（压缩包里可能套一层目录） */
@@ -79,7 +83,20 @@ export function getImageGenState(): ImageGenState {
     install,
     server: server.state,
     lastLog: server.lastLog(6),
+    lastRun: lastRun ?? readLastRun(),
   };
+}
+
+function readLastRun(): ImageGenState['lastRun'] {
+  try {
+    const raw = JSON.parse(fs.readFileSync(lastRunFile(), 'utf8'));
+    if (raw && raw.ms > 0 && raw.pixels > 0 && raw.steps > 0) { lastRun = raw; return raw; }
+  } catch { /* 没画过 */ }
+  return null;
+}
+function saveLastRun(run: NonNullable<ImageGenState['lastRun']>) {
+  lastRun = run;
+  try { fs.mkdirSync(rootDir(), { recursive: true }); fs.writeFileSync(lastRunFile(), JSON.stringify(run), 'utf8'); } catch { /* 记不住就算了 */ }
 }
 
 let broadcastTimer: ReturnType<typeof setTimeout> | null = null;
@@ -163,17 +180,16 @@ export async function deleteAll() {
   broadcast();
 }
 
-/** 让 sd-server 跑起来（步数不同就重启一次：步数是启动参数） */
+/** 让 sd-server 跑起来（步数逐次随请求带，不用重启） */
 async function ensureServer(steps: number): Promise<void> {
-  if (server.isRunning && serverSteps === steps) return;
-  if (startPromise) { await startPromise; if (server.isRunning && serverSteps === steps) return; }
+  if (server.isRunning) return;
+  if (startPromise) { await startPromise; if (server.isRunning) return; }
   startPromise = (async () => {
     const bin = runtimeBin();
     if (!bin || !isReady()) throw new Error('本机生图还没准备好：到「智能 → AI 配图」里下载模型（约 10 GB）');
     if (server.isRunning) await server.stop();
     const files = Object.fromEntries(IMAGE_MODEL.files.map((f) => [f.key, filePathOf(f)]));
     await server.start({ bin, diffusion: files.diffusion, textEncoder: files.textEncoder, vae: files.vae, port: await findFreePort(PORT), steps, cfgScale: CFG_SCALE, threads: getDownloadSettings().threads });
-    serverSteps = steps;
   })().finally(() => { startPromise = null; broadcast(); });
   await startPromise;
 }
@@ -187,14 +203,24 @@ export async function generateLocalImage(prompt: string, cfg: { localSize?: stri
   const size = sizeOf(cfg.localSize);
   await scheduler.ensureCapacity('image');
   scheduler.beginWork('image');
+  genController?.abort();          // 上一张还在画就先停掉：一次只画一张
+  const controller = new AbortController();
+  genController = controller;
   try {
     await ensureServer(steps);
-    return await server.generate(prompt, size.width, size.height);
+    const startedAt = Date.now();
+    const images = await server.generate(prompt, size.width, size.height, steps, { signal: controller.signal });
+    saveLastRun({ ms: Date.now() - startedAt, pixels: size.width * size.height, steps });
+    return images;
   } finally {
+    if (genController === controller) genController = null;
     scheduler.endWork('image');
     broadcast();
   }
 }
+
+/** 正在画的那张不要了（用户点了停止、关掉了对话框） */
+export function cancelGeneration() { genController?.abort(); genController = null; }
 
 export function setupImageGen() {
   scheduler.register({
@@ -212,6 +238,7 @@ export function setupImageGen() {
   ipcMain.handle('image:delete', async () => { await deleteAll(); return getImageGenState(); });
   ipcMain.handle('image:start', async () => { await scheduler.start('image'); return getImageGenState(); });
   ipcMain.handle('image:stop', async () => { await scheduler.stop('image'); return getImageGenState(); });
+  ipcMain.handle('image:cancelGeneration', () => { cancelGeneration(); return true; });
 }
 
 // 出图计数：调度器靠它判断「正在忙」

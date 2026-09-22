@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Editor } from '@tiptap/core';
 import { DOMSerializer } from '@tiptap/pm/model';
 import type { Node as PMNode } from '@tiptap/pm/model';
+import { isLocalImage, localImageEta, startLocalImageTicker } from '../../utils/localImageEta';
 import { useAppStore, HeadingNode } from '../../stores/appStore';
 import { useAI } from '../../hooks/useAI';
 import { markdownToHtml, htmlToMarkdown } from '../../utils/markdown';
@@ -178,11 +179,14 @@ export function useEditorAI({ editor, outline, activeTabIdRef, pushToStore }: Pa
     if (mode === 'image') {
       if (!prompt.trim()) return;
       setAiGenerating(true);
-      setAIStatus({ generating: true, onStop: () => { setAiGenerating(false); setAIStatus({ generating: false, onStop: null }); } });
+      const imageGenConfig = useAppStore.getState().imageGenConfig;
+      const local = isLocalImage(imageGenConfig);
+      // 本机生图慢：状态栏上一直走着秒，旁边就是「取消」
+      const cancelLocal = () => { void window.api.image.cancelGeneration().catch(() => {}); };
+      let stopTicker: (() => void) | null = null;
+      if (local) stopTicker = startLocalImageTicker(await localImageEta(imageGenConfig), useAppStore.getState().notify, cancelLocal);
+      setAIStatus({ generating: true, onStop: () => { if (local) cancelLocal(); stopTicker?.(); setAiGenerating(false); setAIStatus({ generating: false, onStop: null }); } });
       try {
-        const imageGenConfig = useAppStore.getState().imageGenConfig;
-        // 本机生图慢：先说一声，别让人以为卡住了
-        if (imageGenConfig.provider === 'local') useAppStore.getState().notify('本机生图中，约需一两分钟；第一次还要先加载模型', 180000);
         const results = await window.api.ai.generateImage({ prompt, config: imageGenConfig });
         if (results && results.length > 0) {
           // 生成结果是 data URL：存成笔记旁的文件，正文里只留相对路径
@@ -203,6 +207,7 @@ export function useEditorAI({ editor, outline, activeTabIdRef, pushToStore }: Pa
         const reason = String(err?.message || '未知错误').replace(/^Error invoking remote method '[^']+': (?:Error: )?/, '');
         useAppStore.getState().notify(`AI 配图失败：${reason}`, 10000);
       } finally {
+        stopTicker?.();
         setAiGenerating(false);
         setAIStatus({ generating: false, onStop: null });
       }

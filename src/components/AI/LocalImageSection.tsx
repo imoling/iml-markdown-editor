@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Download, Square, Trash2, Cpu } from 'lucide-react';
 import { useAppStore, type ImageGenConfig } from '../../stores/appStore';
-import { SIZE_OPTIONS, STEP_OPTIONS, DEFAULT_SIZE, DEFAULT_STEPS } from '../../../electron/imageGen/catalog';
+import { SIZE_OPTIONS, STEP_OPTIONS, DEFAULT_SIZE, DEFAULT_STEPS, sizeOf, stepsOf, estimateMs, formatDuration } from '../../../electron/imageGen/catalog';
 import type { ImageGenState } from '../../../electron/imageGen/index';
 
 const GB = 1024 ** 3;
@@ -29,6 +29,8 @@ export const LocalImageSection: React.FC<Props> = ({ cfg, update }) => {
   const inst = st.install;
   const pct = inst && inst.total ? Math.min(100, Math.round((inst.received / inst.total) * 100)) : 0;
   const anyInstalled = st.runtime.installed || st.installedBytes > 0;
+  // 这一张大概要画多久：画过一张之后按那次的实测折算，越用越准
+  const eta = formatDuration(estimateMs(sizeOf(cfg.localSize), stepsOf(cfg.localSteps), st.lastRun));
   const act = async (fn: () => Promise<unknown>) => { setPending(true); try { await fn(); } catch (err: any) { useAppStore.getState().notify(String(err?.message || err).replace(/^Error invoking remote method '[^']+': (Error: )?/, '')); } finally { setPending(false); } };
 
   return (
@@ -41,7 +43,7 @@ export const LocalImageSection: React.FC<Props> = ({ cfg, update }) => {
               : inst?.active ? <span className="lm-badge lm-badge--info">正在下载 {pct}%</span>
                 : <span className="lm-badge lm-badge--warn">还没下载</span>}
         </div>
-        <div className="lm-line">文生图模型，全程离线。运行时（stable-diffusion.cpp）+ 三个模型文件共约 {fmt(st.totalBytes)}，需要 16 GB 以上内存；一张 768 的图在 Apple M 系列上要一两分钟。</div>
+        <div className="lm-line">文生图模型，全程离线。运行时（stable-diffusion.cpp）+ 三个模型文件共约 {fmt(st.totalBytes)}，需要 16 GB 以上内存。<strong>出图很慢</strong>：这是个 80 亿参数的模型，全靠这台电脑的 GPU 算，一张图要几分钟到十几分钟（GPU 核心越多越快）。急着用就选网络服务。</div>
         <div className="lm-kv">
           {st.files.map((f) => <div key={f.key}><span className="lm-kv__k">{f.label}</span><span className="lm-kv__v">{f.downloaded ? `已下载 · ${fmt(f.bytes)}` : fmt(f.size)}</span></div>)}
           <div><span className="lm-kv__k">运行时</span><span className="lm-kv__v">{st.runtime.installed ? `已安装 · ${st.runtime.version}` : '未安装'}</span></div>
@@ -79,7 +81,8 @@ export const LocalImageSection: React.FC<Props> = ({ cfg, update }) => {
             {STEP_OPTIONS.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
           </select>
         </div>
-        <div className="lm-line lm-line--muted">步数越多细节越好、越慢；换了步数下一次出图会重启一次服务。</div>
+        <div className="lm-line">按这个设置，一张图{st.lastRun ? '大约要 ' : '预计 '}<strong>{eta}</strong>{st.lastRun ? `（上一张 ${sizeOf(cfg.localSize).width === Math.round(Math.sqrt(st.lastRun.pixels)) ? '' : '换算后 '}实测 ${formatDuration(st.lastRun.ms)}）` : '，第一次还要先花半分钟加载模型'}。</div>
+        <div className="lm-line lm-line--muted">尺寸和步数都是越大越慢：像素数翻倍、步数翻倍，时间就跟着翻倍。出图途中可以取消。</div>
       </div>
     </section>
   );

@@ -25,12 +25,12 @@ export const IMAGE_MODEL = {
   minRamGB: 16,
   files: [
     { key: 'diffusion', label: '扩散模型', repo: 'abenzerps/Qwen-Image-2.1-GGUF', file: 'qwen-image-2.1-Q4_K_M.gguf', size: 4604557984, sha256: '833439e91bc1152d28f37aa198c7f6f4218b7de95754c2f7a318a2422ab4b2f8', gguf: true },
-    { key: 'textEncoder', label: '文本编码器（Qwen3-VL-8B）', repo: 'Qwen/Qwen3-VL-8B-Instruct-GGUF', file: 'Qwen3VL-8B-Instruct-Q4_K_M.gguf', size: 0, sha256: '67d1659bfe71b89d50b45a4ad1a9e5b997e5bb16ce5da66a6a6167abd569e9e2', gguf: true },
+    { key: 'textEncoder', label: '文本编码器（Qwen3-VL-8B）', repo: 'Qwen/Qwen3-VL-8B-Instruct-GGUF', file: 'Qwen3VL-8B-Instruct-Q4_K_M.gguf', size: 5027784800, sha256: '67d1659bfe71b89d50b45a4ad1a9e5b997e5bb16ce5da66a6a6167abd569e9e2', gguf: true },
     { key: 'vae', label: 'VAE', repo: 'abenzerps/Qwen-Image-2.1-GGUF', file: 'vae/qwen_image_2.1_vae_bf16.safetensors', size: 675509688, sha256: 'bb21f7473051e1ac368515dd3f2e15cd44d7a11748ee8823e1ddca3e4876b7c9', gguf: false },
   ] as ImageFileSpec[],
 } as const;
 
-/** 文本编码器的准确大小要等第一次下完才知道：先按 5.03 GB 估 */
+/** 兜底：清单里某个文件没写大小时按这个估 */
 export const TEXT_ENCODER_APPROX = 5030000000;
 export const IMAGE_MODEL_TOTAL_BYTES = IMAGE_MODEL.files.reduce((sum, f) => sum + (f.size || TEXT_ENCODER_APPROX), 0);
 
@@ -53,23 +53,45 @@ export function runtimeAssetFor(platform: string, arch: string): string | null {
 export interface SizeOption { id: string; width: number; height: number; label: string }
 /** 尺寸都能被 32 整除（模型的要求） */
 export const SIZE_OPTIONS: SizeOption[] = [
-  { id: '768x768', width: 768, height: 768, label: '768 × 768（方，快）' },
+  { id: '512x512', width: 512, height: 512, label: '512 × 512（最快，细节少）' },
+  { id: '768x768', width: 768, height: 768, label: '768 × 768（方）' },
   { id: '1024x1024', width: 1024, height: 1024, label: '1024 × 1024（方）' },
   { id: '768x1024', width: 768, height: 1024, label: '768 × 1024（竖）' },
   { id: '1024x768', width: 1024, height: 768, label: '1024 × 768（横）' },
 ];
-export const DEFAULT_SIZE = '768x768';
+export const DEFAULT_SIZE = '512x512';
 
 export interface StepOption { id: string; steps: number; label: string }
 export const STEP_OPTIONS: StepOption[] = [
+  { id: 'draft', steps: 8, label: '草稿（8 步）' },
   { id: 'fast', steps: 12, label: '快（12 步）' },
   { id: 'standard', steps: 20, label: '标准（20 步）' },
   { id: 'fine', steps: 30, label: '精细（30 步）' },
 ];
-export const DEFAULT_STEPS = 'standard';
+export const DEFAULT_STEPS = 'fast';
 
 export function sizeOf(id: string | undefined): SizeOption { return SIZE_OPTIONS.find((s) => s.id === id) || SIZE_OPTIONS[0]; }
-export function stepsOf(id: string | undefined): StepOption { return STEP_OPTIONS.find((s) => s.id === id) || STEP_OPTIONS[1]; }
+export function stepsOf(id: string | undefined): StepOption { return STEP_OPTIONS.find((s) => s.id === id) || STEP_OPTIONS.find((s) => s.id === DEFAULT_STEPS)!; }
+
+/**
+ * 估计这一张要画多久（毫秒）。没画过的时候按一个保守的基准算：一张 512 的图每步约 24 秒（M4 基础款实测 768 每步 53 秒，
+ * 耗时大致跟像素数走）。画过一张之后按那一次的实测折算，越用越准
+ */
+export function estimateMs(size: SizeOption, steps: StepOption, sample?: { ms: number; pixels: number; steps: number } | null): number {
+  const pixels = size.width * size.height;
+  const perPixelStep = sample && sample.ms > 0 && sample.pixels > 0 && sample.steps > 0
+    ? sample.ms / (sample.pixels * sample.steps)
+    : 24000 / (512 * 512);
+  return Math.round(perPixelStep * pixels * steps.steps);
+}
+
+/** 「约 6 分钟」「约 40 秒」 */
+export function formatDuration(ms: number): string {
+  const sec = Math.round(ms / 1000);
+  if (sec < 90) return `约 ${Math.max(5, Math.round(sec / 5) * 5)} 秒`;
+  const min = Math.round(sec / 60);
+  return min < 60 ? `约 ${min} 分钟` : `约 ${(min / 60).toFixed(1)} 小时`;
+}
 
 /** 跑起来大概要多少内存：模型文件 + 工作内存（潜空间、注意力）粗估 2.5 GB */
 export function localImageEstimateBytes(installedBytes: number): number {

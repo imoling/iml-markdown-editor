@@ -41,6 +41,7 @@ contextBridge.exposeInMainWorld('api', {
     delete: () => ipcRenderer.invoke('image:delete'),
     start: () => ipcRenderer.invoke('image:start'),
     stop: () => ipcRenderer.invoke('image:stop'),
+    cancelGeneration: () => ipcRenderer.invoke('image:cancelGeneration'),
     onState: (cb: (state: any) => void) => { const l = (_e: any, s: any) => cb(s); ipcRenderer.on('image:state', l); return () => ipcRenderer.removeListener('image:state', l); },
   },
   // 本机资源：几个本机模型的启停、内存、空闲超时

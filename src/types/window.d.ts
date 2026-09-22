@@ -210,6 +210,7 @@ declare global {
         delete: () => Promise<ImageGenState>;
         start: () => Promise<ImageGenState>;
         stop: () => Promise<ImageGenState>;
+        cancelGeneration: () => Promise<boolean>;
         onState: (cb: (state: ImageGenState) => void) => () => void;
       };
       resources: {
