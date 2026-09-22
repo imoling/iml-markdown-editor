@@ -33,6 +33,15 @@ contextBridge.exposeInMainWorld('api', {
   clipboard: {
     writeHtml: (html: string, text: string): Promise<boolean> => ipcRenderer.invoke('clipboard:writeHtml', html, text),
   },
+  // 本机资源：几个本机模型的启停、内存、空闲超时
+  resources: {
+    getState: () => ipcRenderer.invoke('resources:getState'),
+    start: (id: string) => ipcRenderer.invoke('resources:start', id),
+    stop: (id: string) => ipcRenderer.invoke('resources:stop', id),
+    setConfig: (patch: any) => ipcRenderer.invoke('resources:setConfig', patch),
+    onState: (cb: (state: any) => void) => { const l = (_e: any, s: any) => cb(s); ipcRenderer.on('resources:state', l); return () => ipcRenderer.removeListener('resources:state', l); },
+    onNotice: (cb: (text: string) => void) => { const l = (_e: any, t: string) => cb(t); ipcRenderer.on('resources:notice', l); return () => ipcRenderer.removeListener('resources:notice', l); },
+  },
   ai: {
     getConfig: () => ipcRenderer.invoke('ai:getConfig'),
     saveConfig: (config: any) => ipcRenderer.invoke('ai:saveConfig', config),

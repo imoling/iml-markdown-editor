@@ -55,6 +55,7 @@ export function createMockApi(initialFiles: Record<string, string> = {}) {
     dialog: { open: vi.fn(async () => null), save: vi.fn(async () => null) },
     export: { pdf: vi.fn(), html: vi.fn(), image: vi.fn(), saveFile: vi.fn(), open: vi.fn(async () => true), reveal: vi.fn(async () => true) },
     clipboard: { writeHtml: vi.fn(async () => true) },
+    resources: { getState: vi.fn(async () => ({ totalBytes: 0, availableBytes: 0, exclusiveApplies: false, services: [], config: { idleMinutes: { chat: 15, embed: 10, asr: 0, image: 5 }, exclusiveImage: true } })), start: vi.fn(), stop: vi.fn(), setConfig: vi.fn(), onState: vi.fn(() => () => {}), onNotice: vi.fn(() => () => {}) },
     ai: { getConfig: vi.fn(async () => ({})), saveConfig: vi.fn(async () => ({ success: true })), chat: vi.fn(), stop: vi.fn(), generateImage: vi.fn(), listModels: vi.fn(), testConnection: vi.fn() },
     local: {
       getState: vi.fn(async () => null), installRuntime: vi.fn(), cancelInstall: vi.fn(), pickRuntime: vi.fn(), clearRuntimePath: vi.fn(),

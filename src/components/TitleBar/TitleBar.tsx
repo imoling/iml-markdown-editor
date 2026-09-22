@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAppStore, needsSavePrompt } from '../../stores/appStore';
-import { FileCode, X, FileDown, Plus, Save, FileUp, Sidebar as SidebarIcon, Layout, RotateCw, Minus, Square, Settings, Image, CalendarDays, Sparkles, History, Focus, ImageOff, Network, Wand2, Search, MessageCircleQuestion, Mic, ChevronRight, Copy } from 'lucide-react';
+import { FileCode, X, FileDown, Plus, Save, FileUp, Sidebar as SidebarIcon, Layout, RotateCw, Minus, Square, Settings, Image, CalendarDays, Sparkles, History, Focus, ImageOff, Network, Wand2, Search, MessageCircleQuestion, Mic, ChevronRight, Copy, Gauge } from 'lucide-react';
 import { exportActiveTabToPdf, exportActiveTabToHtml, exportActiveTabToDocx, exportActiveTabToImage } from '../../utils/exportPdf';
 import { isNewerVersion } from '../../utils/version';
 
@@ -172,6 +172,8 @@ export const TitleBar: React.FC = () => {
           <MenuItem icon={<Mic size={14} />} label="实时转写…" disabled={!aiEnabled} onClick={run(() => openDialog('transcribe-config'))} />
           <MenuDivider />
           <MenuItem icon={<Image size={14} />} label="AI 配图…" onClick={run(() => openDialog('image-config'))} />
+          <MenuDivider />
+          <MenuItem icon={<Gauge size={14} />} label="本机资源…" onClick={run(() => openDialog('resources'))} />
         </Menu>
 
         <Menu id="help" label="帮助" width={180} badge={hasUpdate}>

@@ -100,6 +100,7 @@ export const COMMANDS: AppCommand[] = [
   // ── 智能 ──
   { id: 'ai.ask', group: '智能', title: '问你的笔记', shortcut: '⌘J', keywords: ['wd', 'ask', 'chat', 'rag', '问答'], enabled: aiOn, run: () => store().openAsk() },
   { id: 'ai.writing', group: '智能', title: '写作助手（模型设置）…', shortcut: '⇧⌘M', keywords: ['xz', 'mx', 'model', 'llm', '本机模型', 'ollama'], run: () => store().openDialog('ai-config') },
+  { id: 'ai.resources', group: '智能', title: '本机资源（模型启停与内存）…', keywords: ['bjzy', 'resources', 'memory', 'nc', '内存', '启停', '模型', '调度'], run: () => store().openDialog('resources') },
   { id: 'ai.related', group: '智能', title: '相关笔记与语义搜索…', keywords: ['xg', 'yy', 'semantic', 'embedding', '向量'], enabled: aiOn, run: () => store().openDialog('semantic-config') },
   { id: 'ai.transcribe-config', group: '智能', title: '实时转写设置…', keywords: ['zx', 'mkf', 'asr', '麦克风', '语音模型'], enabled: aiOn, run: () => store().openDialog('transcribe-config') },
   { id: 'ai.image', group: '智能', title: 'AI 配图设置…', keywords: ['pt', 'image', '插图', '生图'], run: () => store().openDialog('image-config') },

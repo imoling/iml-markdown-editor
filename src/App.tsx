@@ -8,6 +8,7 @@ import { useTranscribeStore } from './stores/transcribeStore';
 import AboutModal from './components/About/AboutModal';
 import ShortcutsModal from './components/Help/ShortcutsModal';
 import WechatCopyModal from './components/Export/WechatCopyModal';
+import ResourcesModal from './components/AI/ResourcesModal';
 import ModelConfigModal from './components/AI/ModelConfigModal';
 import { ImageConfigModal } from './components/AI/ImageConfigModal';
 import { SettingsModal } from './components/Settings/SettingsModal';
@@ -385,6 +386,8 @@ const App: React.FC = () => {
     });
     // 原生菜单 / 其他入口要求打开某个弹窗
     window.api.events.on('dialog:open', (id: DialogId) => openDialog(id));
+    // 本机模型空闲被自动停掉时提一句，别悄悄没了
+    window.api.resources?.onNotice?.((text: string) => useAppStore.getState().notify(text, 8000));
   }, [openFileByPath, createNewFile, openFile, saveActiveFile, openDialog]);
 
   // 自动检查更新：启动后稍等一下查一次；应用一直开着不关的，每天再查一次。
@@ -517,6 +520,7 @@ const App: React.FC = () => {
       {dialog === 'whats-new' && whatsNewEntry && <WhatsNewModal entry={whatsNewEntry} onClose={closeDialog} />}
       {dialog === 'history' && <HistoryModal onClose={closeDialog} />}
       {dialog === 'wechat-copy' && <WechatCopyModal onClose={closeDialog} />}
+      {dialog === 'resources' && <ResourcesModal onClose={closeDialog} />}
       {dialog === 'image-cleanup' && <ImageCleanupModal onClose={closeDialog} />}
       {dialog === 'semantic-config' && <SemanticIndexModal onClose={closeDialog} />}
       {dialog === 'transcribe-config' && <TranscribeConfigModal onClose={closeDialog} />}

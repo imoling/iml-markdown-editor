@@ -7,6 +7,7 @@ import { chunkNote, normalize } from './chunk';
 import { VectorStore, type SemanticHit } from './store';
 import { rerankChunks, type ChunkCandidate } from './retrieve';
 import { LlamaServer, httpJson } from '../localModel/server';
+import { scheduler } from '../localModel/scheduler';
 import { downloadFile, DownloadError, type DownloadProgress } from '../localModel/download';
 import { resolveModelUrl } from '../localModel/catalog';
 import { getRuntime, getDownloadSettings, localModelPaths, onRuntimeChanged, killStaleServerAt } from '../localModel';
@@ -123,6 +124,7 @@ async function ensureServer(): Promise<{ port: number; alias: string }> {
       const runtime = await getRuntime(true);
       if (!runtime.installed || !runtime.path) throw new Error('需要先安装推理运行时（智能 → 写作助手 → 本机模型）');
       if (!fs.existsSync(specPath(spec))) throw new Error(`嵌入模型尚未下载：${spec.name}`);
+      await scheduler.ensureCapacity('embed');
       await killStaleServerAt(pidFile());
       const state = await server.start({
         bin: runtime.path,
@@ -168,6 +170,11 @@ async function requestEmbeddings(port: number, alias: string, inputs: string[]):
 
 /** 一批文本 → 向量。某一条超长会让整批失败：退回逐条处理，超长的那条对半截断重试 */
 async function embedTexts(inputs: string[]): Promise<Float32Array[]> {
+  scheduler.beginWork('embed');
+  try { return await embedTextsInner(inputs); } finally { scheduler.endWork('embed'); }
+}
+
+async function embedTextsInner(inputs: string[]): Promise<Float32Array[]> {
   const { port, alias } = await ensureServer();
   try {
     return await requestEmbeddings(port, alias, inputs);
@@ -354,6 +361,15 @@ async function startDownload(id: string) {
 }
 
 export function setupSemantic(d: Deps) {
+  scheduler.register({
+    id: 'embed', label: '嵌入模型', note: '相关笔记、问你的笔记的检索用它；很小，停了再起也快',
+    running: () => server.state.status !== 'stopped',
+    busy: () => server.state.status === 'starting',
+    pid: () => server.state.pid,
+    estimateBytes: () => { try { return Math.round(fs.statSync(specPath(currentSpec())).size * 1.2 + 200 * 1024 * 1024); } catch { return 0; } },
+    stop: () => stopSemanticServer(),
+    start: async () => { await ensureServer(); },
+  });
   deps = d;
   fs.mkdirSync(embedDir(), { recursive: true });
   // 上次崩溃 / 被强杀时留下的嵌入服务进程：启动时就清掉，不等到下次用到

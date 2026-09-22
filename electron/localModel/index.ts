@@ -9,6 +9,7 @@ import { getDeviceInfo, checkRequirement, type DeviceInfo, type RequirementCheck
 import { downloadFile, DownloadError, type DownloadProgress } from './download';
 import { resolveRuntime, installRuntime, type InstallPhase, type RuntimeInfo } from './runtime';
 import { LlamaServer, pingChat, type ServerState } from './server';
+import { scheduler } from './scheduler';
 
 export { DEFAULT_LOCAL_CONFIG, normalizeLocalConfig };
 export type { AIServiceType, CustomModel, LocalModelConfig, DeviceInfo, RequirementCheck, RuntimeInfo, ServerState, InstallPhase };
@@ -342,6 +343,7 @@ export async function startServer(draft?: Partial<LocalModelConfig>): Promise<Se
     const model = resolveModel(cfg.modelId, cfg);
     if (!model) throw new Error('请先选择一个模型');
     if (!fs.existsSync(model.path)) throw new Error(`模型尚未下载：${model.name}`);
+    await scheduler.ensureCapacity('chat');
     await killStaleServer();
     fs.mkdirSync(rootDir(), { recursive: true });
     const state = await server.start({
@@ -402,6 +404,23 @@ export function setupLocalModel(d: Deps) {
   fs.mkdirSync(modelsDir(), { recursive: true });
 
   ipcMain.handle('local:getState', () => getLocalState());
+  // 接进本机资源调度：空闲自动停、启动前算内存、和生图互斥
+  scheduler.register({
+    id: 'chat', label: '对话模型', note: '写作助手、整理纪要、问你的笔记都用它；停掉后下次用时自动重新加载，要等十几秒',
+    running: () => server.state.status === 'running' || server.state.status === 'starting',
+    busy: () => server.state.status === 'starting',
+    pid: () => server.state.pid,
+    estimateBytes: () => {
+      const cfg = localConfig();
+      const model = resolveModel(cfg.modelId, cfg);
+      let size = 0;
+      try { size = model ? fs.statSync(model.path).size : 0; } catch { size = 0; }
+      // 模型文件 + 上下文的 KV 缓存（粗估每 token 48 KB，封顶 2 GB）
+      return size ? Math.round(size * 1.1 + Math.min(2 * 1024 ** 3, Math.min(cfg.ctxSize, model?.maxContext || cfg.ctxSize) * 48 * 1024)) : 0;
+    },
+    stop: () => stopServer(),
+    start: async () => { await startServer(); },
+  });
   ipcMain.handle('local:installRuntime', (_e, draft?: Partial<LocalModelConfig>) => {
     if (draft && typeof draft.proxyPrefix === 'string') saveLocalConfig({ proxyPrefix: draft.proxyPrefix });
     void startInstall();

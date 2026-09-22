@@ -1,4 +1,5 @@
 import { app, dialog, ipcMain, BrowserWindow, shell, systemPreferences, utilityProcess, type UtilityProcess } from 'electron';
+import { scheduler } from '../localModel/scheduler';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -225,6 +226,7 @@ async function startSession(opts: { speakers?: boolean; source?: 'mic' | 'file' 
     if (!granted) throw new Error('没有麦克风权限：请到「系统设置 → 隐私与安全性 → 麦克风」里允许 iML Markdown Editor');
   }
 
+  await scheduler.ensureCapacity('asr');
   session = 'starting';
   lastError = null;
   broadcast();
@@ -245,6 +247,7 @@ async function startSession(opts: { speakers?: boolean; source?: 'mic' | 'file' 
       if (m?.type === 'ready') {
         clearTimeout(timer);
         session = 'recording';
+        scheduler.touch('asr');
         broadcast();
         if (!settled) { settled = true; resolve(getAsrState()); }
       } else if (m?.type === 'error') {
@@ -343,6 +346,14 @@ export function stopAsr() {
 
 export function setupAsr(d: Deps) {
   deps = d;
+  scheduler.register({
+    id: 'asr', label: '实时转写', note: '录音、转写文件时才起，一场结束就退出',
+    running: () => !!worker,
+    busy: () => session !== 'idle',
+    pid: () => worker?.pid ?? null,
+    estimateBytes: () => 700 * 1024 * 1024,
+    stop: async () => { if (session !== 'idle') await stopSession(); killWorker(); },
+  });
   ipcMain.handle('asr:getState', () => getAsrState());
   ipcMain.handle('asr:install', () => { void startInstall(); return true; });
   ipcMain.handle('asr:cancelInstall', () => { installController?.abort(); return true; });

@@ -6,6 +6,8 @@ import http from 'http';
 import { setupFileSystemIPC } from './ipc/fileSystem';
 import { SearchIndex } from './searchIndex';
 import { setupLocalModel, ensureBuiltinEndpoint, builtinNotReadyHint, isBuiltinService, isLocalServerActive, stopServer as stopLocalServer } from './localModel';
+import { scheduler } from './localModel/scheduler';
+import { setupResources } from './localModel/resources';
 import { setupSemantic, syncSemanticIndex, stopSemanticServer, isSemanticServerActive } from './semantic';
 import { setupAsr, stopAsr, confirmDiscardTranscript, forgetUnsavedTranscript } from './asr';
 import { describeRelease } from './update';
@@ -420,7 +422,7 @@ function createWindow() {
  * 配置 / 关于 / 快捷键都是主窗口里的浮层，不再新开 BrowserWindow：
  * 多开窗口会让 Dock 与调度中心里出现好几个同名窗口。主窗口不在时先建出来再打开。
  */
-function openDialogInMain(id: 'about' | 'shortcuts' | 'ai-config' | 'image-config' | 'semantic-config' | 'transcribe-config' | 'settings') {
+function openDialogInMain(id: 'about' | 'shortcuts' | 'ai-config' | 'image-config' | 'semantic-config' | 'transcribe-config' | 'settings' | 'resources') {
   if (!mainWindow || mainWindow.isDestroyed()) {
     createWindow();
     mainWindow?.webContents.once('did-finish-load', () => {
@@ -591,6 +593,11 @@ function setupAppMenu() {
           label: 'AI 配图…',
           click: () => openDialogInMain('image-config'),
         },
+        { type: 'separator' },
+        {
+          label: '本机资源…',
+          click: () => openDialogInMain('resources'),
+        },
       ],
     },
     { role: 'windowMenu', label: '窗口' },
@@ -665,6 +672,7 @@ app.whenReady().then(() => {
   // 实时转写：下载识别组件、托管识别进程、转发音频与文字
   try {
     setupAsr({ isAiEnabled: () => getAppSettings().aiEnabled !== false });
+    setupResources(path.join(app.getPath('userData'), 'resources.json'));
   } catch (err) {
     console.error('Failed to setup transcription:', err);
   }
@@ -906,6 +914,7 @@ app.whenReady().then(() => {
   // temperature：整理纪要、问笔记这类「照着材料写」的任务传一个低温度，小模型才守规矩；不传就用服务端默认值（写作要有变化）
   ipcMain.on('ai:chat', async (event, { messages, requestId, maxTokens, temperature }) => {
     const sampling = typeof temperature === 'number' ? { temperature } : {};
+    let localWork = false;
     // 界面上的 AI 入口已经随总开关隐藏；这里再兜一道，保证关掉之后真的不发请求
     if (getAppSettings().aiEnabled === false) {
       event.sender.send(`ai:chat-error-${requestId}`, 'AI 功能已在设置中关闭');
@@ -926,6 +935,8 @@ app.whenReady().then(() => {
       }
       try {
         const local = await ensureBuiltinEndpoint();
+        scheduler.beginWork('chat');
+        localWork = true;
         endpoint = local.endpoint;
         model = local.model;
         protocol = 'openai';
@@ -1055,6 +1066,7 @@ app.whenReady().then(() => {
       }
     } finally {
       aiAbortControllers.delete(requestId);
+      if (localWork) scheduler.endWork('chat');
     }
   });
 

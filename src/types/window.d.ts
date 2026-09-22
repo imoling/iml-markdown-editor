@@ -5,6 +5,7 @@ export type { LocalState, LocalModelConfig, CustomModel, ServerState, LocalModel
 
 import type { SemanticState, SemanticHit, AskSource } from '../../electron/semantic/index';
 import type { HistoryEntry } from '../../electron/history';
+import type { ResourceState, SchedulerConfig, ServiceId } from '../../electron/localModel/scheduler';
 import type { OrphanImage } from '../../electron/assets';
 export type { SemanticState, SemanticHit, EmbedModelEntry, AskSource } from '../../electron/semantic/index';
 export type { HistoryEntry } from '../../electron/history';
@@ -198,6 +199,14 @@ declare global {
       };
       clipboard?: {
         writeHtml: (html: string, text: string) => Promise<boolean>;
+      };
+      resources: {
+        getState: () => Promise<ResourceState>;
+        start: (id: ServiceId) => Promise<ResourceState>;
+        stop: (id: ServiceId) => Promise<ResourceState>;
+        setConfig: (patch: { idleMinutes?: Partial<Record<ServiceId, number>>; exclusiveImage?: boolean }) => Promise<ResourceState>;
+        onState: (cb: (state: ResourceState) => void) => () => void;
+        onNotice: (cb: (text: string) => void) => () => void;
       };
       app: {
         checkUpdates: () => Promise<UpdateInfo>;
