@@ -245,6 +245,8 @@ export interface AppState {
   globalSearchQuery: string | null;
   /** 笔记库内容版本：树刷新 / 外部改动时 +1，反向链接面板据此重新查询 */
   libraryVersion: number;
+  /** 索引建好了 / 库变了：依赖它的面板（日记月历等）重新读一遍 */
+  bumpLibraryVersion: () => void;
   expandedPaths: string[];
   navigationRequest: NavigationRequest | null;
   updateStatus: {
@@ -504,6 +506,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   globalSearchFocus: 0,
   globalSearchQuery: null,
   libraryVersion: 0,
+  bumpLibraryVersion: () => set((state) => ({ libraryVersion: state.libraryVersion + 1 })),
   sidebarWidth: 240,
   fileSort: (() => { try { const v = localStorage.getItem(FILE_SORT_KEY); return isFileSortMode(v) ? v : DEFAULT_FILE_SORT; } catch { return DEFAULT_FILE_SORT; } })(),
   expandedPaths: [],

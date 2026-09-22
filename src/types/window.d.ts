@@ -179,7 +179,7 @@ declare global {
       search: {
         query: (query: string, limit?: number) => Promise<SearchResult[]>;
         status: () => Promise<{ root: string | null; count: number; building: boolean }>;
-        listNotes: () => Promise<{ path: string; title: string; aliases?: string[] }[]>;
+        listNotes: () => Promise<{ path: string; title: string; aliases?: string[]; chars?: number }[]>;
         /** 传库里笔记的路径：按它的文件名 / 一级标题 / 别名找链接；传别的当成一个名字 */
         backlinks: (nameOrPath: string) => Promise<BacklinkResult[]>;
         unlinkedMentions: (filePath: string) => Promise<MentionResult[]>;

@@ -340,6 +340,8 @@ const App: React.FC = () => {
     window.api.events.on('session:clear', () => clearSessionAndReload());
     // 笔记库目录被外部（同步盘 / 其他编辑器）改动：刷新树，未修改的标签页跟随磁盘
     window.api.events.on('library:changed', (paths: string[]) => useAppStore.getState().handleExternalChanges(paths));
+    // 后台索引建完：日记月历这类「挂载时问一次」的面板要重新读
+    window.api.events.on('library:indexed', () => useAppStore.getState().bumpLibraryVersion());
     // iml:// 链接：主进程已经解析、校验过，这里拉过来逐个执行
     window.api.events.on('app-url', () => { void drainAppUrls(); });
     // 用户的 CSS 片段被保存了：立刻重新应用

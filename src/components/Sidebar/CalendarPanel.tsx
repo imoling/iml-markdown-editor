@@ -1,14 +1,15 @@
 import React from 'react';
 import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAppStore } from '../../stores/appStore';
-import { monthGrid, shiftMonth, dailyNotesByDate } from '../../utils/calendar';
+import { monthGrid, shiftMonth, dailyNotesByDate, diaryLevel, type DailyNote } from '../../utils/calendar';
 import { formatDate } from '../../utils/date';
 
 const WEEKDAYS = ['一', '二', '三', '四', '五', '六', '日'];
 const OPEN_KEY = 'iml.calendar.open';
 
 /**
- * 日记月历（钉在笔记库页底部，不随文件树滚动）：有日记的日子带一个点，点一下打开；今天有圈。
+ * 日记月历（钉在笔记库页底部，不随文件树滚动）：写过日记的日子填成主题色的格子，写得越多颜色越深
+ * （像 GitHub 的提交格子），点一下打开；今天有圈。
  * 没有日记的日子先选中、再确认新建——手滑点一下不该在库里多出一个文件。
  */
 export const CalendarPanel: React.FC = () => {
@@ -20,7 +21,7 @@ export const CalendarPanel: React.FC = () => {
 
   const [open, setOpen] = React.useState(() => localStorage.getItem(OPEN_KEY) !== '0');
   const [view, setView] = React.useState(() => { const d = new Date(); return { year: d.getFullYear(), month: d.getMonth() }; });
-  const [daily, setDaily] = React.useState<Map<string, string>>(new Map());
+  const [daily, setDaily] = React.useState<Map<string, DailyNote>>(new Map());
   /** 点了一个还没有日记的日子：等用户确认新建 */
   const [pending, setPending] = React.useState<Date | null>(null);
   const today = formatDate(new Date());
@@ -41,8 +42,8 @@ export const CalendarPanel: React.FC = () => {
 
   const pick = (date: Date, key: string, inMonth: boolean) => {
     if (!inMonth) setView({ year: date.getFullYear(), month: date.getMonth() });
-    const path = daily.get(key);
-    if (path) { setPending(null); void openFileByPath(path); return; }
+    const note = daily.get(key);
+    if (note) { setPending(null); void openFileByPath(note.path); return; }
     // 今天的日记本来就有「今日日记」一键新建的惯例，不用再确认一次
     if (key === today) { setPending(null); void openDailyNote(date); return; }
     setPending(date);
@@ -69,22 +70,30 @@ export const CalendarPanel: React.FC = () => {
           <div className="calendar-panel__grid">
             {WEEKDAYS.map((w) => <div key={w} className="calendar-panel__weekday">{w}</div>)}
             {weeks.flat().map(({ date, key, inMonth }) => {
-              const path = daily.get(key);
+              const note = daily.get(key);
+              const level = note ? diaryLevel(note.chars) : 0;
               const cls = [
                 'calendar-panel__day',
                 !inMonth && 'calendar-panel__day--dim',
                 key === today && 'calendar-panel__day--today',
-                path && 'calendar-panel__day--has',
-                path && path === activeTabId && 'calendar-panel__day--active',
+                note && `calendar-panel__day--l${level}`,
+                note && note.path === activeTabId && 'calendar-panel__day--active',
                 pending && formatDate(pending) === key && 'calendar-panel__day--pending',
               ].filter(Boolean).join(' ');
               return (
-                <button key={key} className={cls} onClick={() => pick(date, key, inMonth)} title={path ? `打开 ${key} 的日记` : key}>
+                <button key={key} className={cls} onClick={() => pick(date, key, inMonth)} title={note ? `打开 ${key} 的日记 · ${note.chars} 字` : key}>
                   {date.getDate()}
                 </button>
               );
             })}
           </div>
+          {countThisMonth > 0 && (
+            <div className="calendar-panel__legend" title="颜色深浅按这一天写了多少字">
+              <span>少</span>
+              {[1, 2, 3, 4].map((l) => <i key={l} className={`calendar-panel__swatch calendar-panel__swatch--l${l}`} />)}
+              <span>多</span>
+            </div>
+          )}
           {pending && (
             <div className="calendar-panel__confirm">
               <span className="flex-1">{pending.getMonth() + 1} 月 {pending.getDate()} 日还没有日记</span>

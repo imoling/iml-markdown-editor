@@ -757,7 +757,11 @@ app.whenReady().then(() => {
       });
       libraryWatcher.on('error', (err) => console.warn('[library:watch]', err));
       // 监听开始的同时后台建索引
-      searchIndex.build(dirPath).then(() => syncSemanticIndex()).catch((err) => console.warn('[search] index build failed:', err));
+      // 建完要说一声：日记月历、快速打开这些都是挂载时问一次 listNotes，冷启动时索引还没建好，不吭声它们就一直是空的
+      searchIndex.build(dirPath).then(() => {
+        if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('library:indexed', searchIndex.status());
+        return syncSemanticIndex();
+      }).catch((err) => console.warn('[search] index build failed:', err));
       return true;
     } catch (err) {
       console.warn('[library:watch] failed:', err);

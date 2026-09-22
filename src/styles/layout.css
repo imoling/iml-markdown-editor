@@ -791,11 +791,27 @@ button.transcribe-note--link:hover { filter: brightness(0.97); }
 }
 .calendar-panel__day:hover { background-color: var(--bg-hover-editor); }
 .calendar-panel__day--dim { opacity: 0.35; }
-/* 有日记：数字加重，下面一个主题色的点 */
-.calendar-panel__day--has { color: var(--text-primary); font-weight: 600; }
-.calendar-panel__day--has::after { content: ''; position: absolute; left: 50%; bottom: 3px; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background-color: var(--color-brand-indigo); }
-.calendar-panel__day--today { border-color: color-mix(in srgb, var(--color-brand-indigo) 55%, transparent); color: var(--color-brand-indigo); font-weight: 600; }
-.calendar-panel__day--active { background-color: color-mix(in srgb, var(--color-brand-indigo) 14%, transparent); }
+/* 写过日记的日子填成主题色的格子，写得越多越深（像 GitHub 的提交格子）；最深那档字用白色才看得清 */
+.calendar-panel__day--l1, .calendar-panel__day--l2, .calendar-panel__day--l3, .calendar-panel__day--l4 { color: var(--text-primary); font-weight: 600; }
+.calendar-panel__day--l1 { background-color: color-mix(in srgb, var(--color-brand-indigo) 14%, transparent); }
+.calendar-panel__day--l2 { background-color: color-mix(in srgb, var(--color-brand-indigo) 32%, transparent); }
+.calendar-panel__day--l3 { background-color: color-mix(in srgb, var(--color-brand-indigo) 55%, transparent); }
+.calendar-panel__day--l4 { background-color: var(--color-brand-indigo); color: #fff; }
+.calendar-panel__day--l3:hover, .calendar-panel__day--l4:hover { background-color: color-mix(in srgb, var(--color-brand-indigo) 78%, transparent); }
+.calendar-panel__day--l1:hover, .calendar-panel__day--l2:hover { background-color: color-mix(in srgb, var(--color-brand-indigo) 42%, transparent); }
+/* 图例：少 ▫▫▪▪ 多 */
+.calendar-panel__legend { display: flex; align-items: center; justify-content: flex-end; gap: 3px; margin-top: 6px; padding-right: 2px; font-size: 9px; color: var(--text-muted); }
+.calendar-panel__swatch { width: 9px; height: 9px; border-radius: 2px; }
+.calendar-panel__swatch--l1 { background-color: color-mix(in srgb, var(--color-brand-indigo) 14%, transparent); }
+.calendar-panel__swatch--l2 { background-color: color-mix(in srgb, var(--color-brand-indigo) 32%, transparent); }
+.calendar-panel__swatch--l3 { background-color: color-mix(in srgb, var(--color-brand-indigo) 55%, transparent); }
+.calendar-panel__swatch--l4 { background-color: var(--color-brand-indigo); }
+/* 今天：一圈边框，填色的日子也看得出来是今天 */
+.calendar-panel__day--today { border-color: var(--color-brand-indigo); color: var(--color-brand-indigo); font-weight: 600; }
+.calendar-panel__day--today.calendar-panel__day--l4 { color: #fff; }
+/* 正开着的那篇：格子本来就有底色了，再加背景看不出来，改成内嵌一圈描边（深色格子上用白圈） */
+.calendar-panel__day--active { box-shadow: inset 0 0 0 2px var(--color-brand-indigo); }
+.calendar-panel__day--active.calendar-panel__day--l4 { box-shadow: inset 0 0 0 2px #fff; }
 .calendar-panel__day--pending { border-style: dashed; border-color: var(--color-brand-indigo); }
 .calendar-panel__confirm { display: flex; align-items: center; gap: 6px; margin-top: 6px; padding: 4px 6px 4px 8px; border-radius: 8px; font-size: 11px; color: var(--text-secondary); background-color: color-mix(in srgb, var(--color-brand-indigo) 6%, transparent); }
 

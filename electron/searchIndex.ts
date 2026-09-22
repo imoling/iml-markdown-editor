@@ -194,8 +194,9 @@ export class SearchIndex {
     }
   }
 
-  listNotes(): { path: string; title: string; aliases: string[] }[] {
-    return [...this.notes.values()].map((n) => ({ path: n.path, title: n.title, aliases: n.aliases })).sort((a, b) => a.title.localeCompare(b.title));
+  listNotes(): { path: string; title: string; aliases: string[]; chars: number }[] {
+    // chars 给日记月历画深浅用：写得多的日子颜色深
+    return [...this.notes.values()].map((n) => ({ path: n.path, title: n.title, aliases: n.aliases, chars: n.content.length })).sort((a, b) => a.title.localeCompare(b.title));
   }
 
   /** 全库标签及篇数；层级标签 a/b 同时计入父标签 a */
