@@ -60,12 +60,16 @@ describe('发布说明得能变成像样的更新提醒', () => {
   it('每份发布说明都有口号、开头那段，和至少 2 条说得出内容的要点', () => {
     expect(files.length).toBeGreaterThan(0);
     const 没内容 = /^(改了什么|顺带|其它改动|杂项|细节|更新内容|说明)$/;
+    // 标题说的应该是「用户拿到什么 / 现在是什么样」，不是「我们返工了多少」：
+    // 「界面上的字，少说一半」这种自嘲 + 量化的写法，弹到用户面前像个段子
+    const 自嘲 = /(少说一半|砍掉|返工|重构|优化了一遍)/;
     for (const f of files) {
       const s = summarizeReleaseNotes(fs.readFileSync(path.join(dir, f), 'utf8'));
       expect(`${f}: ${s.slogan}`).toMatch(/: .+/);
       expect(`${f}: ${s.lead.length}`).not.toMatch(/: 0$/);
       expect(`${f}: ${s.highlights.length} 条要点`).toMatch(/: [2-9]\d* 条/);
       for (const h of s.highlights) expect(`${f}: ${h}`).not.toMatch(没内容);
+      expect(`${f}: ${s.slogan}`).not.toMatch(自嘲);
     }
   });
 });
