@@ -7,13 +7,22 @@
   代价：@main 有缓存，换了截图最长要等半天才刷新；本地预览也走网络。别「顺手」改回相对路径。
 -->
 
-**极简其表 · 极致内核**
+中文 · **[English](README.en.md)**
 
-![iML Markdown Editor 26.5：写到一半想配张图，说一句想要什么，这台电脑自己画出来，存在笔记旁边](https://cdn.jsdelivr.net/gh/imoling/iml-markdown-editor@main/screenshots/本机生图.png)
+**极简其表 · 极致内核 —— AI 全在你这台电脑上跑，笔记不出门**
+
+![说一句想要什么，几分钟后图就出现在笔记里，全程离线](https://cdn.jsdelivr.net/gh/imoling/iml-markdown-editor@main/screenshots/demo-image-gen.gif)
+
+<p align="center"><em>空行按空格 → 说一句想要什么 → 图自己出现在正文里。全程离线，上面这段是真机录的。</em></p>
+
+**[⬇ 下载最新版](https://github.com/imoling/iml-markdown-editor/releases/latest)** ·
+macOS（Apple 芯片 / Intel）· Windows（x64 / ARM）· 80 ~ 90 MB · MIT 开源
 
 ---
 
 本地 Markdown 编辑器，为长期写作和记笔记设计。界面只保留必要的东西：左边一棵笔记库树，中间一页纸，其余交给快捷键、斜杠菜单和侧边栏。笔记就是普通的 `.md` 文件，放在你自己的文件夹里，随时可以用别的工具打开。
+
+**写作助手、问你的笔记、实时转写、本机生图 —— 四件事全在这台电脑上完成**，模型用到才下载，笔记和声音都不出门。
 
 > [!TIP]
 > **只想要一个纯粹的 Markdown 编辑器？** 另有轻量版 **[iML 编辑器](#轻量版iml-编辑器)**：没有笔记库、没有 AI、没有后台进程，像记事本一样打开、写、保存，安装包不到 4 MB。→ [下载轻量版](https://github.com/imoling/iml-editor-lite/releases) · [了解更多](https://github.com/imoling/iml-editor-lite#readme)

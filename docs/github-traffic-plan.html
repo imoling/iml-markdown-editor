@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>GitHub 流量诊断与增长方案 · iML Markdown Editor</title>
+<style>
+  :root{--ink:#1c1c1e;--ink2:#48484a;--muted:#8e8e93;--line:#e5e5ea;--bg:#fafafa;--card:#fff;
+        --brand:#5b5bd6;--bad:#d64545;--good:#2a9d63;--warn:#c77700}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.75 -apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",Arial,sans-serif}
+  .wrap{max-width:1080px;margin:0 auto;padding:48px 28px 96px}
+  h1{font-size:30px;line-height:1.35;margin:0 0 8px;letter-spacing:-.4px}
+  h2{font-size:21px;margin:56px 0 14px;padding-top:18px;border-top:1px solid var(--line)}
+  h3{font-size:16px;margin:28px 0 10px}
+  p{margin:10px 0}
+  .lead{color:var(--ink2);font-size:16px}
+  .meta{color:var(--muted);font-size:13px;margin-bottom:28px}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:22px 0 8px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+  .card b{display:block;font-size:26px;font-weight:650;letter-spacing:-.5px}
+  .card span{color:var(--muted);font-size:12px}
+  table{width:100%;border-collapse:separate;border-spacing:0;background:var(--card);border:1px solid var(--line);
+        border-radius:12px;overflow:hidden;margin:14px 0;font-size:14px}
+  th,td{text-align:left;padding:10px 13px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#f5f5f7;font-weight:600;font-size:13px;color:var(--ink2)}
+  tr:last-child td{border-bottom:none}
+  td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;background:#f0f0f3;padding:1px 5px;border-radius:4px}
+  pre{background:#f5f5f7;border:1px solid var(--line);border-radius:10px;padding:14px;overflow:auto;
+      font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;line-height:1.6}
+  .box{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:14px 0}
+  .box--key{border-left:3px solid var(--brand);background:#f7f7ff}
+  .box--bad{border-left:3px solid var(--bad)}
+  .box--good{border-left:3px solid var(--good)}
+  .tag{display:inline-block;padding:1px 7px;border-radius:5px;font-size:11.5px;margin-right:6px;background:#eef;color:var(--brand);white-space:nowrap}
+  .tag--now{background:#fdecec;color:var(--bad)}
+  .tag--wk{background:#fff4e2;color:var(--warn)}
+  .tag--mo{background:#eef6f1;color:var(--good)}
+  .bar{display:inline-block;height:9px;background:var(--brand);border-radius:3px;vertical-align:middle}
+  ul,ol{margin:10px 0;padding-left:22px} li{margin:5px 0}
+  .kicker{color:var(--brand);font-size:12px;font-weight:600;letter-spacing:.6px;text-transform:uppercase}
+  footer{margin-top:64px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="kicker">流量诊断</div>
+<h1>不是转化差，是只有一个渠道、而且只响了一次</h1>
+<p class="lead">拉了仓库近两周的真实流量、来源、各版本下载量和 star 的时间分布。
+结论和直觉不同：<strong>愿意来的人转化得挺好，问题是没人被送过来</strong>。</p>
+<p class="meta">数据取自 GitHub Traffic / Releases / Stargazers API，2026-09-23 · 统计窗口 09-09 ~ 09-22</p>
+
+<div class="cards">
+  <div class="card"><b>140</b><span>近两周独立访客</span></div>
+  <div class="card"><b>77</b><span>独立克隆者</span></div>
+  <div class="card"><b>17</b><span>累计 star</span></div>
+  <div class="card"><b>0 / 1</b><span>watch / fork</span></div>
+  <div class="card"><b>350</b><span>累计安装包下载</span></div>
+  <div class="card"><b>32</b><span>最大外部来源（github.com 站内）</span></div>
+</div>
+
+<h2>一、数据说了什么</h2>
+
+<h3>1. 流量是「一次性脉冲」，不是流</h3>
+<p>每天独立访客：</p>
+<pre>09-09 ·
+09-11 ▌
+09-14 ▌
+09-17 ▌▌
+09-19 ███████████████
+09-20 █████████████
+09-21 ███████████████████████████████
+09-22 █████████████████████████████████████████████████████████████████████████████████████ 85</pre>
+<p>前十天几乎为零，09-19 起跳、09-22 冲到 85。同一天进账 <strong>6 个 star</strong>（全部 17 个里，9 月只有 8 个，其中 6 个在这一天）。</p>
+<div class="box box--key">
+<strong>85 个访客 → 6 个 star ≈ 7%。</strong>这个转化率在开源项目里算好的（常见 1~3%）。
+所以「GitHub 流量不好」的真实含义是：<strong>只有那一天有人推了一把，其余时间没有任何入口把人送过来。</strong>
+</div>
+
+<h3>2. 来源几乎是空的 —— 而这恰恰暴露了问题</h3>
+<table>
+<tr><th>来源</th><th class="num">次数 / 人数</th><th>说明</th></tr>
+<tr><td>github.com（站内）</td><td class="num">32 / 15</td><td>GitHub 自己的推荐、搜索、关注流</td></tr>
+<tr><td>百度</td><td class="num">11 / 8</td><td>搜得到，但量极小</td></tr>
+<tr><td>Bing</td><td class="num">7 / 7</td><td>—</td></tr>
+<tr><td>Google</td><td class="num">2 / 2</td><td>几乎没有英文世界的流量</td></tr>
+<tr><td>mail.qq.com</td><td class="num">1 / 1</td><td>—</td></tr>
+<tr><td><strong>加起来</strong></td><td class="num"><strong>53 次</strong></td><td>可 456 次浏览里有 <strong>四百次没有来源</strong></td></tr>
+</table>
+<p>没有来源 = 直接访问，或者<strong>来源被剥掉了</strong>。微信正是后者：从公众号跳出来的链接不带 referrer。
+结合 09-22 的尖峰，几乎可以断定<strong>那天的流量来自你的公众号</strong>——
+也就是说，你目前<strong>只有一个渠道，而且它在统计里是隐形的</strong>。</p>
+
+<h3>3. 来的人是 Windows，讲的故事是 Mac</h3>
+<table>
+<tr><th>版本</th><th class="num">Windows x64</th><th class="num">macOS arm64</th><th class="num">其它</th></tr>
+<tr><td>v26.5.1</td><td class="num">22</td><td class="num">4</td><td class="num">0</td></tr>
+<tr><td>v26.4.1</td><td class="num">31</td><td class="num">6</td><td class="num">0</td></tr>
+<tr><td>lite-v26.4.0</td><td class="num">68</td><td class="num">17</td><td class="num">6</td></tr>
+<tr><td>v26.4.0</td><td class="num">48</td><td class="num">23</td><td class="num">14</td></tr>
+<tr><td><strong>近期合计</strong></td><td class="num"><strong>≈ 208</strong></td><td class="num"><strong>≈ 74</strong></td><td class="num">—</td></tr>
+</table>
+<div class="box box--bad">
+下载的人里 <strong>七成是 Windows</strong>，但 README 首图是 Mac 截图、新特性介绍里的七张配图全是 Mac、
+26.5 的两个主打功能里「系统声音转写」是 macOS 独占。<strong>你在用 Mac 的故事，招 Windows 的用户。</strong>
+本机生图在 Windows x64（Vulkan）上是能跑的，但没有一张 Windows 截图能证明这件事。
+</div>
+
+<h3>4. 仓库本身没把「流量放大器」打开</h3>
+<table>
+<tr><th>项目</th><th>现状</th><th>影响</th></tr>
+<tr><td>社交预览图</td><td>GitHub 自动生成的默认卡片</td><td>链接分享到任何地方都长得像「一个随便的仓库」</td></tr>
+<tr><td>Homepage 字段</td><td>空</td><td>仓库右上角没有落地入口，搜索引擎少一条信号</td></tr>
+<tr><td>Topics</td><td>7 个，缺最关键的几个</td><td>缺 <code>note-taking</code> <code>local-first</code> <code>offline-ai</code> <code>local-llm</code> <code>obsidian</code> <code>ai-writing</code> <code>speech-to-text</code> <code>image-generation</code> <code>notes-app</code> —— GitHub 的 topic 页是稳定的长尾入口</td></tr>
+<tr><td>英文 README</td><td>没有</td><td>Google 只带来 2 个人。HN / Reddit / awesome 列表这条线<strong>整条是关的</strong></td></tr>
+<tr><td>Discussions</td><td>关闭</td><td>用户提问只能开 issue，门槛高；没有沉淀内容供搜索</td></tr>
+<tr><td>Watch</td><td>0</td><td>发版没有任何人被通知</td></tr>
+<tr><td>轻量版仓库</td><td>0 star、无 topics、无描述打磨、两周 12 个访客</td><td>把下载和搜索权重劈成两半，两边都不够强</td></tr>
+<tr><td>1.x 老版本</td><td>仍列在 Releases 里</td><td>新访客翻到 v1.0 会以为项目没人维护</td></tr>
+</table>
+
+<h2>二、方案：按「投入 → 回报」排序</h2>
+
+<h3><span class="tag tag--now">今天 · 半小时</span>把放大器打开</h3>
+<p>这些不需要写代码，做完之后<strong>每一个到访者的价值都会变高</strong>。</p>
+<ol>
+<li><strong>补 Topics</strong>（GitHub topic 页是长期稳定的免费入口）：
+<pre>markdown-editor  note-taking  notes-app  local-first  offline
+ai-writing  local-llm  speech-to-text  image-generation
+electron  tiptap  productivity  obsidian  chinese</pre></li>
+<li><strong>传一张社交预览图</strong>（Settings → Social preview，1280×640）。
+手上现成的 <code>screenshots/本机生图.png</code> 裁一版就行。分享到微信、即刻、V2EX、Twitter 时卡片会带图，点击率差一倍。</li>
+<li><strong>填 Homepage</strong>：暂时先指向 Releases 页或公众号文章，之后换成落地页。</li>
+<li><strong>打开 Discussions</strong>，建三个帖子：「装不上怎么办」「想要什么功能」「你在用哪个本机模型」。</li>
+<li><strong>老版本归档</strong>：把 v1.x 几个 Release 标成 pre-release，首屏只留 26.x。</li>
+<li><strong>轻量版仓库补描述和 topics</strong>，README 顶部加一行「完整版在这里 →」，主仓库也回链。两边互相导流，别各活各的。</li>
+</ol>
+
+<h3><span class="tag tag--now">今天</span>修掉微信那条断路</h3>
+<div class="box box--bad">
+<strong>微信里点不开 GitHub 链接。</strong>你最大的渠道，落地那一步是断的：读者看完文章，想下载，要么复制链接换浏览器，要么放弃。
+09-22 那天 85 个人到了 GitHub——能想象有多少人在这一步掉了。
+</div>
+<ul>
+<li>公众号文末不要只放 GitHub 链接，放<strong>一张二维码 + 一个短链</strong>（指向 Releases 或落地页）。</li>
+<li>更狠一点：安装包同时传一份到<strong>国内网盘</strong>（123 云盘 / 蓝奏云），文章里给「网盘直下」和「GitHub（求个 star）」两个入口——
+想快的走网盘，愿意支持的去 GitHub。</li>
+<li>用<strong>不同短链区分渠道</strong>（公众号一个、V2EX 一个、小红书一个），这是唯一能绕过 referrer 被剥的办法，否则你永远不知道哪个渠道有效。</li>
+</ul>
+
+<h3><span class="tag tag--wk">这周</span>把「发版」变成「发一次声」</h3>
+<p>你 10 天发了 7 个版本，这是很强的势能，但每次都只在一个地方说了一句。
+固定成一张清单，每次发版走一遍：</p>
+<table>
+<tr><th>渠道</th><th>怎么发</th><th>预期</th></tr>
+<tr><td><strong>V2EX「分享创造」</strong></td><td>标题写功能不写产品名：「做了个 Markdown 编辑器，AI 全在本机跑，笔记不出电脑」</td><td>一次 200~2000 UV，质量最高，容易来 star</td></tr>
+<tr><td><strong>小众软件 appinn</strong></td><td>投稿（网站有投稿入口），中文桌面工具最大的分发口</td><td>被收录一次 = 长期搜索流量</td></tr>
+<tr><td><strong>少数派</strong></td><td>写成体验文，不写成发布公告</td><td>受众和产品高度重合</td></tr>
+<tr><td><strong>即刻 / 小红书</strong></td><td>发<strong>录屏</strong>：说一句话 → 三分钟后图出现在笔记里</td><td>这功能天生适合短视频，比截图强十倍</td></tr>
+<tr><td><strong>公众号</strong></td><td>已有。改进：文末加二维码 + 网盘 + 「求 star」的明确请求</td><td>把现有流量的转化再抬一截</td></tr>
+</table>
+
+<h3><span class="tag tag--mo">这个月</span>打开英文世界这条线</h3>
+<div class="box box--key">
+这是<strong>回报最高但你还完全没做</strong>的一件事。你的产品定位——
+<em>笔记本地存、AI 全在本机跑、对话/检索/转写/生图都不出网</em>——
+正是英文圈 local-first / local-LLM 人群最买账的叙事，而那群人<strong>是会点 star 的</strong>。
+现在 Google 只给你带来 2 个访客，因为仓库里没有一个英文字。
+</div>
+<ol>
+<li><strong>写 README.en.md</strong>（不用翻译全文，300 行压成 80 行：一句定位 + 一张 GIF + 功能表 + 下载表 + 隐私声明），顶部互相切换。</li>
+<li>发到这几个地方（一次一个，间隔开）：
+  <ul>
+    <li><strong>r/LocalLLaMA</strong>：角度是「note app that runs chat / embedding / ASR / image-gen fully local, with a memory scheduler so they don't OOM your 24GB Mac」——你的调度器那套是真有话可说的</li>
+    <li><strong>r/selfhosted</strong>、<strong>r/ObsidianMD</strong>（角度：Obsidian 搬家无痛，链接语法全兼容）</li>
+    <li><strong>Hacker News · Show HN</strong>：标题「Show HN: A Markdown editor where the AI never leaves your laptop」</li>
+    <li><strong>Product Hunt</strong>：需要一张好图和一段 60 秒视频</li>
+  </ul></li>
+<li><strong>提 PR 进 awesome 列表</strong>：<code>awesome-electron</code>、<code>awesome-markdown-editors</code>、<code>awesome-selfhosted</code>、<code>awesome-local-llm</code>。
+被收录一条 = 一条永久的、带权重的反向链接。</li>
+</ol>
+
+<h3><span class="tag tag--mo">这个月</span>把首屏改成「5 秒决定要不要 star」</h3>
+<p>GitHub README 的第一屏决定一切。现在是一张静态 Mac 截图，建议换成：</p>
+<ul>
+<li><strong>一张 GIF</strong>（≤ 5 MB）：空行按空格 → 输入「秋天的山间小路」→ 占位块走进度 → 图出现。
+这是你最有说服力的 8 秒，静态图完全传达不了。</li>
+<li>GIF 下面<strong>三行字讲清楚定位</strong>，然后立刻是下载表 —— 别让人先读一屏中文散文。</li>
+<li>补<strong>一张 Windows 截图</strong>：七成下载者是 Windows，让他们看到自己的系统。</li>
+</ul>
+
+<h2>三、发版日检查清单（复制去用）</h2>
+<pre>□ 仓库：Release 标题是「用户拿到什么」，不是版本号
+□ 社交预览图：这一版有新功能就换一张
+□ 公众号：文章 + 二维码 + 网盘直下 + 一句「觉得有用的话给个 star」
+□ V2EX 分享创造：标题写功能
+□ 即刻 / 小红书：一段 15 秒录屏
+□ 英文：Reddit 对口子版块（一次一个，别同一天铺）
+□ 一周后：拉一次 traffic API，看哪个短链有效
+</pre>
+
+<h3>怎么量（否则永远在猜）</h3>
+<pre># 每周一跑一次，存进 docs/traffic-log.md
+gh api repos/imoling/iml-markdown-editor/traffic/views
+gh api repos/imoling/iml-markdown-editor/traffic/popular/referrers
+gh api repos/imoling/iml-markdown-editor/releases --jq '.[0].assets[] | "\(.name) \(.download_count)"'</pre>
+<p>GitHub 的流量数据<strong>只保留 14 天</strong>，不定期抓就永久丢失。现在开始记，三个月后才有「哪个渠道有效」的答案。</p>
+
+<h2>四、如果只做三件事</h2>
+<div class="box box--good">
+<ol>
+<li><strong>补 Topics + 传社交预览图</strong>（半小时，永久生效）</li>
+<li><strong>公众号文末改成二维码 + 网盘 + 明确请求 star</strong>（下一篇就能用，直接抬高你现有唯一渠道的转化）</li>
+<li><strong>写英文 README，发一次 r/LocalLLaMA</strong>（一个下午，打开一条你现在完全没有的流量线）</li>
+</ol>
+</div>
+
+<footer>
+生成于 2026-09-23 · 文件：<code>docs/github-traffic-plan.html</code><br>
+数据来源：GitHub Traffic API（14 天窗口）、Releases API 下载计数、Stargazers API（带 starred_at）。
+</footer>
+
+</div>
+</body>
+</html>
