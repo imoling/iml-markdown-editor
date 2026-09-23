@@ -212,3 +212,89 @@ Interface is Chinese today; the README has an English version and an English UI 
 ```bash
 ./scripts/traffic-log.sh    # 每周一跑一次，自动追加
 ```
+
+---
+
+## 八、演示视频（抖音 / 视频号 / 小红书 / B 站）
+
+素材都在 `media/`，真机录的，带片头片尾、烧好的字幕和中文解说：
+
+| 文件 | 规格 | 用在哪 |
+|---|---|---|
+| `media/demo-vertical.mp4` | 1080×1920 竖屏 · 78 秒 · 3.1 MB | 抖音、视频号、小红书 |
+| `media/demo-landscape.mp4` | 1920×1080 横屏 · 78 秒 · 3.2 MB | B 站、V2EX、YouTube、官网 |
+| `media/cover-vertical.jpg` | 1080×1920 | 抖音 / 视频号封面 |
+| `media/cover-xhs.jpg` | 1080×1440（3:4） | 小红书封面 |
+| `screenshots/demo-image-gen.gif` | 900×611 · 13 秒 · 1.2 MB | README、Reddit、论坛 |
+
+**内容顺序**：片头 →「笔记就是普通的 .md 文件」→ 双模切换 → 斜杠菜单 → 折叠 →
+`[[` 链接与悬浮预览 → 命令面板 → 问你的笔记 → 实时转写 → 本机生图 → 本机资源 → 片尾。
+解说词就是每一章的字幕，重录时改 `docs/launch-kit.md` 这一节对应的文案即可。
+
+### 抖音 / 视频号
+
+```
+标题：笔记里的 AI，全跑在我自己电脑上
+
+正文：
+做了一个 Markdown 编辑器，写作、问笔记、开会转写、配图，
+四件事的 AI 全在本机跑，笔记和录音都不上传。
+模型用到才下载，装包只有 80 MB。
+开源免费，macOS 和 Windows 都有，GitHub 搜 iML Markdown Editor。
+
+#效率工具 #Markdown #本地部署 #AI工具 #开源软件 #笔记软件
+```
+
+**注意**：抖音正文里放链接没用，靠「GitHub 搜 iML Markdown Editor」这句和主页简介引流；
+主页简介写上 GitHub 地址。评论区置顶一条「怎么下载」的回复。
+
+### 小红书
+
+```
+标题：终于把 AI 搬进自己电脑了｜开源笔记软件
+
+正文：
+一直不太愿意把笔记发给别人的服务器，所以自己写了个 Markdown 编辑器，
+把 AI 那部分全搬到了本机：
+
+· 写作助手：续写、润色、整理
+· 问你的笔记：答案只来自你写过的东西，每条都标出处
+· 实时转写：开会边听边出字，还能分清谁在说
+· 本机生图：说一句想要什么，几分钟后图出现在笔记里
+
+全程离线，笔记就是普通的 .md 文件，放在自己的文件夹里。
+模型用到才下载，安装包只有 80 MB。开源免费，macOS / Windows 都有。
+
+#效率工具 #笔记软件 #Markdown #开源 #本地AI #数字生活 #程序员
+```
+
+**封面**用 `media/cover-xhs.jpg`（3:4）。小红书正文里可以写 GitHub 地址，但不能点，
+所以第一条评论再贴一次，并说明「搜 iML Markdown Editor 也能找到」。
+
+### B 站
+
+```
+标题：我做了个 AI 全在本机跑的 Markdown 编辑器（开源）
+
+简介：
+写作助手、问你的笔记、实时转写、本机生图 —— 四件事都在自己电脑上完成，
+笔记和声音都不出门。模型用到才下载，安装包 80 MB。
+
+开源地址：https://github.com/imoling/iml-markdown-editor
+macOS（Apple 芯片 / Intel）、Windows（x64 / ARM）都有安装包。
+
+分区：科技 → 软件应用
+标签：Markdown、效率工具、开源、本地部署、AI、笔记软件
+```
+
+用 `media/demo-landscape.mp4`。B 站简介里的链接能点，务必放全。
+
+### 发之前对一遍
+
+```
+□ 封面：竖屏用 cover-vertical.jpg，小红书用 cover-xhs.jpg
+□ 抖音 / 视频号：主页简介写上 GitHub 地址（正文放了也点不了）
+□ 小红书：第一条评论补一次地址
+□ B 站：简介放完整链接，选「科技 → 软件应用」分区
+□ 发完一周：./scripts/traffic-log.sh，看 GitHub 那边的量有没有动
+```
