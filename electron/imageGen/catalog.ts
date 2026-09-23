@@ -39,8 +39,8 @@ export interface ImageModelSpec {
   defaultStepsId: string;
   files: ImageFileSpec[];
   /**
-   * 跑起来的峰值内存（实测）。别拿文件大小去推：开着 --offload-to-cpu 时权重不会同时驻留，
-   * Qwen-Image 三个文件 10.3 GB，实测峰值只有 5.6 GB
+   * 768 × 768 时的峰值内存（实测）。别拿文件大小去推：开着 --offload-to-cpu 时权重不会同时驻留，
+   * Qwen-Image 三个文件 10.3 GB，实测峰值只有 5.6 GB。别的尺寸按 localImageEstimateBytes 折算
    */
   peakBytes: number;
   /** 基准机（M4 基础款 24 GB）上的实测曲线；换台机器第一张画完就按实测折算 */
@@ -63,7 +63,7 @@ export const IMAGE_MODELS: ImageModelSpec[] = [
       // FLUX 的 VAE。官方那个仓库要先同意许可才能下，这里用公开镜像（文件逐字节相同，SHA256 对得上）
       { key: 'vae', label: 'VAE', repo: 'Comfy-Org/Lumina_Image_2.0_Repackaged', file: 'split_files/vae/ae.safetensors', size: 335304388, sha256: 'afc8e28272cd15db3919bacdb6918ce9c1ed22e96cb12c4d5ed0fba823529e38', gguf: false },
     ],
-    peakBytes: 6_920_273_920,   // 实测 768×768 八步
+    peakBytes: 6_920_273_920,   // 实测 768×768 八步（512×512 是 5.74 GB，两点定出上面那条斜率）
     // 两次实测拟合（768×768 八步 2.9 分、512×512 八步 1.4 分）：每步的固定开销只有 1.5 秒，
     // 所以它和 Qwen-Image 不一样——**分辨率是主要变量**，降到 512 时间直接减半
     perf: { stepFixedMs: 1536, stepPerPixelMs: 0.0317, vaePerPixelMs: 0.0217, loadMs: 8000 },
@@ -170,12 +170,20 @@ export function formatDuration(ms: number): string {
   return min < 60 ? `约 ${min} 分钟` : `约 ${(min / 60).toFixed(1)} 小时`;
 }
 
+/** 每像素的工作内存：Z-Image 两次实测（512² 5.74 GB、768² 6.92 GB）解出来的斜率，别的模型先按同一条用 */
+const PEAK_PER_PIXEL_BYTES = 3601;
+const PEAK_REF_PIXELS = 768 * 768;
+
 /**
- * 跑起来大概要多少内存：直接用这个模型的实测峰值，再留一成余量。
- * 没下载完就当 0（不占内存，也不用给它腾地方）
+ * 跑起来大概要多少内存：实测峰值里「权重那一半」是固定的，「工作内存那一半」跟像素走，
+ * 所以出小图时要的内存明显少——内存紧张时这能决定出不出得了图。
+ * 不再额外加余量：peakBytes 本来就是实测的峰值，再乘一次只会把跑得动的活拦下来
+ * （调度那边留了一点系统回收的余地，见 MEMORY_SLACK）。没下载完就当 0
  */
-export function localImageEstimateBytes(model: ImageModelSpec, downloaded: boolean): number {
-  return downloaded ? Math.round(model.peakBytes * 1.1) : 0;
+export function localImageEstimateBytes(model: ImageModelSpec, downloaded: boolean, pixels = PEAK_REF_PIXELS): number {
+  if (!downloaded) return 0;
+  const base = model.peakBytes - PEAK_PER_PIXEL_BYTES * PEAK_REF_PIXELS;
+  return Math.round(base + PEAK_PER_PIXEL_BYTES * Math.max(0, pixels));
 }
 
 /** 兜底：老配置里存的步数 id 可能不属于这个模型，换成它自己的默认 */

@@ -44,6 +44,7 @@ contextBridge.exposeInMainWorld('api', {
     stop: () => ipcRenderer.invoke('image:stop'),
     cancelGeneration: () => ipcRenderer.invoke('image:cancelGeneration'),
     onState: (cb: (state: any) => void) => { const l = (_e: any, s: any) => cb(s); ipcRenderer.on('image:state', l); return () => ipcRenderer.removeListener('image:state', l); },
+    onProgress: (cb: (p: any) => void) => { const l = (_e: any, p: any) => cb(p); ipcRenderer.on('image:progress', l); return () => ipcRenderer.removeListener('image:progress', l); },
   },
   // 本机资源：几个本机模型的启停、内存、空闲超时
   resources: {

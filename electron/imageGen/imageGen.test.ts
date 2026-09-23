@@ -3,7 +3,7 @@ import {
   runtimeAssetFor, sizeOf, stepsForModel, stepOptionsFor, localImageEstimateBytes, estimateMs, formatDuration,
   imageModelOf, modelTotalBytes, IMAGE_MODELS, DEFAULT_IMAGE_MODEL, SIZE_OPTIONS, DEFAULT_SIZE,
 } from './catalog';
-import { buildSdServerArgs, parseJob } from './server';
+import { buildSdServerArgs, parseJob, parseProgressLine, parsePhaseLine } from './server';
 
 describe('本机生图：清单', () => {
   it('每个平台挑对运行时压缩包；没有的平台（Windows on ARM）给 null', () => {
@@ -38,9 +38,17 @@ describe('本机生图：清单', () => {
     // 内存按实测峰值算，不按文件大小推：Qwen 文件 10.3 GB，实测峰值只有 5.6 GB
     for (const m of IMAGE_MODELS) {
       expect(localImageEstimateBytes(m, false)).toBe(0);
-      expect(localImageEstimateBytes(m, true)).toBeGreaterThan(m.peakBytes);
+      // 768² 就是实测峰值本身，不再往上加余量（加了只会把跑得动的活拦下来）
+      expect(localImageEstimateBytes(m, true)).toBe(m.peakBytes);
       expect(localImageEstimateBytes(m, true)).toBeLessThan(modelTotalBytes(m) * 1.05 + 2.5 * 1024 ** 3);
+      // 出小图要的内存明显少（Z-Image 实测 512² 5.74 GB、768² 6.92 GB）
+      const small = localImageEstimateBytes(m, true, 512 * 512);
+      const big = localImageEstimateBytes(m, true, 1024 * 1024);
+      expect(small).toBeLessThan(localImageEstimateBytes(m, true));
+      expect(big).toBeGreaterThan(localImageEstimateBytes(m, true));
+      expect(small).toBeGreaterThan(m.peakBytes * 0.7);   // 省的是工作内存，权重那部分省不掉
     }
+    expect(localImageEstimateBytes(imageModelOf('z-image-turbo-q4k'), true, 512 * 512) / 1e9).toBeCloseTo(5.74, 1);
   });
 
   it('估时间：每个模型一条自己的实测曲线；第一次多算一次模型加载', () => {
@@ -89,5 +97,26 @@ describe('本机生图：sd-server', () => {
     expect(() => parseJob({ status: 'failed', error: { code: 'generation_failed', message: '显存不够' } })).toThrow('显存不够');
     expect(() => parseJob({ status: 'cancelled', error: { message: 'job cancelled by client' } })).toThrow('job cancelled by client');
     expect(() => parseJob({ status: 'completed', result: { images: [] } })).toThrow('没有返回图片');
+  });
+});
+
+describe('本机生图：进度（出图要几分钟，界面得一直看得见在动）', () => {
+  it('读模型的进度条：一行里连着刷好几次，取最后一次', () => {
+    const line = '  |###            | 13/297 - 244.82MB/s[K  |####           | 21/297 - 412.81MB/s[K';
+    expect(parseProgressLine(line)).toEqual({ kind: 'load', current: 21, total: 297, rate: 412.81 });
+  });
+
+  it('采样的进度条：认出第几步、每步几秒（用来算还剩多久）', () => {
+    expect(parseProgressLine('  |====>   | 3/8 - 20.23s/it[K')).toEqual({ kind: 'step', current: 3, total: 8, rate: 20.23 });
+    // 有的模型报的是 it/s，换算成每步几秒
+    expect(parseProgressLine('  |==| 2/4 - 2.00it/s')).toEqual({ kind: 'step', current: 2, total: 4, rate: 0.5 });
+    expect(parseProgressLine('[INFO] sampling completed, taking 161.83s')).toBeNull();
+  });
+
+  it('阶段：收到请求 → 编提示词 → 采样 → 解码；解码时再读一次 VAE 权重，不该倒回「读模型」', () => {
+    expect(parsePhaseLine('[INFO   ] image.cpp:803  - generate_image 512x512')).toBe('encoding');
+    expect(parsePhaseLine('[INFO   ] image.cpp:524  - get_learned_condition completed, taking 7.81s')).toBe('sampling');
+    expect(parsePhaseLine('[INFO   ] image.cpp:549  - decoding 1 latents')).toBe('decoding');
+    expect(parsePhaseLine('[INFO   ] 随便一行日志')).toBeNull();
   });
 });

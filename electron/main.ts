@@ -1117,7 +1117,7 @@ app.whenReady().then(() => {
   // ── AI 图片生成（插入图片对话框 / AI 气泡「AI 配图」模式）──────────────────
   ipcMain.handle(
     'ai:generateImage',
-    async (_, { prompt, config: cfg }: { prompt: string; config: any }): Promise<{ url: string }[]> => {
+    async (event, { prompt, config: cfg }: { prompt: string; config: any }): Promise<{ url: string }[]> => {
       function bufToDataUrl(buf: Buffer, mimeType: string): string {
         return `data:${mimeType};base64,${buf.toString('base64')}`;
       }
@@ -1147,7 +1147,7 @@ app.whenReady().then(() => {
 
       if (cfg.provider === 'local') {
         // 本机生图：走调度（24 GB 以下先停对话模型）、按需起 sd-server
-        for (const url of await generateLocalImage(prompt, cfg)) results.push({ url });
+        for (const url of await generateLocalImage(prompt, cfg, event.sender)) results.push({ url });
       } else if (cfg.provider === 'agnes-cn' || cfg.provider === 'agnes') {
         // Agnes：OpenAI 兼容的 /images/generations；国内站与国际站只是域名不同（与写作助手里的 Base URL 同源）
         const site = cfg.provider === 'agnes-cn' ? '国内站' : '国际站';

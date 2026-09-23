@@ -1,6 +1,6 @@
 import React from 'react';
 import { Loader2, Sparkles, RotateCcw } from 'lucide-react';
-import { isLocalImage, localImageEta, clock } from '../../../utils/localImageEta';
+import { isLocalImage, localImageEta, clock, describeProgress } from '../../../utils/localImageEta';
 import { useAppStore } from '../../../stores/appStore';
 
 interface ImageInsertDialogProps {
@@ -31,6 +31,9 @@ export const ImageInsertDialog: React.FC<ImageInsertDialogProps> = ({ onConfirm,
   const [aiSelected, setAiSelected] = React.useState<number | null>(null);
   const [aiLoading, setAiLoading] = React.useState(false);
   const [aiElapsed, setAiElapsed] = React.useState('');
+  const progressRef = React.useRef<any>(null);
+  // 本机出图：主进程一路报「腾内存 / 读模型 / 第几步」，照实显示，别让人对着一个转圈干等
+  React.useEffect(() => window.api.image?.onProgress?.((p) => { progressRef.current = p; }) ?? undefined, []);
   const [aiError, setAiError] = React.useState('');
   const [lightboxSrc, setLightboxSrc] = React.useState<string | null>(null);
 
@@ -62,8 +65,9 @@ export const ImageInsertDialog: React.FC<ImageInsertDialogProps> = ({ onConfirm,
     let timer: ReturnType<typeof setInterval> | null = null;
     if (local) {
       const eta = await localImageEta(imageGenConfig);
-      setAiElapsed(`0:00 / ${eta}`);
-      timer = setInterval(() => setAiElapsed(`${clock(Date.now() - startedAt)} / ${eta}`), 1000);
+      progressRef.current = null;
+      setAiElapsed(describeProgress(null, '0:00', eta));
+      timer = setInterval(() => setAiElapsed(`${describeProgress(progressRef.current, clock(Date.now() - startedAt), eta)} · ${clock(Date.now() - startedAt)}`), 1000);
     }
     try {
       const results = await window.api.ai.generateImage({ prompt: aiPrompt.trim(), config: imageGenConfig });
@@ -81,6 +85,15 @@ export const ImageInsertDialog: React.FC<ImageInsertDialogProps> = ({ onConfirm,
   /** 本机生图很慢，中途可以不要了 */
   const cancelGenerate = () => { void window.api.image.cancelGeneration().catch(() => {}); };
 
+  /**
+   * 关掉对话框时，正在出的那张本机图也一起停掉。
+   * 不然人一关窗，GPU 还在为一张没人要的图转好几分钟
+   */
+  const closeDialog = () => {
+    if (aiLoading && isLocalImage(imageGenConfig)) cancelGenerate();
+    onCancel();
+  };
+
   const canConfirm = tab === 'upload' ? !!preview : tab === 'url' ? !!url.trim() : aiSelected !== null && aiImages.length > 0;
 
   const handleConfirm = () => {
@@ -92,11 +105,11 @@ export const ImageInsertDialog: React.FC<ImageInsertDialogProps> = ({ onConfirm,
 
   const onInputKey = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && canConfirm) handleConfirm();
-    if (e.key === 'Escape') onCancel();
+    if (e.key === 'Escape') closeDialog();
   };
 
   return (
-    <div className="modal-backdrop modal-backdrop--light" onClick={(e) => { if (e.target === e.currentTarget) onCancel(); }}>
+    <div className="modal-backdrop modal-backdrop--light" onClick={(e) => { if (e.target === e.currentTarget) closeDialog(); }}>
       <div className="modal-card image-dialog">
         <div className="image-dialog__head">
           <h3 className="modal-title modal-title--sm">插入图片</h3>
@@ -149,7 +162,7 @@ export const ImageInsertDialog: React.FC<ImageInsertDialogProps> = ({ onConfirm,
                 <input
                   autoFocus type="text" value={aiPrompt}
                   onChange={(e) => setAiPrompt(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') handleGenerate(); if (e.key === 'Escape') onCancel(); }}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleGenerate(); if (e.key === 'Escape') closeDialog(); }}
                   placeholder="描述你想要的图片…"
                   className="field-input field-input--xs flex-1"
                 />
@@ -199,7 +212,7 @@ export const ImageInsertDialog: React.FC<ImageInsertDialogProps> = ({ onConfirm,
           )}
 
           <div className="row gap-10 mt-2">
-            <button onClick={onCancel} className="btn btn-ghost btn-sm btn-block">取消</button>
+            <button onClick={closeDialog} className="btn btn-ghost btn-sm btn-block">取消</button>
             <button onClick={handleConfirm} disabled={!canConfirm} className="btn btn-primary btn-sm btn-block">插入</button>
           </div>
         </div>

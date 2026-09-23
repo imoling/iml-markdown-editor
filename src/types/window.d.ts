@@ -7,6 +7,7 @@ import type { SemanticState, SemanticHit, AskSource } from '../../electron/seman
 import type { HistoryEntry } from '../../electron/history';
 import type { ResourceState, ServiceId } from '../../electron/localModel/scheduler';
 import type { ImageGenState } from '../../electron/imageGen/index';
+import type { ImageProgress } from '../../electron/imageGen/server';
 import type { OrphanImage } from '../../electron/assets';
 export type { SemanticState, SemanticHit, EmbedModelEntry, AskSource } from '../../electron/semantic/index';
 export type { HistoryEntry } from '../../electron/history';
@@ -213,6 +214,7 @@ declare global {
         stop: () => Promise<ImageGenState>;
         cancelGeneration: () => Promise<boolean>;
         onState: (cb: (state: ImageGenState) => void) => () => void;
+        onProgress: (cb: (p: ImageProgress | null) => void) => () => void;
       };
       resources: {
         getState: () => Promise<ResourceState>;

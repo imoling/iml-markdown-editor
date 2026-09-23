@@ -3,6 +3,7 @@ import type { Editor } from '@tiptap/core';
 import { DOMSerializer } from '@tiptap/pm/model';
 import type { Node as PMNode } from '@tiptap/pm/model';
 import { isLocalImage, localImageEta, startLocalImageTicker } from '../../utils/localImageEta';
+import { placeholderPos } from '../../extensions/ImagePlaceholder';
 import { useAppStore, HeadingNode } from '../../stores/appStore';
 import { useAI } from '../../hooks/useAI';
 import { markdownToHtml, htmlToMarkdown } from '../../utils/markdown';
@@ -181,20 +182,40 @@ export function useEditorAI({ editor, outline, activeTabIdRef, pushToStore }: Pa
       setAiGenerating(true);
       const imageGenConfig = useAppStore.getState().imageGenConfig;
       const local = isLocalImage(imageGenConfig);
-      // 本机生图慢：状态栏上一直走着秒，旁边就是「取消」
       const cancelLocal = () => { void window.api.image.cancelGeneration().catch(() => {}); };
+      // 正文里先占个位：出图要好几分钟，气泡一关就什么都看不见了。
+      // 占位块是装饰层，不进文档也不会被保存；上面写着提示词和进度，点它就能不要了
+      const phId = `img-${Date.now().toString(36)}`;
+      let cancelled = false;
+      const cancelAll = () => { cancelled = true; if (local) cancelLocal(); editor.commands.removeImagePlaceholder(phId); };
+      editor.commands.addImagePlaceholder({ id: phId, prompt, onCancel: () => { cancelAll(); stopTicker?.(); setAiGenerating(false); setAIStatus({ generating: false, onStop: null, text: undefined }); } });
+      // 占位块接手了进度和取消，气泡就该让开——它正好压在图要出来的地方
+      setShowAIPalette(false);
+      setPalettePos(null);
+      // 一路报到哪一步了：状态栏和占位块上同时写；只写「正在生成」的话人会以为卡住直接关掉
       let stopTicker: (() => void) | null = null;
-      if (local) stopTicker = startLocalImageTicker(await localImageEta(imageGenConfig), useAppStore.getState().notify, cancelLocal);
-      setAIStatus({ generating: true, onStop: () => { if (local) cancelLocal(); stopTicker?.(); setAiGenerating(false); setAIStatus({ generating: false, onStop: null }); } });
+      const setProgress = (text: string) => { setAIStatus({ text }); editor.commands.updateImagePlaceholder(phId, text); };
+      if (local) stopTicker = startLocalImageTicker(await localImageEta(imageGenConfig), setProgress, cancelLocal);
+      else setProgress('正在生成图片…');
+      setAIStatus({ generating: true, onStop: () => { cancelAll(); stopTicker?.(); setAiGenerating(false); setAIStatus({ generating: false, onStop: null, text: undefined }); } });
       try {
         const results = await window.api.ai.generateImage({ prompt, config: imageGenConfig });
+        if (cancelled) return;
         if (results && results.length > 0) {
           // 生成结果是 data URL：存成笔记旁的文件，正文里只留相对路径
           const url = await persistDataUrl(results[0].url, activeTabIdRef.current, prompt.slice(0, 24));
           const { schema } = editor.state;
           const node = schema.nodes.image.create({ src: url, alt: prompt });
-          const tr = editor.state.tr.replaceSelectionWith(node);
+          // 插在占位块那儿——这几分钟里用户可能已经在别处写了字，光标早不在原地了
+          const at = placeholderPos(editor.state, phId);
+          const tr = at == null ? editor.state.tr.replaceSelectionWith(node) : editor.state.tr.insert(at, node);
           editor.view.dispatch(tr);
+          editor.commands.removeImagePlaceholder(phId);
+          // 换上来的真图淡入一下，别硬切
+          requestAnimationFrame(() => {
+            const img = editor.view.dom.querySelector(`img[src="${CSS.escape(url)}"]`);
+            if (img) { img.classList.add('img-just-made'); setTimeout(() => img.classList.remove('img-just-made'), 600); }
+          });
           // 同步到 store
           const tabId = activeTabIdRef.current;
           if (tabId) pushToStore(tabId, serializeDoc(editor).markdown);
@@ -208,8 +229,9 @@ export function useEditorAI({ editor, outline, activeTabIdRef, pushToStore }: Pa
         useAppStore.getState().notify(`AI 配图失败：${reason}`, 10000);
       } finally {
         stopTicker?.();
+        editor.commands.removeImagePlaceholder(phId);
         setAiGenerating(false);
-        setAIStatus({ generating: false, onStop: null });
+        setAIStatus({ generating: false, onStop: null, text: undefined });
       }
       return;
     }

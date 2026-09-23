@@ -48,6 +48,9 @@
   font-style: italic;
 }
 
+/* 占位块压在空段落上时，「在此开始您的写作…」就别再从底下透出来了 */
+.tiptap-prosemirror p.is-editor-empty:first-child:has(.img-ph)::before { content: none; }
+
 .tiptap-prosemirror p {
   margin-bottom: 0.5em;
   font-size: var(--editor-font-size, 16px);
@@ -1084,3 +1087,26 @@ span > .source-node__input { display: inline-block; width: auto; min-width: 160p
 .tiptap-prosemirror li.is-folded > p:first-child::after, .tiptap-prosemirror li.is-folded > div > p:first-child::after {
   content: '…'; margin-left: 8px; color: var(--text-muted); font-weight: 400; font-size: 0.9em;
 }
+
+/* 出图占位块：一块微光流动的方框，画完原地换成真图 */
+.tiptap-prosemirror .img-ph {
+  display: flex; align-items: center; gap: 12px; margin: 10px 0; padding: 12px 14px;
+  border: 1px solid var(--border-subtle); border-radius: 12px; background-color: var(--bg-card); user-select: none;
+}
+.tiptap-prosemirror .img-ph__art {
+  width: 72px; height: 72px; flex-shrink: 0; border-radius: 8px; position: relative; overflow: hidden;
+  background: linear-gradient(110deg, var(--bg-elevated) 30%, color-mix(in srgb, var(--color-brand-indigo) 22%, var(--bg-elevated)) 50%, var(--bg-elevated) 70%);
+  background-size: 220% 100%; animation: img-ph-sweep 1.6s ease-in-out infinite;
+}
+@keyframes img-ph-sweep { from { background-position: 180% 0; } to { background-position: -80% 0; } }
+.tiptap-prosemirror .img-ph__body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.tiptap-prosemirror .img-ph__title { font-size: 13px; font-weight: 600; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tiptap-prosemirror .img-ph__note { font-size: 12px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.tiptap-prosemirror .img-ph__cancel {
+  flex-shrink: 0; padding: 4px 10px; border: 1px solid var(--border-subtle); border-radius: 6px;
+  background-color: var(--bg-elevated); color: var(--text-secondary); font: inherit; font-size: 12px; cursor: pointer;
+}
+.tiptap-prosemirror .img-ph__cancel:hover { border-color: var(--color-brand-indigo); color: var(--color-brand-indigo); }
+/* 画完换成真图：淡入，别硬切 */
+.tiptap-prosemirror img.img-just-made { animation: img-ph-fade 0.45s ease-out; }
+@keyframes img-ph-fade { from { opacity: 0; filter: blur(8px); } to { opacity: 1; filter: none; } }

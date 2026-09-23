@@ -264,6 +264,8 @@ export interface AppState {
   aiStatus: {
     generating: boolean;
     onStop: (() => void) | null;
+    /** 状态栏上写什么。本机生图要好几分钟，得一路报「正在读模型 / 第几步」，不能只写一句「正在生成」 */
+    text?: string;
   };
   zoom: number;
   theme: ThemeConfig;

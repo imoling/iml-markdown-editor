@@ -113,7 +113,7 @@ export const StatusBar: React.FC = () => {
         <div className="statusbar-section statusbar-ai-status">
           <div className="row gap-6 text-brand">
             <Loader2 size={13} className="animate-spin" />
-            <span className="text-xs fw-500">AI 正在生成内容...</span>
+            <span className="text-xs fw-500" title={aiStatus.text || undefined}>{aiStatus.text || 'AI 正在生成内容...'}</span>
           </div>
           <button onClick={() => aiStatus.onStop?.()} className="statusbar-stop">停止</button>
         </div>

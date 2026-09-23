@@ -8,7 +8,7 @@ import fs from 'fs';
 import path from 'path';
 import { execFile } from 'child_process';
 import { IMAGE_MODELS, SD_RUNTIME, runtimeAssetFor, sizeOf, stepsForModel, localImageEstimateBytes, imageModelOf, modelTotalBytes, DEFAULT_IMAGE_MODEL, type ImageFileSpec, type ImageModelSpec } from './catalog';
-import { SdServer, type SdState } from './server';
+import { SdServer, type SdState, type ImageProgress } from './server';
 import { downloadFile, DownloadError } from '../localModel/download';
 import { resolveModelUrl } from '../localModel/catalog';
 import { getDownloadSettings } from '../localModel/index';
@@ -103,6 +103,8 @@ export function setImageModel(id: string) {
   broadcast();
 }
 const currentModel = () => imageModelOf(currentModelId);
+/** 这次要画多大：内存需求按它算（出小图要的内存明显少） */
+let currentPixels = sizeOf(undefined).width * sizeOf(undefined).height;
 export function isReady(): boolean { return !!runtimeBin() && modelReady(currentModel()); }
 
 const viewOf = (m: ImageModelSpec): ImageModelView => ({
@@ -152,6 +154,14 @@ function broadcast() {
 }
 server.on('state', broadcast);
 server.on('log', broadcast);
+
+/** 出图进度推给窗口：本机出图要好几分钟，界面上得一直看得见在动 */
+let progressTo: Electron.WebContents | null = null;
+function sendProgress(p: ImageProgress | null) {
+  if (!progressTo || progressTo.isDestroyed()) return;
+  progressTo.send('image:progress', p);
+}
+server.on('progress', (p: ImageProgress) => sendProgress(p));
 
 const exec = (cmd: string, args: string[]) => new Promise<void>((resolve) => execFile(cmd, args, { timeout: 60000 }, () => resolve()));
 const execOut = (cmd: string, args: string[]) => new Promise<string>((resolve) => execFile(cmd, args, { timeout: 5000 }, (err, stdout) => resolve(err ? '' : String(stdout))));
@@ -262,18 +272,28 @@ async function ensureServer(steps: number): Promise<void> {
 export async function stopImageServer() { await server.stop(); fs.rmSync(pidFile(), { force: true }); }
 
 /** ai:generateImage 的本机分支 */
-export async function generateLocalImage(prompt: string, cfg: { localSize?: string; localSteps?: string; localModel?: string }): Promise<string[]> {
+export async function generateLocalImage(prompt: string, cfg: { localSize?: string; localSteps?: string; localModel?: string }, sender?: Electron.WebContents): Promise<string[]> {
+  progressTo = sender ?? progressTo;
   if (cfg.localModel) setImageModel(cfg.localModel);
   const model = currentModel();
   if (!isReady()) throw new Error(`本机生图还没准备好：到「智能 → AI 配图」里下载 ${model.name}`);
   const steps = stepsForModel(model, cfg.localSteps).steps;
   const size = sizeOf(cfg.localSize);
-  await scheduler.ensureCapacity('image');
+  currentPixels = size.width * size.height;
+  // 腾内存、启服务、加载模型这几步加起来可能小一分钟，中间必须让人看见在干什么
+  sendProgress({ phase: 'freeing' });
+  // 要腾地方的那个正忙（对话模型在答题）时调度会等它干完，这几十秒也得让人看见在等什么
+  const onWaiting = ({ label }: { label: string | null }) => sendProgress(label ? { phase: 'waiting', label } : { phase: 'freeing' });
+  scheduler.on('waiting', onWaiting);
+  let freed: { stopped: string[] };
+  try { freed = await scheduler.ensureCapacity('image'); } finally { scheduler.off('waiting', onWaiting); }
+  if (freed.stopped.length) sendProgress({ phase: 'freeing', current: freed.stopped.length });
   scheduler.beginWork('image');
   genController?.abort();          // 上一张还在画就先停掉：一次只画一张
   const controller = new AbortController();
   genController = controller;
   try {
+    if (!server.isRunning) sendProgress({ phase: 'starting' });
     await ensureServer(steps);
     const startedAt = Date.now();
     const images = await server.generate(prompt, size.width, size.height, steps, { signal: controller.signal });
@@ -281,7 +301,8 @@ export async function generateLocalImage(prompt: string, cfg: { localSize?: stri
     return images;
   } finally {
     if (genController === controller) genController = null;
-    scheduler.endWork('image');   // 让位的对话 / 嵌入模型会在这之后自己回来
+    sendProgress(null);            // 出完 / 出错：界面收起进度
+    scheduler.endWork('image');    // 让位的对话 / 嵌入模型会在这之后自己回来
     broadcast();
   }
 }
@@ -296,7 +317,8 @@ export function setupImageGen() {
     running: () => server.state.status === 'running' || server.state.status === 'starting',
     busy: () => generating > 0 || server.state.status === 'starting',
     pid: () => server.state.pid,
-    estimateBytes: () => localImageEstimateBytes(currentModel(), modelReady(currentModel())),
+    estimateBytes: () => localImageEstimateBytes(currentModel(), modelReady(currentModel()), currentPixels),
+    memoKey: () => `${currentModel().id}@${currentPixels}`,
     stop: () => server.stop(),
     start: async () => { const m = currentModel(); await ensureServer(stepsForModel(m, m.defaultStepsId).steps); },
   });
