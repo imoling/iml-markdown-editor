@@ -1,4 +1,4 @@
-# iML Markdown Editor · [![Release v26.5.0](https://img.shields.io/badge/Release-v26.5.0-indigo?style=for-the-badge&logo=github)](https://github.com/imoling/iml-markdown-editor/releases)
+# iML Markdown Editor · [![Release v26.5.1](https://img.shields.io/badge/Release-v26.5.1-indigo?style=for-the-badge&logo=github)](https://github.com/imoling/iml-markdown-editor/releases)
 <!--
   图片为什么不用相对路径（screenshots/xxx.png）：
   相对路径会被 GitHub 发到 raw.githubusercontent.com，而这个域名在国内多数网络下被 DNS 污染（解析到 0.0.0.0），
@@ -208,10 +208,10 @@
 
 | 平台 | 安装包 |
 |---|---|
-| macOS Apple Silicon（M 系列） | `iML.Markdown.Editor-26.5.0-arm64.dmg` |
-| macOS Intel（x64） | `iML.Markdown.Editor-26.5.0-x64.dmg` |
-| Windows（绝大多数电脑选这个） | `iML.Markdown.Editor-Setup-26.5.0-x64.exe` |
-| Windows on ARM（骁龙本等） | `iML.Markdown.Editor-Setup-26.5.0-arm64.exe` |
+| macOS Apple Silicon（M 系列） | `iML.Markdown.Editor-26.5.1-arm64.dmg` |
+| macOS Intel（x64） | `iML.Markdown.Editor-26.5.1-x64.dmg` |
+| Windows（绝大多数电脑选这个） | `iML.Markdown.Editor-Setup-26.5.1-x64.exe` |
+| Windows on ARM（骁龙本等） | `iML.Markdown.Editor-Setup-26.5.1-arm64.exe` |
 
 前往 [Releases](https://github.com/imoling/iml-markdown-editor/releases) 下载最新版本（80 ~ 90 MB）。已经装了的，应用会在发现新版本时提醒一次，并直接给出对应的安装包。安装包由 GitHub Actions 在打 `v*` 标签时自动构建并发布。
 
@@ -282,6 +282,14 @@ Windows 上把 `⌘` 换成 `Ctrl`，`⌥` 换成 `Alt`。
 ---
 
 ## 版本历史
+
+**26.5.1（2026-09-23）— 界面上的字，少说一半**
+
+- 界面说明文字全量重写：每个控件下面的小字只回答「不做会怎样」，设计理由、实现细节、重复的隐私承诺一律拿掉（5372 → 3139 字）
+- 修掉上一个产品残留的文案：设置里的「安全逃生舱 / 销毁本地记忆快照 / 浴火重生」（它其实只重置界面状态），以及「知识库」「起始控制台」等旧叫法
+- 出错时说人话：服务商报错不再把原始回包糊在状态栏上，技术细节进日志（`providerError()`）
+- 重复文案抽成共用件（`CopyNotes.tsx`、`src/utils/uiText.ts`、`electron/shared/uiText.ts`）；标点与术语统一
+- 新增文案护栏测试 `src/test/uiCopy.test.ts`（省略号、半角冒号、禁用词、术语、长度上限、实现细节词、跨文件重复），跟着 `npm run check` 跑；体检报告见 `docs/ui-copy-audit.html`
 
 **26.5.0（2026-09-23）— 想要的图，这台电脑自己画**
 
