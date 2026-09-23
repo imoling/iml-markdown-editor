@@ -27,6 +27,13 @@ import v264Daily from '../../assets/whats-new/v264-daily.webp';
 import v264Export from '../../assets/whats-new/v264-export.webp';
 import v264Transcribe from '../../assets/whats-new/v264-transcribe.webp';
 import v264AsrConfig from '../../assets/whats-new/v264-asrconfig.webp';
+import v265Image from '../../assets/whats-new/v265-image.webp';
+import v265Hero from '../../assets/whats-new/v265-hero.webp';
+import v265Resources from '../../assets/whats-new/v265-resources.webp';
+import v265Fold from '../../assets/whats-new/v265-fold.webp';
+import v265Syscap from '../../assets/whats-new/v265-syscap.webp';
+import v265Wechat from '../../assets/whats-new/v265-wechat.webp';
+import v265Daily from '../../assets/whats-new/v265-daily.webp';
 
 const IMAGES: Record<WhatsNewImage, string> = {
   hero: heroImg, slash: slashImg, wiki: wikiImg, search: searchImg, daily: dailyImg, local: localImg,
@@ -34,6 +41,7 @@ const IMAGES: Record<WhatsNewImage, string> = {
   'v262-history': v262History, 'v262-semantic': v262Semantic, 'v262-focus': v262Focus,
   'v263-hero': v263Hero, 'v263-ask': v263Ask, 'v263-transcribe': v263Transcribe, 'v263-playback': v263Playback, 'v263-config': v263Config, 'v263-update': v263Update,
   'v264-hero': v264Hero, 'v264-palette': v264Palette, 'v264-tasks': v264Tasks, 'v264-daily': v264Daily, 'v264-export': v264Export, 'v264-transcribe': v264Transcribe, 'v264-asrconfig': v264AsrConfig,
+  'v265-image': v265Image, 'v265-hero': v265Hero, 'v265-resources': v265Resources, 'v265-fold': v265Fold, 'v265-syscap': v265Syscap, 'v265-wechat': v265Wechat, 'v265-daily': v265Daily,
 };
 
 interface Props {

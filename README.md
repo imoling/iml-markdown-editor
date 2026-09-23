@@ -1,4 +1,4 @@
-# iML Markdown Editor · [![Release v26.4.1](https://img.shields.io/badge/Release-v26.4.1-indigo?style=for-the-badge&logo=github)](https://github.com/imoling/iml-markdown-editor/releases)
+# iML Markdown Editor · [![Release v26.5.0](https://img.shields.io/badge/Release-v26.5.0-indigo?style=for-the-badge&logo=github)](https://github.com/imoling/iml-markdown-editor/releases)
 <!--
   图片为什么不用相对路径（screenshots/xxx.png）：
   相对路径会被 GitHub 发到 raw.githubusercontent.com，而这个域名在国内多数网络下被 DNS 污染（解析到 0.0.0.0），
@@ -9,7 +9,7 @@
 
 **极简其表 · 极致内核**
 
-![iML Markdown Editor 26.4：三个人的会议录音，本机识别、本机认出谁说的，自动写成一篇笔记](https://cdn.jsdelivr.net/gh/imoling/iml-markdown-editor@main/screenshots/录音转写.png)
+![iML Markdown Editor 26.5：写到一半想配张图，说一句想要什么，这台电脑自己画出来，存在笔记旁边](https://cdn.jsdelivr.net/gh/imoling/iml-markdown-editor@main/screenshots/本机生图.png)
 
 ---
 
@@ -18,6 +18,8 @@
 > [!TIP]
 > **只想要一个纯粹的 Markdown 编辑器？** 另有轻量版 **[iML 编辑器](#轻量版iml-编辑器)**：没有笔记库、没有 AI、没有后台进程，像记事本一样打开、写、保存，安装包不到 4 MB。→ [下载轻量版](https://github.com/imoling/iml-editor-lite/releases) · [了解更多](https://github.com/imoling/iml-editor-lite#readme)
 
+> **26.5 · 想要的图，这台电脑自己画。** 写到一半想配张图，说一句想要什么就行：**本机生图**（Z-Image Turbo 八步出图 / Qwen-Image 2.1 更细），全程离线，图片存在笔记旁边；出图的几分钟里正文占着位、一路报到第几步，随时能取消。几个本机模型现在**按内存自己排队**：对话与嵌入一组、转写用时自动起、生图出图时才起，内存不够才请人让位，让完的自己回来。顺带：**标题与列表折叠**（`⌥⌘[`）、**转写收电脑放出来的声音**（macOS，网课和线上会议）、**复制为公众号格式**、日记月历按字数填深浅、新建日记跟着你的年月目录走。
+>
 > **26.4 · 本机智能，笔记不出门。** 开会时**谁说的一眼看清**（声纹在这台电脑上算、只存在这台电脑上）；手机录的会议、课程音频**选个文件就转成笔记**，约 40 倍速，全程离线；一场转写就是一篇笔记，正文里的时间戳点一下录音就跳到那一刻。和 26.3 的实时转写、整理纪要、问你的笔记一起，听、认、记、问全在本机完成。编辑器这边**搬来就能用**：从 Obsidian 搬来的笔记库，`[[笔记#小节]]`、`![[嵌入]]`、别名、悬浮预览、未链接提及都认得；日历、全库待办、标签改名、快速捕获、属性面板这些最常装的插件功能直接内置；再加上命令面板（`⌘⇧P`）、导出 Word / 长图。安装包仍在 80 ~ 90 MB。
 >
 > **26.3 · 听得见，问得到。** 开会、听课时它替你记全文，你只管记要点：**实时转写**边听边出字，点哪句话就从哪句开始回听，结束后一键整理成纪要；记下来的东西，用大白话一问就能找到 —— **问你的笔记**（`⌘J`）的答案只来自你的笔记，每个结论都标着出处。两件事都在这台电脑上完成，声音和笔记都不出门。顺带：安装包从 250 MB 降到 79 MB（Windows）/ 153 MB 降到 88 MB（macOS），启动更快。
@@ -31,6 +33,21 @@
 ---
 
 ## 特性
+
+### 🖼 想要的图，这台电脑自己画（26.5）
+
+- **本机生图**：空行按空格 → 「AI 配图」，说一句想要什么，这台电脑自己画（stable-diffusion.cpp + GGUF 权重，全程离线）。两个模型可选：**Z-Image Turbo**（6.7 GB，八步出图，M 系列上 768×768 约三分钟）或 **Qwen-Image 2.1**（10.3 GB，更细但慢七倍）；尺寸、步数、模型都在「智能 → AI 配图」里选，也能继续用网络服务
+- **等的这几分钟看得见**：正文里先占一块位，写着提示词和进度——腾内存 → 读模型 N% → 出图 N/M 步（按每步秒数算还剩多久）→ 最后一步，画完原地换成真图。占位块只是显示层，画到一半保存文件、落盘的还是原文；点它就能不要了
+- **几个模型按内存自己排队**：对话与嵌入合成一组一起启停，转写用时自动起、用完自己退，生图出图时才起；占多少按实测算（不靠文件大小猜），不够时才请人让位、让完自己回来，对方正在干活就等它干完。「智能 → 本机资源」一眼看清谁在跑、各占多少、空闲多久自动停
+- **标题与列表折叠**：标题左边的箭头收起整节，列表项有子项时也能收；`⌥⌘[` 折叠、`⌥⌘]` 展开。收起来的只是不显示，文件一个字都没动
+- **转写收电脑放出来的声音**（macOS）：网课、戴耳机开线上会议时对方说的话也能转；识别照样在本机完成，声音不上传
+- **复制为公众号格式**：选个主题、看着手机预览调，一键复制，粘到公众号编辑器就是排好的版
+- **日记**：月历按这一天写了多少字填深浅（像 GitHub 的格子）；新建日记跟着你已有的目录习惯走——`日记/2026/09/2026-09-23.md` 这种分法也认
+- 修复：导出 PDF 的代码块与表格（#2）、可用内存算少一半导致「内存不够」、腾内存失败后模型一直停着没人管
+
+| 本机生图：说一句想要什么，几分钟后图在正文里 | 本机资源：谁在跑、各占多少、空闲多久自动停 |
+|---|---|
+| ![本机生图](https://cdn.jsdelivr.net/gh/imoling/iml-markdown-editor@main/screenshots/本机生图.png) | ![本机资源](https://cdn.jsdelivr.net/gh/imoling/iml-markdown-editor@main/screenshots/本机资源.png) |
 
 ### 🧠 本机智能，笔记不出门（26.4）
 
@@ -191,10 +208,10 @@
 
 | 平台 | 安装包 |
 |---|---|
-| macOS Apple Silicon（M 系列） | `iML.Markdown.Editor-26.4.1-arm64.dmg` |
-| macOS Intel（x64） | `iML.Markdown.Editor-26.4.1-x64.dmg` |
-| Windows（绝大多数电脑选这个） | `iML.Markdown.Editor-Setup-26.4.1-x64.exe` |
-| Windows on ARM（骁龙本等） | `iML.Markdown.Editor-Setup-26.4.1-arm64.exe` |
+| macOS Apple Silicon（M 系列） | `iML.Markdown.Editor-26.5.0-arm64.dmg` |
+| macOS Intel（x64） | `iML.Markdown.Editor-26.5.0-x64.dmg` |
+| Windows（绝大多数电脑选这个） | `iML.Markdown.Editor-Setup-26.5.0-x64.exe` |
+| Windows on ARM（骁龙本等） | `iML.Markdown.Editor-Setup-26.5.0-arm64.exe` |
 
 前往 [Releases](https://github.com/imoling/iml-markdown-editor/releases) 下载最新版本（80 ~ 90 MB）。已经装了的，应用会在发现新版本时提醒一次，并直接给出对应的安装包。安装包由 GitHub Actions 在打 `v*` 标签时自动构建并发布。
 
@@ -265,6 +282,16 @@ Windows 上把 `⌘` 换成 `Ctrl`，`⌥` 换成 `Alt`。
 ---
 
 ## 版本历史
+
+**26.5.0（2026-09-23）— 想要的图，这台电脑自己画**
+
+- **本机生图**：stable-diffusion.cpp 的 `sd-server`（异步任务接口，可取消）+ GGUF 权重；两个模型（Z-Image Turbo 默认 / Qwen-Image 2.1），尺寸与步数按模型给档位，估时用实测拟合的曲线（`electron/imageGen/catalog.ts`）；出图进度从服务端日志里解析（读权重 / 采样第几步 / 解码），正文里用 ProseMirror 装饰画占位块（`src/extensions/ImagePlaceholder.ts`，不进文档、不入保存）
+- **本机模型调度**（`electron/localModel/scheduler.ts`）：一起启停的算一组（嵌入跟对话）、空闲自动停、启动前算预算、内存不够才让位且让完自动回来、对方正忙先等它干完；内存按实测常驻内存算并存档（`resources-usage.json`），公式去掉 KV 缓存的 2 GB 上限；macOS 的可用内存改用活动监视器口径（总量 − 活跃 − 联动 − 已压缩）
+- **标题与列表折叠**（`src/extensions/Folding.ts`，装饰实现，锚点跟着编辑走，光标进入自动展开）
+- **实时转写收系统声音**（macOS）：ScreenCaptureKit 小工具（Swift，`electron/asr/native/syscap.swift`）取系统混音，16 kHz 单声道喂给识别进程
+- **复制为公众号格式**：几套主题、手机预览、一键复制（`src/utils/wechatHtml.ts`）
+- **日记**：月历按字数填四档深浅、冷启动时等索引建完再问（`library:indexed`）；新建日记跟随已有的目录层级（平铺 / 按年 / 按年月）
+- 修复：出图取消真的停得下来（服务端对运行中的任务返回 409，改成停进程）、应用被强杀后不留孤儿推理进程、腾内存失败时把刚请下去的模型立刻叫回来
 
 **26.4.1（2026-09-22）— 导出的文档和编辑器里看到的一样**
 

@@ -13,7 +13,7 @@ type CloudProvider = Exclude<ImageGenConfig['provider'], 'local' | 'gemini-image
 
 /** 和写作助手一样两大类：编辑器代管的本机模型，或者填 Key 的网络服务 */
 const SERVICE_TYPES: { id: ImageServiceType; title: string; desc: string; icon: React.ReactNode }[] = [
-  { id: 'builtin', title: '本机生图', desc: 'Qwen-Image 2.1，编辑器代管，不联网；模型约 10 GB', icon: <Cpu size={14} /> },
+  { id: 'builtin', title: '本机生图', desc: 'Z-Image Turbo 或 Qwen-Image 2.1，编辑器代管，不联网；模型 6.7 ~ 10.3 GB', icon: <Cpu size={14} /> },
   { id: 'cloud', title: '网络服务', desc: 'Agnes、Gemini、火山引擎、MiniMax 或自定义接口', icon: <Cloud size={14} /> },
 ];
 

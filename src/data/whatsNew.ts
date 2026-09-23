@@ -5,7 +5,8 @@ export type WhatsNewImage =
   | 'hero' | 'slash' | 'wiki' | 'search' | 'daily' | 'local'
   | 'v262-hero' | 'v262-source' | 'v262-compat' | 'v262-paste' | 'v262-history' | 'v262-semantic' | 'v262-focus'
   | 'v263-hero' | 'v263-ask' | 'v263-transcribe' | 'v263-playback' | 'v263-config' | 'v263-update'
-  | 'v264-hero' | 'v264-palette' | 'v264-tasks' | 'v264-daily' | 'v264-export' | 'v264-transcribe' | 'v264-asrconfig';
+  | 'v264-hero' | 'v264-palette' | 'v264-tasks' | 'v264-daily' | 'v264-export' | 'v264-transcribe' | 'v264-asrconfig'
+  | 'v265-image' | 'v265-hero' | 'v265-resources' | 'v265-fold' | 'v265-syscap' | 'v265-wechat' | 'v265-daily';
 
 export interface WhatsNewPage {
   key: string;
@@ -31,6 +32,55 @@ export interface WhatsNewEntry {
 
 /** 每个大版本一条；新版本加在最前面 */
 export const WHATS_NEW: WhatsNewEntry[] = [
+  {
+    version: '26.5',
+    title: '想要的图，这台电脑自己画',
+    releaseUrl: 'https://github.com/imoling/iml-markdown-editor/releases/tag/v26.5.0',
+    pages: [
+      {
+        key: 'intro', kicker: '新特性', title: '想要的图，这台电脑自己画',
+        desc: '写到一半想配张图，不用出门找素材，也不用把想法发给谁：说一句想要什么，这台电脑自己画出来，存在笔记旁边。全程离线，和对话、检索、转写一样，都在本机完成。',
+        bullets: ['两个模型可选：Z-Image Turbo（八步出图，快）或 Qwen-Image 2.1（细）', '出图的几分钟里正文占着位，随时能取消', '几个本机模型按内存自己排队，不会一股脑全起来把机器压垮'],
+        image: 'v265-image',
+      },
+      {
+        key: 'progress', kicker: '本机生图', title: '等的这几分钟，看得见', hint: '空行按空格 → AI 配图',
+        desc: '本机出图要几分钟。正文里先占一块位，上面写着提示词和进度——腾内存、读模型 N%、第几步、还要多久，画完原地换成真图。气泡关了也没关系，占位块一直在那儿，点它就能不要了。',
+        bullets: ['占位块只是显示层：画到一半保存文件，落盘的还是原文', '这几分钟里你可以接着在别处写，图会插回原来的位置', '图片存在笔记旁的 assets 里，走的是相对路径'],
+        image: 'v265-hero',
+      },
+      {
+        key: 'resources', kicker: '本机智能', title: '几个模型，一台电脑，自己排队', hint: '智能 → 本机资源',
+        desc: '对话、嵌入、转写、生图都要内存。现在它们按组管：对话和嵌入一起启停，转写用时自动起、用完自己退，生图出图时才起。内存不够才请人让位，让完的自己回来；对方正忙就等它干完，不会张口就说「内存不够」。',
+        bullets: ['占多少按实测算，不靠文件大小猜；空闲多久自动停可以自己设', '面板上一眼看清：本机模型 + 其它程序 + 可用 = 这台电脑的内存', '正在干活的模型不会被停掉'],
+        image: 'v265-resources',
+      },
+      {
+        key: 'fold', kicker: '写作', title: '长文收起来看', hint: '⌥⌘[ / ⌥⌘]',
+        desc: '标题左边的箭头收起整节，列表项有子项时也能收。收起来的部分只是不显示，文件一个字都没动；光标移进去会自动展开。',
+        bullets: ['⌥⌘[ 折叠当前小节，⌥⌘] 展开', '大纲式的笔记可以只留标题，想看哪节点哪节'],
+        image: 'v265-fold',
+      },
+      {
+        key: 'syscap', kicker: '实时转写', title: '电脑放出来的声音也能转', hint: '转写 → 收音设备 → 系统声音',
+        desc: '网课、线上会议里对方说的话，以前戴上耳机就收不到了。现在可以直接收电脑放出来的声音（macOS），识别照样在本机完成，声音不上传。',
+        bullets: ['第一次用系统会请求「屏幕录制」权限', '和麦克风一样：一场转写 = 一篇笔记，点句子回听', 'Windows 的系统声音还在计划中'],
+        image: 'v265-syscap',
+      },
+      {
+        key: 'wechat', kicker: '分享', title: '复制为公众号格式', hint: '⌘⇧P → 公众号',
+        desc: '选个主题，看着手机预览调，一键复制，粘到公众号编辑器里就是排好的版：代码块、表格、公式、图片都带着样式过去。',
+        bullets: ['几套主题可选，标题、引用、代码块各有各的样子', '图片按公众号的宽度缩好，不用再一张张调'],
+        image: 'v265-wechat',
+      },
+      {
+        key: 'daily', kicker: '日记', title: '这个月写了多少，一眼看见',
+        desc: '侧边栏的月历按这一天写了多少字填深浅，像 GitHub 那种格子；点一下打开，没有的日子问一句再新建。新建时跟着你已有的目录习惯走——平铺、按年、按年月都认。',
+        bullets: ['日记/2026/09/2026-09-23.md 这种分法，新建的也会放进去', '本月写了几篇写在月份旁边'],
+        image: 'v265-daily',
+      },
+    ],
+  },
   {
     version: '26.4',
     title: '本机智能，笔记不出门',
