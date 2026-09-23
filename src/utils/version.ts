@@ -65,7 +65,8 @@ export function summarizeReleaseNotes(notes: string | undefined | null, max = 6)
       }
       continue;
     }
-    if (!seenSection && !lead && line && !/^[|>\-*]/.test(line)) lead = plain(line);
+    // 表格、引用、列表不算开头那段；`**加粗**` 开头的是正常段落（26.3.1 的「**macOS 用户请升级。**」）
+    if (!seenSection && !lead && line && !/^([|>]|[-*+]\s)/.test(line)) lead = plain(line);
   }
   return { slogan, lead, highlights };
 }

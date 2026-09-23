@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { formatVersion, isNewerVersion } from './version';
+import fs from 'fs';
+import path from 'path';
+import { formatVersion, isNewerVersion, summarizeReleaseNotes } from './version';
 
 describe('version', () => {
   it('隐藏末尾的 .0，保留补丁号', () => {
@@ -43,5 +45,27 @@ describe('更新提醒里的发布说明摘要', () => {
     expect(summarizeReleaseNotes('')).toEqual({ slogan: '', lead: '', highlights: [] });
     expect(summarizeReleaseNotes(undefined)).toEqual({ slogan: '', lead: '', highlights: [] });
     expect(summarizeReleaseNotes('Bug fixes and improvements.')).toEqual({ slogan: '', lead: 'Bug fixes and improvements.', highlights: [] });
+  });
+});
+
+/**
+ * 发布说明是更新提醒的数据源：弹窗里那几条要点就是各个 ### 小节的标题。
+ * 26.5.1 第一版把小节写成了「改了什么」「顺带」，弹出来就是两条什么也没说的要点——
+ * 写发布说明的时候看不出问题，只有真的弹出来才看得见。这条测试替人先看一眼
+ */
+describe('发布说明得能变成像样的更新提醒', () => {
+  const dir = path.resolve(__dirname, '../../docs');
+  const files = fs.readdirSync(dir).filter((f) => /^release-notes-.*\.md$/.test(f));
+
+  it('每份发布说明都有口号、开头那段，和至少 2 条说得出内容的要点', () => {
+    expect(files.length).toBeGreaterThan(0);
+    const 没内容 = /^(改了什么|顺带|其它改动|杂项|细节|更新内容|说明)$/;
+    for (const f of files) {
+      const s = summarizeReleaseNotes(fs.readFileSync(path.join(dir, f), 'utf8'));
+      expect(`${f}: ${s.slogan}`).toMatch(/: .+/);
+      expect(`${f}: ${s.lead.length}`).not.toMatch(/: 0$/);
+      expect(`${f}: ${s.highlights.length} 条要点`).toMatch(/: [2-9]\d* 条/);
+      for (const h of s.highlights) expect(`${f}: ${h}`).not.toMatch(没内容);
+    }
   });
 });
