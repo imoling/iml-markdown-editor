@@ -37,8 +37,8 @@ const WechatCopyModal: React.FC<Props> = ({ onClose }) => {
     if (!result) return [] as string[];
     const { stats } = result;
     const out: string[] = [];
-    if (stats.links) out.push(`${stats.links} 个外链换成了上标，文末列了「参考链接」（公众号不让正文带外链）`);
-    if (stats.localImages) out.push(`${stats.localImages} 张本地图片已内嵌。粘贴后要是没显示出来，请在公众号编辑器里手动插入`);
+    if (stats.links) out.push(`${stats.links} 个外链换成了上标，文末列了「参考链接」`);
+    if (stats.localImages) out.push(`${stats.localImages} 张本地图片已内嵌，没显示出来的话在公众号里手动插入`);
     if (stats.remoteImages) out.push(`${stats.remoteImages} 张网络图片保留原地址，粘贴时公众号会自己转存`);
     if (stats.formulas) out.push(`${stats.formulas} 个公式画成了图片`);
     if (stats.diagrams) out.push(`${stats.diagrams} 张流程图 / SVG 画成了图片`);
@@ -65,7 +65,7 @@ const WechatCopyModal: React.FC<Props> = ({ onClose }) => {
         <header className="modal-head">
           <div>
             <h1 className="modal-title">复制为公众号格式</h1>
-            <p className="modal-subtitle">选个样子，复制，到公众号编辑器里粘贴。标题、代码、表格、提示块都按这里看到的排好了</p>
+            <p className="modal-subtitle">选个样子，复制，粘到公众号编辑器里就是排好的版</p>
           </div>
           <button className="icon-btn" onClick={onClose} aria-label="关闭"><X size={18} /></button>
         </header>
@@ -92,7 +92,7 @@ const WechatCopyModal: React.FC<Props> = ({ onClose }) => {
           </div>
         </div>
         <footer className="modal-footer">
-          <span className="hint history-modal__note">{error && result ? error : '公众号编辑器只认行内样式，这里已经全部铺好；粘贴后不用再调'}</span>
+          <span className="hint history-modal__note">{error && result ? error : '样式都铺成行内的了，粘贴后不用再调'}</span>
           <button className="btn btn-primary btn-wide" onClick={copy} disabled={!result || copying}><Copy size={16} /> {copying ? '正在复制…' : '复制'}</button>
         </footer>
       </div>

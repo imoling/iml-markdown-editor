@@ -8,12 +8,13 @@ import { formatClock, transcriptText } from '../../utils/transcript';
 import { LevelBars } from '../AI/MicLevel';
 import { ME_ID, type Speaker } from '../../utils/speakers';
 import { PanelIntro } from './PanelIntro';
+import { AI_DISABLED } from '../../utils/uiText';
 
 const formatSize = (bytes: number) => (bytes >= 1024 ** 3 ? `${(bytes / 1024 ** 3).toFixed(1)} GB` : `${Math.round(bytes / 1024 ** 2)} MB`);
 
-const privacyPoint = (keep: boolean) => (keep ? '识别在这台电脑上完成；录音只存在本机，不上传' : '识别在这台电脑上完成，音频不保存、不上传');
+const privacyPoint = (keep: boolean) => (keep ? '识别在这台电脑上完成，录音只存在本机' : '识别在这台电脑上完成，音频不保存');
 const introPoints = (keep: boolean) => [
-  { icon: <FileText size={13} />, text: '点开始就新建一篇会议记录：你在里面记要点，停下来时全文和录音自动写进去' },
+  { icon: <FileText size={13} />, text: '点开始就新建一篇会议记录，停下来时全文和录音自动写进去' },
   { icon: <ShieldCheck size={13} />, text: privacyPoint(keep) },
   { icon: <ListChecks size={13} />, text: '结束后结合你记的要点，一键整理成纪要' },
 ];
@@ -166,11 +167,11 @@ export const TranscribePanel: React.FC = () => {
   );
 
   if (!aiEnabled) {
-    return <div className="ask-panel">{head}<div className="tree-empty tree-empty--root">AI 功能已在设置里关闭。<button className="btn-link" onClick={() => openDialog('settings')}>去打开</button></div></div>;
+    return <div className="ask-panel">{head}<div className="tree-empty tree-empty--root">{AI_DISABLED}<button className="btn-link" onClick={() => openDialog('settings')}>去打开</button></div></div>;
   }
   if (!asr) return <div className="ask-panel">{head}</div>;
   if (!asr.supported) {
-    return <div className="ask-panel">{head}<div className="tree-empty tree-empty--root">这个平台暂时还不支持实时转写。</div></div>;
+    return <div className="ask-panel">{head}<div className="tree-empty tree-empty--root">这个平台暂时还不支持实时转写</div></div>;
   }
 
   // ── 还没下载语音模型 ──
@@ -194,7 +195,7 @@ export const TranscribePanel: React.FC = () => {
               ) : (
                 <>
                   <button className="btn btn-primary btn-xs panel-intro__cta" onClick={t.install}><Download size={13} /> {dl?.error ? '重试下载' : `下载语音模型 · ${formatSize(asr.downloadBytes)}`}</button>
-                  <div className="panel-intro__note">第一次用需要下载，只下载一次</div>
+                  <div className="panel-intro__note">只下载一次</div>
                 </>
               )}
               {dl?.error && <div className="ask-status ask-status--error">下载失败：{dl.error}</div>}
@@ -225,7 +226,7 @@ export const TranscribePanel: React.FC = () => {
           <div className="rec-card__row">
             <span className="rec-file__title"><FileAudio size={13} /> {t.fileJob.phase === 'reading' ? '读取录音…' : '转写录音中'}</span>
             <span className="rec-clock">{t.fileJob.phase === 'reading' ? '' : `${Math.round(t.fileJob.progress * 100)}%`}</span>
-            <button className="rec-stop" onClick={() => void t.stop()} disabled={t.status !== 'recording'} title="不再往下转；已经转出来的会写进笔记"><Square size={10} /> 取消</button>
+            <button className="rec-stop" onClick={() => void t.stop()} disabled={t.status !== 'recording'} title="停下来，已经转出来的会写进笔记"><Square size={10} /> 取消</button>
           </div>
           <div className="lm-progress"><div className={`lm-progress__bar ${t.fileJob.phase === 'reading' ? 'lm-progress__bar--indeterminate' : ''}`} style={{ width: t.fileJob.phase === 'reading' ? '100%' : `${Math.round(t.fileJob.progress * 100)}%` }} /></div>
           <div className="rec-file__name truncate" title={t.fileJob.name}>{t.fileJob.name}</div>
@@ -241,7 +242,7 @@ export const TranscribePanel: React.FC = () => {
           <LevelBars getLevel={getLevel} running={recording} bars={36} />
           <div className="rec-card__row rec-card__row--foot">
             {device}
-            <button className="rec-mark" onClick={() => t.markMoment()} disabled={!recording} title="在正文光标处插入现在的时间（⌘⇧L）；之后点它，录音跳到这一刻"><Flag size={11} /> 打点</button>
+            <button className="rec-mark" onClick={() => t.markMoment()} disabled={!recording} title="在光标处插入时间戳（⌘⇧L），点它录音就跳到这一刻"><Flag size={11} /> 打点</button>
           </div>
         </div>
       ) : hasText ? (
@@ -274,7 +275,7 @@ export const TranscribePanel: React.FC = () => {
           {!busy && (
             <div className="rec-start__alts">
               {activeTabId && <button className="btn-link" onClick={() => void t.start('current')} title="不新建会议记录，要点就记在现在打开的这篇里">记在当前笔记里</button>}
-              <button className="btn-link" onClick={() => void t.transcribeFile()} title="手机录的会议、课程录音……选一个音频文件，转写成一篇笔记（m4a / mp3 / wav 等，单个最长 90 分钟）"><FileAudio size={12} /> 转写一段录音…</button>
+              <button className="btn-link" onClick={() => void t.transcribeFile()} title="选一个音频文件转成笔记，单个最长 90 分钟"><FileAudio size={12} /> 转写一段录音…</button>
             </div>
           )}
         </div>
@@ -285,13 +286,13 @@ export const TranscribePanel: React.FC = () => {
       ) : live && (
         t.savedTo
           ? <button className="transcribe-note transcribe-note--link" onClick={openBound} title="打开这篇笔记"><FileText size={12} /><span>要点记在「{boundTitle}」里；停下来时，全文{t.recordingOn ? '和录音' : ''}自动写进去。</span></button>
-          : <div className="transcribe-note"><FileText size={12} /><span>还没打开笔记库，这一场没有对应的笔记；停下来之后再选放到哪。</span></div>
+          : <div className="transcribe-note"><FileText size={12} /><span>还没打开笔记库，停下来之后再选放到哪</span></div>
       )}
 
       <div className="ask-panel__list" ref={listRef}>
         {!hasText && !t.partial ? (
           live
-            ? <div className="rec-listening"><span className="ask-dots" /> 正在听……有人说话，文字就会出现在这里</div>
+            ? <div className="rec-listening"><span className="ask-dots" /> 正在听，有人说话文字就会出现在这里</div>
             : <PanelIntro title="你记要点，全文它来记" lead="开会、听课时点开始，照常在正文里记你的要点。" points={POINTS} />
         ) : (
           <>

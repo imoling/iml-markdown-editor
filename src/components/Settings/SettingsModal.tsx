@@ -140,7 +140,7 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
     if (result && result.length > 0) setLocal((s) => ({ ...s, defaultLibraryPath: result[0] }));
   };
   const handleClearSession = () => {
-    if (window.confirm('警告：此操作将彻底抹除当前一切会话现场（包括您的星标状态与记忆目录）。\n点击确认后主窗口将会立即重载。确定要继续吗？')) {
+    if (window.confirm('重置界面状态？标签页、最近打开、星标会清空，笔记和设置不受影响。')) {
       // 会话只存在于主窗口，这里通知主窗口清空并重载
       window.api.app.clearSession();
       close();
@@ -201,8 +201,7 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
                 <div className="settings-row">
                   <div>
                     <div className="settings-row__title">正文字体</div>
-                    <div className="settings-row__desc">富文本与预览的正文；代码始终用等宽字体</div>
-                  </div>
+                                      </div>
                   <select className="settings-select" value={local.editorPrefs.font} onChange={(e) => setPrefs({ font: e.target.value as EditorPrefs['font'] })}>
                     {(Object.keys(EDITOR_FONTS) as EditorPrefs['font'][]).map((id) => <option key={id} value={id}>{EDITOR_FONTS[id].label}</option>)}
                   </select>
@@ -238,20 +237,20 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
             <section>
               <h3 className="settings-section-title">粘贴与输入</h3>
               <div className="settings-card">
-                {toggleRow('imageCompression', <ImageDown size={18} color="var(--text-muted)" />, '粘贴图片时压缩', '截图等大图转成 WebP 再存进笔记旁的 assets/，体积通常小一半以上；动图、矢量图不动')}
+                {toggleRow('imageCompression', <ImageDown size={18} color="var(--text-muted)" />, '粘贴图片时压缩', '大图转成 WebP，通常小一半；动图和矢量图不动')}
                 <div className="settings-divider" />
-                {toggleRow('fetchLinkTitle', <Link2 size={18} color="var(--text-muted)" />, '粘贴网址时取网页标题', '贴进来的只是一个网址时，访问它一次取标题，变成 [标题](网址)')}
+                {toggleRow('fetchLinkTitle', <Link2 size={18} color="var(--text-muted)" />, '粘贴网址时取网页标题', '单独粘贴一个网址时，取回标题变成 [标题](网址)')}
                 <div className="settings-divider" />
-                {toggleRow('userCss', <Paintbrush size={18} color="var(--text-muted)" />, '自定义样式（CSS 片段）', '笔记库里 .iml/snippets.css 的样式会叠加到界面上，保存即生效；只是样式表，不执行任何代码，也不会联网')}
+                {toggleRow('userCss', <Paintbrush size={18} color="var(--text-muted)" />, '自定义样式', '笔记库里的 .iml/snippets.css，保存即生效')}
                 {local.userCss && !isStandalone && (
-                  <div className="quick-capture-row"><button className="btn btn-ghost btn-xs" onClick={() => void useAppStore.getState().revealUserCss()}>在{window.api.app.platform === 'darwin' ? '访达' : '资源管理器'}中显示片段文件</button><span className="quick-capture-row__status">还没有的话会先建一个，里面是几条注释掉的示例</span></div>
+                  <div className="quick-capture-row"><button className="btn btn-ghost btn-xs" onClick={() => void useAppStore.getState().revealUserCss()}>在{window.api.app.platform === 'darwin' ? '访达' : '资源管理器'}中显示片段文件</button><span className="quick-capture-row__status">没有就先建一个，里面有几条示例</span></div>
                 )}
                 <div className="settings-divider" />
-                {toggleRow('linkPreview', <Link2 size={18} color="var(--text-muted)" />, '链接悬浮预览', '鼠标在 [[链接]] 上停半秒，就地弹出那篇笔记（或那个小节）的内容')}
+                {toggleRow('linkPreview', <Link2 size={18} color="var(--text-muted)" />, '链接悬浮预览', '鼠标停在 [[链接]] 上半秒，弹出那篇的内容')}
                 <div className="settings-divider" />
-                {toggleRow('vimMode', <Keyboard size={18} color="var(--text-muted)" />, '源码模式用 Vim 键位', 'hjkl 移动、i 进入插入、:w 保存……只在源码模式生效；富文本模式不受影响')}
+                {toggleRow('vimMode', <Keyboard size={18} color="var(--text-muted)" />, '源码模式用 Vim 键位', 'hjkl 移动、i 插入、:w 保存；只在源码模式生效')}
                 <div className="settings-divider" />
-                {toggleRow('spellcheck', <SpellCheck size={18} color="var(--text-muted)" />, '拼写检查', '用系统词典给拼错的英文单词标红；中文笔记建议关闭')}
+                {toggleRow('spellcheck', <SpellCheck size={18} color="var(--text-muted)" />, '英文拼写检查', '用系统词典标红拼错的英文词')}
                 <div className="settings-divider" />
                 <QuickCaptureRow value={local.quickCapture} onChange={(quickCapture) => setLocal((s) => ({ ...s, quickCapture }))} />
               </div>
@@ -260,8 +259,8 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
             <section>
               <h3 className="settings-section-title"><ShieldCheck size={14} /> AI 与隐私</h3>
               <div className="settings-card">
-                {toggleRow('aiEnabled', <ShieldCheck size={18} color="var(--text-muted)" />, '启用 AI 功能', '关闭后所有 AI 入口隐藏（写作助手、AI 配图、相关笔记、语义搜索），应用不向任何模型服务发请求')}
-                <div className="hint">状态栏右侧始终显示 AI 请求发往哪里：本机（不出这台电脑）还是云端服务。</div>
+                {toggleRow('aiEnabled', <ShieldCheck size={18} color="var(--text-muted)" />, '启用 AI 功能', '关掉后隐藏所有 AI 入口，也不再发任何请求')}
+                <div className="hint">状态栏右侧一直显示 AI 请求发往哪里：本机还是云端</div>
               </div>
             </section>
 
@@ -272,13 +271,12 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
                   <div className="settings-row__label">
                     <Power size={18} color="var(--text-muted)" />
                     <div>
-                      <div className="settings-row__title">启动行为</div>
-                      <div className="settings-row__desc">每次打开知识库时呈现的画面</div>
+                      <div className="settings-row__title">启动时打开</div>
                     </div>
                   </div>
                   <div className="seg-switch">
-                    <button onClick={() => setLocal((s) => ({ ...s, startupBehavior: 'restore' }))} className={`seg-switch__btn ${local.startupBehavior === 'restore' ? 'seg-switch__btn--active' : ''}`}>恢复上次会话</button>
-                    <button onClick={() => setLocal((s) => ({ ...s, startupBehavior: 'dashboard' }))} className={`seg-switch__btn ${local.startupBehavior === 'dashboard' ? 'seg-switch__btn--active' : ''}`}>起始控制台</button>
+                    <button onClick={() => setLocal((s) => ({ ...s, startupBehavior: 'restore' }))} className={`seg-switch__btn ${local.startupBehavior === 'restore' ? 'seg-switch__btn--active' : ''}`}>上次打开的笔记</button>
+                    <button onClick={() => setLocal((s) => ({ ...s, startupBehavior: 'dashboard' }))} className={`seg-switch__btn ${local.startupBehavior === 'dashboard' ? 'seg-switch__btn--active' : ''}`}>首页</button>
                   </div>
                 </div>
 
@@ -288,8 +286,8 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
                   <div className="settings-row__label">
                     <Save size={18} color="var(--text-muted)" />
                     <div>
-                      <div className="settings-row__title">静默自动保存</div>
-                      <div className="settings-row__desc">编辑器失焦时无感存盘；未命名文档会自动存入笔记库</div>
+                      <div className="settings-row__title">自动保存</div>
+                      <div className="settings-row__desc">切走时自动存盘，未命名的存进笔记库</div>
                     </div>
                   </div>
                   <label className={`toggle ${local.autoSave ? 'toggle--on' : ''}`}>
@@ -306,7 +304,7 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
                 <div className="settings-row">
                   <div>
                     <div className="settings-row__title">笔记库位置</div>
-                    <div className="settings-row__desc">侧边栏的树根；新建与静默保存的笔记都放在这里</div>
+                    <div className="settings-row__desc">新建的笔记都放在这里</div>
                   </div>
                   <div className="row gap-10">
                     <button onClick={handleSelectLibrary} className="btn-link"><FolderOpen size={12} /> 更改目录</button>
@@ -319,7 +317,7 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
                     {syncFolders.map((f) => {
                       const active = syncedIn?.id === f.id;
                       return (
-                        <button key={f.id} onClick={() => void (active ? leaveSyncFolder() : moveLibraryInto(f))} title={active ? '再点一下：改回原来的目录（笔记文件不会动）' : f.libraryPath} className={`sync-folders__btn ${active ? 'sync-folders__btn--active' : ''}`}>
+                        <button key={f.id} onClick={() => void (active ? leaveSyncFolder() : moveLibraryInto(f))} title={active ? '再点一下改回原来的目录，笔记文件不会动' : f.libraryPath} className={`sync-folders__btn ${active ? 'sync-folders__btn--active' : ''}`}>
                           ☁︎ {f.name}{active ? ' ✓' : ''}
                         </button>
                       );
@@ -330,7 +328,7 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
                 <div className="hint">
                   {syncedIn
                     ? `笔记库已经在「${syncedIn.name}」里，由它负责同步。${local.libraryPathBeforeSync ? `原来目录里的笔记还留在原处，没有自动搬过去；要合并的话，在访达里把它们拖进新目录即可。` : ''}`
-                    : '笔记库就是一个普通文件夹：放进任何同步盘的目录里，同步交给同步盘。只是换个地方看，笔记文件不会自动搬过去。'}
+                    : '笔记库就是个普通文件夹，放进同步盘的目录即可；换目录不会搬动已有笔记'}
                   外部改动会自动刷新，未保存的标签页会用橙点提示；覆盖之前版本历史会留底。
                 </div>
                 {!isStandalone && (
@@ -339,7 +337,7 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
                     <div className="settings-row">
                       <div>
                         <div className="settings-row__title">清理未引用的图片</div>
-                        <div className="settings-row__desc">找出没有任何笔记用到的图片，确认后移入废纸篓</div>
+                        <div className="settings-row__desc">没有任何笔记用到的图片，确认后移入废纸篓</div>
                       </div>
                       <button onClick={() => { handleCancel(); openDialog('image-cleanup'); }} className="btn-link"><ImageOff size={12} /> 开始扫描</button>
                     </div>
@@ -349,13 +347,13 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
             </section>
 
             <section>
-              <h3 className="settings-section-title settings-section-title--danger"><AlertTriangle size={14} /> 安全逃生舱</h3>
+              <h3 className="settings-section-title settings-section-title--danger"><AlertTriangle size={14} /> 重置</h3>
               <div className="settings-card settings-card--danger">
                 <div>
-                  <div className="settings-row__title settings-row__title--danger">销毁本地记忆快照</div>
-                  <div className="settings-row__desc">一键抹除全部现场，并让应用浴火重生。</div>
+                  <div className="settings-row__title settings-row__title--danger">重置界面状态</div>
+                  <div className="settings-row__desc">关掉所有标签页，清空最近打开和星标；笔记和设置不动</div>
                 </div>
-                <button onClick={handleClearSession} className="btn btn-danger"><Trash2 size={14} /> 清除全部</button>
+                <button onClick={handleClearSession} className="btn btn-danger"><Trash2 size={14} /> 重置</button>
               </div>
             </section>
           </div>

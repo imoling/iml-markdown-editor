@@ -101,6 +101,6 @@ export const editorExtensions = [
     types: ['heading', 'paragraph', 'tableCell', 'tableHeader'],
   }),
   Placeholder.configure({
-    placeholder: '在此开始你的写作...',
+    placeholder: '在此开始你的写作…',
   })
 ];

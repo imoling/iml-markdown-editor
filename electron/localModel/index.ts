@@ -388,7 +388,7 @@ export function builtinNotReadyHint(): string | null {
   const cfg = localConfig();
   const model = resolveModel(cfg.modelId, cfg);
   if (model && fs.existsSync(model.path)) return null;
-  return '还没有下载本机模型：打开「智能 → 写作助手」，下载一个推荐模型（约 1 GB），或改用本地 / 网络模型服务';
+  return '还没有本机模型：到「智能 → 写作助手」下载一个，或改用别的模型服务';
 }
 
 async function testConnection(draft?: Partial<LocalModelConfig>) {
@@ -406,7 +406,7 @@ export function setupLocalModel(d: Deps) {
   ipcMain.handle('local:getState', () => getLocalState());
   // 接进本机资源调度：空闲自动停、启动前算内存、和生图互斥
   scheduler.register({
-    id: 'chat', label: '对话模型', note: '写作助手、整理纪要、问你的笔记都用它，嵌入模型跟着它一起启停；停掉后下次用时自动重新加载，要等十几秒',
+    id: 'chat', label: '对话模型', note: '写作助手、纪要、问笔记都用它。停掉后下次用时自动加载，约十几秒',
     running: () => server.state.status === 'running' || server.state.status === 'starting',
     busy: () => server.state.status === 'starting',
     pid: () => server.state.pid,

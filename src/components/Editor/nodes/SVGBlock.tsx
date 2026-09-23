@@ -117,7 +117,7 @@ export const SVGBlock: React.FC<NodeViewProps> = ({ node, updateAttributes, sele
               theme="light"
               extensions={extensions}
               onChange={handleCodeChange}
-              placeholder="粘贴 SVG 代码..."
+              placeholder="粘贴 SVG 代码…"
               basicSetup={{ lineNumbers: true, foldGutter: false, dropCursor: true, allowMultipleSelections: false, indentOnInput: true }}
               className="block-card__cm"
             />
@@ -132,7 +132,7 @@ export const SVGBlock: React.FC<NodeViewProps> = ({ node, updateAttributes, sele
               {code.trim() && !error ? (
                 <div className="svg-render-wrapper block-card__canvas" onDoubleClick={handlePreviewDoubleClick} title="双击元素以定位源码" dangerouslySetInnerHTML={{ __html: sanitizeSvg(code) }} />
               ) : (
-                <div className="block-card__placeholder">{error || '等待输入内容...'}</div>
+                <div className="block-card__placeholder">{error || '等待输入内容…'}</div>
               )}
             </div>
             <ResizeHandle resizing={isResizing} onMouseDown={onMouseDown} />

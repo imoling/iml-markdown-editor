@@ -32,7 +32,7 @@ const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
         </div>
 
         <p className="about-footer">
-          &copy; 2026 iML Studio. 保留所有权利。<br />
+          &copy; 2026 iML Studio. 保留所有权利<br />
           AI 时代的敏捷知识编辑中枢
         </p>
 

@@ -76,7 +76,7 @@ export const MermaidBlock: React.FC<NodeViewProps> = ({ node, updateAttributes, 
       if (currentRenderId !== renderCount.current) return;
 
       if (ERROR_MARKERS.some((marker) => renderedSvg.includes(marker))) {
-        setError(isEOF(renderedSvg) ? null : '图表构建中...');
+        setError(isEOF(renderedSvg) ? null : '图表构建中…');
       } else {
         setSvg(renderedSvg.replace(/<svg/, '<svg style="height: 100%; width: 100%; display: block; margin: auto;"'));
         setError(null);
@@ -193,7 +193,7 @@ export const MermaidBlock: React.FC<NodeViewProps> = ({ node, updateAttributes, 
               theme="light"
               extensions={[EditorView.lineWrapping]}
               onChange={handleCodeChange}
-              placeholder="输入 Mermaid 代码..."
+              placeholder="输入 Mermaid 代码…"
               basicSetup={{ lineNumbers: true, foldGutter: false, dropCursor: true, allowMultipleSelections: false, indentOnInput: true }}
               className="block-card__cm"
             />
@@ -209,7 +209,7 @@ export const MermaidBlock: React.FC<NodeViewProps> = ({ node, updateAttributes, 
                 onDoubleClick={handlePreviewDoubleClick}
                 className="block-card__canvas"
                 title="双击节点以定位源码"
-                dangerouslySetInnerHTML={{ __html: svg || '<div class="block-card__placeholder">等待输入内容...</div>' }}
+                dangerouslySetInnerHTML={{ __html: svg || '<div class="block-card__placeholder">等待输入内容…</div>' }}
               />
             </div>
             <ResizeHandle resizing={isResizing} onMouseDown={onMouseDown} />

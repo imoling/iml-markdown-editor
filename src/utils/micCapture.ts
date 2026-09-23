@@ -5,6 +5,7 @@
  */
 
 import { cleanMicLabel } from './micDevices';
+import { MIC_DENIED, AUDIO_WORKLET_FAILED } from './uiText';
 
 const CHUNK = 1600;   // 100 ms @ 16 kHz
 
@@ -60,7 +61,7 @@ export async function startMicCapture(onChunk: (samples: Float32Array, level: nu
       fellBack = true;
     }
   } catch (err: any) {
-    if (err?.name === 'NotAllowedError') throw new Error('没有麦克风权限：请在系统设置里允许 iML Markdown Editor 使用麦克风');
+    if (err?.name === 'NotAllowedError') throw new Error(MIC_DENIED);
     if (err?.name === 'NotFoundError') throw new Error('没有找到麦克风');
     throw new Error(`打不开麦克风：${err?.message || err}`);
   }
@@ -72,7 +73,7 @@ export async function startMicCapture(onChunk: (samples: Float32Array, level: nu
   } catch (err: any) {
     stream.getTracks().forEach((t) => t.stop());
     await ctx.close().catch(() => {});
-    throw new Error(`音频处理模块加载失败：${err?.message || err}`);
+    throw new Error(`${AUDIO_WORKLET_FAILED}：${err?.message || err}`);
   }
   const source = ctx.createMediaStreamSource(stream);
   const tap = new AudioWorkletNode(ctx, 'iml-mic-tap');

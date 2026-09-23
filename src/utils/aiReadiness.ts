@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { inferServiceType } from './aiService';
 import type { LocalState } from '../types/window';
+import { AI_DISABLED } from './uiText';
 
 /**
  * AI 现在能不能用；不能用的话差什么。
@@ -24,7 +25,7 @@ export function describeAiReadiness(
   config: { serviceType?: string | null; endpoint?: string | null; apiKey?: string | null; protocol?: string | null; local?: { modelId?: string } | null } | null | undefined,
   local: Pick<LocalState, 'runtime' | 'models'> | null,
 ): AiReadiness {
-  if (!aiEnabled) return { ready: false, blocker: 'disabled', message: 'AI 功能已在设置里关闭' };
+  if (!aiEnabled) return { ready: false, blocker: 'disabled', message: AI_DISABLED };
 
   if (inferServiceType(config) === 'builtin') {
     // 本机模型：主进程会在请求时现拉起服务，所以「在不在跑」不算阻塞，缺运行时或缺模型才算

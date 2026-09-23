@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { ShieldCheck, Laptop, Package, Boxes, Activity, ChevronDown, ChevronRight, FolderOpen, FileInput, RefreshCw } from 'lucide-react';
 import type { LocalState, LocalModelConfig, LocalModelEntry } from '../../types/window';
 import { stripIpcError } from './ModelConfigModal';
+import { GATEKEEPER_SCAN, DOWNLOAD_IN_BACKGROUND, VERIFYING_FILE } from '../../utils/uiText';
 
 interface Props {
   /** 表单里的本机模型配置（尚未保存） */
@@ -97,7 +98,7 @@ export const LocalModelPanel: React.FC<Props> = ({ draft, onChange, onSwitchBack
       return `下载 ${install.tag || ''} ${pct}% · ${formatSize(install.received || 0)} / ${formatSize(install.total || 0)} ${formatSpeed(install.speed || 0)}`;
     }
     if (install.phase === 'extracting') return '正在解压…';
-    if (install.phase === 'warming') return '首次启动检查中（系统会对新程序做一次安全扫描，约十几秒）…';
+    if (install.phase === 'warming') return GATEKEEPER_SCAN;
     return '处理中…';
   };
 
@@ -125,7 +126,7 @@ export const LocalModelPanel: React.FC<Props> = ({ draft, onChange, onSwitchBack
             <span>{m.vendor}</span>
             <span>约 {formatSize(m.size)}</span>
             {!m.custom && <span>建议 {m.minRamGB}GB 内存 · {m.minCores} 核</span>}
-            {!m.custom && <span title="模型原生支持的上限；实际预留多少在上方「分配上下文」里选">最长 {formatCtx(m.maxContext)} 上下文</span>}
+            {!m.custom && <span title="模型支持的上限；实际用多少在上面选">最长 {formatCtx(m.maxContext)} 上下文</span>}
           </div>
           {m.description && <div className="lm-model__desc">{m.description}</div>}
           {m.requirement.level !== 'ok' && <div className={`lm-line ${m.requirement.level === 'fail' ? 'lm-line--error' : ''}`}>{m.requirement.message}</div>}
@@ -134,7 +135,7 @@ export const LocalModelPanel: React.FC<Props> = ({ draft, onChange, onSwitchBack
               <div className="lm-progress"><div className={`lm-progress__bar ${dl.phase === 'verifying' ? 'lm-progress__bar--verify' : ''}`} style={{ width: `${dl.phase === 'verifying' ? Math.round(((dl.received || 0) / (dl.total || 1)) * 100) : pct}%` }} /></div>
               <div className="lm-line lm-line--muted">
                 {dl.phase === 'verifying'
-                  ? '校验 SHA256 中…'
+                  ? VERIFYING_FILE
                   : `${pct}% · ${formatSize(dl.received || 0)} / ${formatSize(dl.total || m.size)} ${formatSpeed(dl.speed || 0)} ${formatEta((dl.total || m.size) - (dl.received || 0), dl.speed || 0) && `· 剩余约 ${formatEta((dl.total || m.size) - (dl.received || 0), dl.speed || 0)}`}`}
               </div>
             </>
@@ -147,7 +148,7 @@ export const LocalModelPanel: React.FC<Props> = ({ draft, onChange, onSwitchBack
             <button className="btn btn-secondary btn-xs" onClick={() => run(`cancel-${m.id}`, () => window.api.local.cancelDownload(m.id))}>取消</button>
           ) : m.downloaded ? (
             <button className="btn btn-ghost btn-xs" disabled={running || starting} title={m.custom ? '从列表移除（不删除文件）' : '删除模型文件'} onClick={() => {
-              if (m.custom || window.confirm(`删除已下载的「${m.name} ${m.quant}」？需要时可以重新下载。`)) run(`delete-${m.id}`, () => window.api.local.deleteModel(m.id));
+              if (m.custom || window.confirm(`删除「${m.name} ${m.quant}」？以后可以重新下载。`)) run(`delete-${m.id}`, () => window.api.local.deleteModel(m.id));
             }}>{m.custom ? '移除' : '删除'}</button>
           ) : m.custom ? (
             <button className="btn btn-ghost btn-xs" onClick={() => run(`delete-${m.id}`, () => window.api.local.deleteModel(m.id))}>移除</button>
@@ -165,7 +166,7 @@ export const LocalModelPanel: React.FC<Props> = ({ draft, onChange, onSwitchBack
     <div>
       <div className="lm-notice">
         <ShieldCheck size={16} />
-        <span>全部在本机运行，笔记不会离开这台电脑。</span>
+        <span>全部在本机运行，笔记不会离开这台电脑</span>
       </div>
 
       {/* 顺序按「打开就想看什么」排：在不在跑 → 用哪个模型 → 运行时 → 设备信息 */}
@@ -194,7 +195,7 @@ export const LocalModelPanel: React.FC<Props> = ({ draft, onChange, onSwitchBack
                     <button className="btn-link" onClick={() => run('install', () => window.api.local.installRuntime({ proxyPrefix: draft.proxyPrefix }))}>现在安装</button>
                   </>
                 )
-              ) : !selected ? '先在下面选一个模型。' : '所选模型还没下载，在下面点「下载」。'}
+              ) : !selected ? '先在下面选一个模型' : '所选模型还没下载，在下面点「下载」'}
             </div>
           )}
           {server.status === 'starting' && (
@@ -211,7 +212,7 @@ export const LocalModelPanel: React.FC<Props> = ({ draft, onChange, onSwitchBack
             )}
             <button className="btn btn-ghost btn-xs" onClick={onSwitchBack}>切回模型服务</button>
             {/* 模型卡片上的「最长」是原生上限；这里是本次启动实际预留多少，越大越占内存，所以最多开到 128k */}
-            <span className="lm-line lm-line--muted" style={{ marginLeft: 'auto' }} title="启动时预留的上下文长度，越大越占内存。写作场景 32k 已够用，128k 能装下一整本书">
+            <span className="lm-line lm-line--muted" style={{ marginLeft: 'auto' }} title="越大越占内存；写作 32k 够用">
               分配上下文
               <select className="lm-select" value={ctxValue} onChange={(e) => onChange({ ctxSize: Number(e.target.value) })} style={{ marginLeft: 6 }}>
                 {ctxOptions.map((c) => <option key={c} value={c}>{formatCtx(c)}</option>)}
@@ -220,7 +221,7 @@ export const LocalModelPanel: React.FC<Props> = ({ draft, onChange, onSwitchBack
           </div>
           <div className="lm-actions">
             <label className="lm-check"><input type="checkbox" checked={draft.autoStart} onChange={(e) => onChange({ autoStart: e.target.checked })} /> 随客户端启动</label>
-            <label className="lm-check" title="开启后模型会先推理再作答，质量更好但明显变慢；关闭时直接输出">
+            <label className="lm-check" title="先推理再作答，质量更好但明显变慢">
               <input type="checkbox" checked={draft.thinking} disabled={selected ? !selected.supportsThinking : false} onChange={(e) => onChange({ thinking: e.target.checked })} /> 思考模式（慢）
             </label>
             {server.status === 'running' && <span className="lm-line lm-line--muted">改动下次启动生效</span>}
@@ -228,7 +229,7 @@ export const LocalModelPanel: React.FC<Props> = ({ draft, onChange, onSwitchBack
               {logsOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />} 查看运行日志
             </button>
           </div>
-          {logsOpen && <pre ref={logRef} className="lm-log">{logs.length ? logs.join('\n') : '（启动后这里显示 llama-server 的输出）'}</pre>}
+          {logsOpen && <pre ref={logRef} className="lm-log">{logs.length ? logs.join('\n') : '（启动后这里显示模型服务的输出）'}</pre>}
         </div>
       </section>
 
@@ -244,10 +245,10 @@ export const LocalModelPanel: React.FC<Props> = ({ draft, onChange, onSwitchBack
             </select>
           </div>
           {draft.source === 'custom' && (
-            <input className="field-input field-input--xs" placeholder="自定义地址前缀，如 https://mirror.example.com" value={draft.customBase} onChange={(e) => onChange({ customBase: e.target.value })} />
+            <input className="field-input field-input--xs" placeholder="自定义地址前缀" value={draft.customBase} onChange={(e) => onChange({ customBase: e.target.value })} />
           )}
           <div className="lm-models">{models.map(renderModel)}</div>
-          {models.some((m) => m.download?.active) && <div className="lm-line lm-line--muted">下载在后台进行，可以关掉这个窗口。</div>}
+          {models.some((m) => m.download?.active) && <div className="lm-line lm-line--muted">{DOWNLOAD_IN_BACKGROUND}</div>}
           <div className="lm-actions">
             <button className="btn-link" onClick={() => run('import', async () => { const m = await window.api.local.importModel(); if (m) { onChange({ modelId: m.id }); notify('success', `已导入 ${m.name}`); } })}><FileInput size={12} /> 导入本地 GGUF…</button>
             <button className="btn-link" onClick={() => window.api.local.openModelsFolder()}><FolderOpen size={12} /> 打开模型目录</button>
@@ -282,7 +283,7 @@ export const LocalModelPanel: React.FC<Props> = ({ draft, onChange, onSwitchBack
                   <div className="lm-path">{runtime.path}</div>
                 </>
               ) : (
-                <div className="lm-line">约 11 MB，从 GitHub 下载到编辑器自己的数据目录，不影响系统。</div>
+                <div className="lm-line">约 11 MB，下载到编辑器自己的目录，不影响系统</div>
               )}
               {install.error && <div className="lm-line lm-line--error">安装失败：{install.error}</div>}
               <div className="lm-actions">
@@ -339,7 +340,7 @@ export const LocalModelPanel: React.FC<Props> = ({ draft, onChange, onSwitchBack
                 <input className="field-input" type="number" step={0.1} min={0} max={2} value={draft.temperature ?? ''} onChange={(e) => onChange({ temperature: e.target.value === '' ? null : Number(e.target.value) })} placeholder="0.8" />
               </div>
               <div className="lm-adv__field lm-adv__field--wide">
-                <span className="lm-adv__label">GitHub 加速前缀（运行时下载慢时填，如 https://ghfast.top）</span>
+                <span className="lm-adv__label">GitHub 加速前缀，下载慢时填</span>
                 <input className="field-input" value={draft.proxyPrefix} onChange={(e) => onChange({ proxyPrefix: e.target.value })} placeholder="留空直接连 github.com" />
               </div>
               <div className="lm-adv__field lm-adv__field--wide">

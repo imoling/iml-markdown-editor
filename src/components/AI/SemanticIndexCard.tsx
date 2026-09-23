@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Network, RefreshCw } from 'lucide-react';
 import type { SemanticState, EmbedModelEntry } from '../../types/window';
 import { stripIpcError } from './ModelConfigModal';
+import { VERIFYING_FILE } from '../../utils/uiText';
 
 interface Props {
   notify: (type: 'success' | 'error', text: string, autoHide?: boolean) => void;
@@ -77,7 +78,7 @@ export const SemanticIndexCard: React.FC<Props> = ({ notify, standalone = false 
           {dl?.active && (
             <>
               <div className="lm-progress"><div className={`lm-progress__bar ${dl.phase === 'verifying' ? 'lm-progress__bar--verify' : ''}`} style={{ width: `${dlPct}%` }} /></div>
-              <div className="lm-line lm-line--muted">{dl.phase === 'verifying' ? '校验 SHA256 中…' : `${dlPct}% · ${formatSize(dl.received || 0)} / ${formatSize(dl.total || m.size)}`}</div>
+              <div className="lm-line lm-line--muted">{dl.phase === 'verifying' ? VERIFYING_FILE : `${dlPct}% · ${formatSize(dl.received || 0)} / ${formatSize(dl.total || m.size)}`}</div>
             </>
           )}
           {dl && !dl.active && dl.error && <div className="lm-line lm-line--error">下载失败：{dl.error}</div>}
@@ -103,7 +104,7 @@ export const SemanticIndexCard: React.FC<Props> = ({ notify, standalone = false 
           <div className="lm-card__title"><Network size={14} /> 相关笔记与语义搜索</div>
           <span className={`lm-badge ${state.enabled && ready && !state.error ? (state.indexing ? 'lm-badge--info' : 'lm-badge--run') : state.error ? 'lm-badge--fail' : 'lm-badge--muted'}`}>{statusText()}</span>
         </div>
-        <div className="lm-line">一个很小的本机模型读懂每篇笔记的意思，全程不出这台电脑，与写作助手用什么模型无关。</div>
+        <div className="lm-line">一个很小的本机模型读懂每篇笔记的意思，全程不出这台电脑</div>
         <div className="lm-actions">
           <label className={`toggle ${state.enabled ? 'toggle--on' : ''}`}>
             <input type="checkbox" checked={state.enabled} disabled={busy} onChange={(e) => run(() => window.api.semantic.setEnabled(e.target.checked), e.target.checked ? '相关笔记已开启' : '相关笔记已关闭')} />
@@ -119,7 +120,7 @@ export const SemanticIndexCard: React.FC<Props> = ({ notify, standalone = false 
         )}
         {state.enabled && !state.runtimeInstalled && (
           <div className="lm-line lm-line--error">
-            需要 llama-server 运行时（约 11 MB，和「本机模型」共用）。
+            需要推理运行时，约 11 MB，和「本机模型」共用
             <button className="btn-link" onClick={() => run(() => window.api.local.installRuntime(), '已开始安装运行时')}>现在安装</button>
           </div>
         )}

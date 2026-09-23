@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { SemanticIndexCard } from './SemanticIndexCard';
+import { LiveSettingsNote } from './CopyNotes';
 
 interface Props {
   onClose: () => void;
@@ -33,7 +34,7 @@ export const SemanticIndexModal: React.FC<Props> = ({ onClose }) => {
           <SemanticIndexCard notify={notify} standalone />
         </div>
         <footer className="modal-footer">
-          <span className="hint history-modal__note">改动即时生效，不需要保存。</span>
+          <LiveSettingsNote className="hint history-modal__note" />
           <button onClick={onClose} className="btn btn-primary btn-wide">完成</button>
         </footer>
       </div>

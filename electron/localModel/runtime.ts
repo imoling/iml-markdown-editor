@@ -214,7 +214,7 @@ export async function installRuntime(opts: {
   const dir = path.join(opts.rootDir, tag);
   await extractArchive(archive, dir);
   const bin = findServerBinary(dir);
-  if (!bin) throw new Error('发布包里没有 llama-server，可能是 llama.cpp 改了打包结构');
+  if (!bin) throw new Error('下载的包里没有推理程序，换个版本再试');
 
   // 可执行权限 + 去掉 macOS 隔离属性（保险起见，Node 下载的文件本来就没有）
   const binDir = path.dirname(bin);

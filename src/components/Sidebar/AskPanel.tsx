@@ -9,6 +9,7 @@ import { sanitizeHtml } from '../../utils/sanitize';
 import { linkCitations, citedNumbers, locateFragment, isRefusal, stripCitations } from '../../utils/askNotes';
 import type { AskSource } from '../../types/window';
 import { PanelIntro } from './PanelIntro';
+import { AI_DISABLED } from '../../utils/uiText';
 
 const answerMarkdown = new Marked({ gfm: true, breaks: true });
 
@@ -83,12 +84,12 @@ const Turn: React.FC<{ turn: AskTurn; onOpen: (s: AskSource) => void; relative: 
       )}
 
       {turn.status === 'done' && turn.sources.length === 0 && (
-        <div className="ask-answer ask-answer--empty">笔记库里没有找到和这个问题相关的内容。换个说法，或者问得具体一点试试。</div>
+        <div className="ask-answer ask-answer--empty">笔记库里没有找到相关内容，换个说法或问得具体些</div>
       )}
 
       {turn.status === 'answering' && !turn.answer && <div className="ask-status"><span className="ask-dots" /> 正在根据这几处内容组织回答…</div>}
       {turn.answer && <Answer turn={turn} refused={refused} onCite={cite} />}
-      {uncited && <div className="ask-status ask-status--warn">这段回答没有标出处，可能不完全来自你的笔记，请对照上面的依据核对。</div>}
+      {uncited && <div className="ask-status ask-status--warn">这段回答没有标出处，请对照上面的依据核对</div>}
       {turn.status === 'stopped' && <div className="ask-status">已停止</div>}
       {turn.status === 'error' && <div className="ask-status ask-status--error">{turn.error}</div>}
 
@@ -146,11 +147,11 @@ export const AskPanel: React.FC = () => {
   // ── 还用不了的几种情况：各自说清楚差什么、去哪配 ──
   const loading = semantic === null;
   const blocker = loading ? null : !aiEnabled
-    ? { text: 'AI 功能已在设置里关闭。', action: '去打开', go: () => openDialog('settings') }
+    ? { text: AI_DISABLED, action: '去打开', go: () => openDialog('settings') }
     : !readiness.ready
       ? { text: `${readiness.message}。回答问题要靠一个对话模型。`, action: '一分钟配好', go: () => openDialog('ai-setup') }
       : !indexReady
-        ? { text: '需要先开启「相关笔记」：它用一个很小的本机模型读懂每篇笔记的意思，问答靠它找到相关内容。', action: '去开启', go: () => openDialog('semantic-config') }
+        ? { text: '先开启「相关笔记」，问答要靠它找到相关内容', action: '去开启', go: () => openDialog('semantic-config') }
         : null;
 
   const canAsk = !loading && !blocker;

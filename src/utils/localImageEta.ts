@@ -51,15 +51,15 @@ export function describeProgress(p: { phase: string; current?: number; total?: n
   if (!p) return `${elapsed} / ${eta}`;
   switch (p.phase) {
     case 'waiting':
-      return `${p.label || '别的本机模型'}正在忙，等它干完就开画`;
+      return `${p.label || '别的模型'}正在忙，等它干完`;
     case 'freeing':
-      return p.current ? '正在腾内存：先把别的本机模型停一下' : '正在准备';
+      return p.current ? '正在腾内存' : '正在准备';
     case 'starting':
       return '正在启动生图服务';
     case 'loading':
       return p.total ? `正在读模型 ${Math.min(99, Math.round(((p.current || 0) / p.total) * 100))}%` : '正在读模型';
     case 'encoding':
-      return '正在理解这句提示词';
+      return '正在读提示词';
     case 'sampling': {
       if (!p.total) return '正在出图';
       const left = Math.max(0, p.total - (p.current || 0));
@@ -67,7 +67,7 @@ export function describeProgress(p: { phase: string; current?: number; total?: n
       return `正在出图 ${p.current || 0}/${p.total} 步${rest}`;
     }
     case 'decoding':
-      return '正在出图（最后一步）';
+      return '正在出图，最后一步';
     default:
       return `${elapsed} / ${eta}`;
   }

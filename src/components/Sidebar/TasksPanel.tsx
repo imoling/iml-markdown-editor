@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ListChecks, FileText, CalendarClock, Eye, EyeOff, PencilLine, Mic, FolderSearch } from 'lucide-react';
+import { ListChecks, FileText, CalendarClock, Eye, EyeOff, PencilLine, FolderSearch } from 'lucide-react';
 import { useAppStore } from '../../stores/appStore';
 import { PanelIntro } from './PanelIntro';
 import { dueBucket, DueBucket, NoteTask } from '../../../electron/shared/tasks';
@@ -91,7 +91,7 @@ export const TasksPanel: React.FC = () => {
     setNotes((prev) => (prev || []).map((n) => (n.path !== path ? n : { ...n, tasks: n.tasks.map((t) => (t === task ? { ...t, done: next } : t)) })));
     const ok = await toggleTask(path, task, next);
     if (!ok) {
-      notify('那篇笔记刚被改过，这一条对不上了，已重新读取。');
+      notify('那篇笔记刚改过，这一条已重新读取');
       setReload((n) => n + 1);
     }
   };
@@ -107,11 +107,10 @@ export const TasksPanel: React.FC = () => {
         <PanelIntro
           icon={<ListChecks size={20} />}
           title="全库待办"
-          lead="散在各篇笔记里的待办，汇到这一处。现在还没有没做完的。"
+          lead="散在各篇笔记里的待办都汇到这里"
           points={[
             { icon: <PencilLine size={12} />, text: '在任何笔记里写「- [ ] 要做的事」，保存后就会出现在这里' },
-            { icon: <Mic size={12} />, text: '会议纪要里的「待办」一节会自动汇进来，不用再抄一遍' },
-            { icon: <CalendarClock size={12} />, text: '想要到期提醒，在后面加 📅 2026-09-30（Obsidian 的写法也认）' },
+            { icon: <CalendarClock size={12} />, text: '加上 📅 2026-09-30 就能按日期分组' },
           ]}
         >
           <button className="btn btn-ghost btn-xs" onClick={toggleShowDone}><Eye size={11} /> 看看已完成的</button>

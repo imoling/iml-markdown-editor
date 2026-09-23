@@ -3,6 +3,7 @@ import { X, Cloud, MonitorSmartphone, Cpu } from 'lucide-react';
 import { SERVICE_TYPES, PRESETS, DEFAULT_LOCAL_CONFIG, DEFAULT_SERVICE_TYPE, inferServiceType, fallbackServiceType, findPreset, isLocalEndpoint, type AIServiceType, type Protocol, type Preset } from '../../utils/aiService';
 import type { LocalModelConfig } from '../../types/window';
 import { LocalModelPanel } from './LocalModelPanel';
+import { KeyPrivacyNote } from './CopyNotes';
 
 interface AIConfig {
   serviceType: AIServiceType;
@@ -185,7 +186,7 @@ const ModelConfigModal: React.FC<Props> = ({ isOpen, onClose }) => {
 
         <div className={isStandalone ? 'standalone-scroll standalone-scroll--headed' : 'modal-body modal-body--headed'}>
           {loading ? (
-            <div className="empty-state">加载中...</div>
+            <div className="empty-state">加载中…</div>
           ) : (
             <div>
               <label className="field-label">服务类型</label>
@@ -263,19 +264,16 @@ const ModelConfigModal: React.FC<Props> = ({ isOpen, onClose }) => {
                   <div className="info-box info-box--flush">
                     <div className="info-box__row">
                       <span>
-                        {config.protocol === 'anthropic'
-                          ? 'Anthropic Messages API，Base URL 须填到 /v1。实际请求：'
-                          : 'OpenAI Chat Completions 格式，适用于 OpenAI、DeepSeek、Gemini、本地服务与各类兼容接口。实际请求：'}
+                        实际请求
                       </span>
                       <br />
                       <span className="text-brand model-config__url">{requestUrl}</span>
                     </div>
                     {currentPreset?.hint && <div className="info-box__row">{currentPreset.hint}</div>}
-                    <div className="info-box__row">🔒 API Key 加密后保存在本机（macOS 钥匙串 / Windows DPAPI），不会上传。</div>
+                    <KeyPrivacyNote />
                     {isLocal && (
                       <div className="info-box__row">
-                        本地小模型（如 MiniCPM、讯飞星火开源版、Qwen 等）：安装 Ollama 或 LM Studio 后下载模型，
-                        保持服务运行，再点「获取模型列表」选择即可。不想自己装的话，选「本机模型」由编辑器代管。
+                        装好 Ollama 或 LM Studio 并让它跑着，再点「获取模型列表」
                       </div>
                     )}
                   </div>
@@ -288,7 +286,7 @@ const ModelConfigModal: React.FC<Props> = ({ isOpen, onClose }) => {
 
         <footer className={isStandalone ? 'standalone-footer' : 'modal-footer'}>
           <button onClick={handleSave} disabled={saving || loading} className="btn btn-primary btn-block">
-            {saving ? '保存中...' : '保存配置'}
+            {saving ? '保存中…' : '保存配置'}
           </button>
           <button onClick={handleTest} disabled={testing || loading} className="btn btn-secondary btn-wide">
             {testing ? '测试中…' : '测试连接'}

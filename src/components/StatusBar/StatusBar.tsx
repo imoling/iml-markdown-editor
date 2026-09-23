@@ -44,7 +44,7 @@ const RecordingIndicator: React.FC = () => {
   }, [recording]);
   if (!recording) return null;
   return (
-    <button className="statusbar-recording" onClick={() => useAppStore.getState().openTranscribe()} title={`正在转写（本机识别，${keepRecording ? '录音只存在本机' : '音频不保存'}）。点击查看`}>
+    <button className="statusbar-recording" onClick={() => useAppStore.getState().openTranscribe()} title={`正在转写（本机识别，${keepRecording ? '录音只存在本机' : '音频不保存'}）`}>
       <span className="statusbar-recording__dot" /> {fileJob ? `录音转写 ${Math.round(fileJob.progress * 100)}%` : `转写中 ${formatClock(elapsed())}`}
     </button>
   );
@@ -113,7 +113,7 @@ export const StatusBar: React.FC = () => {
         <div className="statusbar-section statusbar-ai-status">
           <div className="row gap-6 text-brand">
             <Loader2 size={13} className="animate-spin" />
-            <span className="text-xs fw-500" title={aiStatus.text || undefined}>{aiStatus.text || 'AI 正在生成内容...'}</span>
+            <span className="text-xs fw-500" title={aiStatus.text || undefined}>{aiStatus.text || '正在生成…'}</span>
           </div>
           <button onClick={() => aiStatus.onStop?.()} className="statusbar-stop">停止</button>
         </div>
@@ -123,7 +123,7 @@ export const StatusBar: React.FC = () => {
         <span
           className="statusbar-ai-dest"
           onClick={() => openDialog(aiEnabled ? 'ai-config' : 'settings')}
-          title={!aiEnabled ? 'AI 功能已在设置中关闭，应用不会向任何模型服务发请求' : aiDest?.kind === 'cloud' ? '使用 AI 功能时，选中的文字会发往这个云端服务' : 'AI 请求只发往本机，笔记内容不会离开这台电脑'}
+          title={!aiEnabled ? 'AI 功能已在设置里关闭，不会发任何请求' : aiDest?.kind === 'cloud' ? '用 AI 时，选中的文字会发往这个云端服务' : 'AI 请求只发往本机，笔记不会离开这台电脑'}
         >
           <span className={`statusbar-ai-dest__dot ${!aiEnabled ? 'statusbar-ai-dest__dot--off' : aiDest?.kind === 'cloud' ? 'statusbar-ai-dest__dot--cloud' : ''}`} />
           {aiEnabled ? `AI：${aiDest?.label ?? '…'}` : 'AI 已关闭'}

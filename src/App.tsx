@@ -353,7 +353,7 @@ const App: React.FC = () => {
       handledCaptures.add(req.id);
       let ok = false;
       try { ok = await useAppStore.getState().captureToDaily(req.text); } catch { ok = false; }
-      window.api.events.send('capture:appended', { id: req.id, ok, error: ok ? undefined : '没写进去：笔记库没设置，或文件写入失败' });
+      window.api.events.send('capture:appended', { id: req.id, ok, error: ok ? undefined : '没写进去：还没设置笔记库，或者文件写不进去' });
     });
     window.api.events.on('menu:new-file', () => createNewFile());
     window.api.events.on('menu:open-file', () => openFile());
@@ -561,7 +561,7 @@ const UpdateModal: React.FC = () => {
           {updateStatus.loading ? (
             <>
               <RotateCw size={32} className="animate-spin" color="var(--color-accent-indigo)" />
-              <p className="update-modal__text">正在检查更新...</p>
+              <p className="update-modal__text">正在检查更新…</p>
             </>
           ) : updateStatus.error ? (
             <>
@@ -609,7 +609,7 @@ const UpdateModal: React.FC = () => {
             <button onClick={() => open(releasePage)} className="btn btn-primary btn-sm update-card__download">前往下载</button>
           )}
         </div>
-        <p className="update-card__note">下载后退出应用、装上新的即可，笔记和设置都不受影响。这个版本不会再主动弹出，「帮助」菜单上的红点会一直留到你更新。</p>
+        <p className="update-card__note">装上新版本即可，笔记和设置不受影响；「帮助」里的红点会留到你更新</p>
       </div>
     </div>
   );

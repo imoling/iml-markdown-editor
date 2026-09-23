@@ -72,7 +72,7 @@ export const StartPage: React.FC = () => {
         {!readiness.ready && readiness.blocker !== 'disabled' && (
           <button className="start-page__ai-hint" onClick={() => openDialog('ai-setup')}>
             <Wand2 size={16} />
-            <span><strong>还没配过 AI</strong> —— 本机模型免费离线，Agnes 有免费额度，一分钟就能配好</span>
+            <span><strong>还没配过 AI</strong> 本机模型免费离线，Agnes 有免费额度</span>
             <ChevronRight size={16} />
           </button>
         )}

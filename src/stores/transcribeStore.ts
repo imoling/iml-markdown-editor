@@ -346,7 +346,7 @@ export const useTranscribeStore = create<TranscribeState>((set, get) => ({
       path = picked?.[0];
     }
     if (!path) return;
-    if (!isAudioFile(path)) { set({ error: '这不是能转写的录音文件（支持 m4a、mp3、wav、flac、ogg、webm）' }); return; }
+    if (!isAudioFile(path)) { set({ error: '这个格式转不了，支持 m4a、mp3、wav、flac、ogg、webm' }); return; }
 
     get().clear();
     const name = (path.split(/[\\/]/).pop() || path);
@@ -356,7 +356,7 @@ export const useTranscribeStore = create<TranscribeState>((set, get) => ({
     set({ status: 'starting', error: null, source: 'file', fileJob: { name, progress: 0, phase: 'reading' } });
     try {
       const duration = await probeDuration(url);
-      if (duration > MAX_FILE_MINUTES * 60) throw new Error(`这段录音有 ${Math.round(duration / 60)} 分钟，目前一次最多转写 ${MAX_FILE_MINUTES} 分钟，长的请先切成几段`);
+      if (duration > MAX_FILE_MINUTES * 60) throw new Error(`这段录音 ${Math.round(duration / 60)} 分钟，一次最多转 ${MAX_FILE_MINUTES} 分钟，请先切成几段`);
       const wantSpeakers = get().speakersOn && !!get().asr?.speaker?.installed;
       set({ speakers: wantSpeakers ? initialSpeakers() : [] });
       // 识别进程和解码一起准备
@@ -434,7 +434,7 @@ export const useTranscribeStore = create<TranscribeState>((set, get) => ({
       } else {
         // 写不回去（没存过盘的未命名文档、文件被删了）：内容留在面板里，让人另找个地方放
         set({ savedTo: null });
-        app.notify('笔记关了，转写也停了；这一场还没存上，在转写面板里选个地方放');
+        app.notify('笔记关了，转写也停了；这一场还没存上，去转写面板里选个地方放');
         app.openTranscribe();
       }
     } finally {
@@ -487,7 +487,7 @@ export const useTranscribeStore = create<TranscribeState>((set, get) => ({
     const app = useAppStore.getState();
     // 纪要写进存了转写的那篇；还没存过就写进当前打开的这篇
     const target = app.tabs.find((t) => t.id === get().savedTo) ?? app.tabs.find((t) => t.id === app.activeTabId);
-    if (!target) { set({ minutes: { running: false, progress: '', error: '先把转写存成笔记（或打开一篇笔记），纪要要有地方放' } }); return; }
+    if (!target) { set({ minutes: { running: false, progress: '', error: '先把转写存成笔记，纪要要有地方放' } }); return; }
 
     const ask = async (messages: { role: string; content: string }[], tag: string) =>
       stripThinking(await window.api.ai.chat(messages, () => {}, `minutes-${Date.now()}-${tag}`, 1500, MINUTES_TEMPERATURE));
@@ -536,7 +536,7 @@ if (typeof window !== 'undefined') {
     if (tab.id !== s.savedTo || (s.status !== 'recording' && s.status !== 'starting')) return null;
     return {
       title: '正在转写',
-      message: `「${tab.title.replace(/\.md$/i, '')}」是这一场转写的笔记，关掉它，转写就结束了。已经转写出来的全文${s.recordingOn ? '和录音' : ''}会写进这篇笔记。`,
+      message: `关掉「${tab.title.replace(/\.md$/i, '')}」就结束这一场转写，全文${s.recordingOn ? '和录音' : ''}会写进这篇笔记。`,
       confirmLabel: '结束转写并关闭',
     };
   });

@@ -65,7 +65,7 @@ export const LocalImageSection: React.FC<Props> = ({ cfg, update }) => {
               : inst?.active ? <span className="lm-badge lm-badge--info">正在下载 {pct}%</span>
                 : <span className="lm-badge lm-badge--warn">还没下载</span>}
         </div>
-        <div className="lm-line">文生图模型，全程离线。运行时（stable-diffusion.cpp）+ 三个模型文件共约 {fmt(view?.totalBytes || 0)}，需要 {model.minRamGB} GB 以上内存。出图全靠这台电脑的 GPU，快慢看核心数。</div>
+        <div className="lm-line">全程离线，共约 {fmt(view?.totalBytes || 0)}，需要 {model.minRamGB} GB 以上内存</div>
         <div className="lm-kv">
           {(view?.files || []).map((f) => <div key={f.key}><span className="lm-kv__k">{f.label}</span><span className="lm-kv__v">{f.downloaded ? `已下载 · ${fmt(f.bytes)}` : fmt(f.size)}</span></div>)}
           <div><span className="lm-kv__k">运行时</span><span className="lm-kv__v">{st.runtime.installed ? `已安装 · ${st.runtime.version}` : '未安装'}</span></div>
@@ -86,7 +86,7 @@ export const LocalImageSection: React.FC<Props> = ({ cfg, update }) => {
           {(st.server.status === 'running' || st.server.status === 'starting') && <button className="btn btn-secondary btn-xs" disabled={pending} onClick={() => void act(() => window.api.image.stop())}><Square size={11} /> 停止服务</button>}
           {(view?.installedBytes || 0) > 0 && !inst?.active && <button className="btn-link" disabled={pending} onClick={() => void act(() => window.api.image.delete())}><Trash2 size={11} /> 删掉这个模型</button>}
         </div>
-        <div className="lm-line lm-line--muted">出图时服务自动启动，几分钟不用会自动停；内存不够时才会请对话和嵌入模型让个位，出完图它们自己回来——都在 <button className="btn-link" onClick={() => openDialog('resources')}>本机资源</button> 里管。</div>
+        <div className="lm-line lm-line--muted">出图时自动启动，闲几分钟自动停；内存不够时对话模型会让位。都在 <button className="btn-link" onClick={() => openDialog('resources')}>本机资源</button> 里管。</div>
       </div>
 
       <div className="lm-card" style={{ marginTop: 10 }}>
@@ -104,7 +104,7 @@ export const LocalImageSection: React.FC<Props> = ({ cfg, update }) => {
           </select>
         </div>
         <div className="lm-line">按这个设置，一张图{st.lastRun && st.modelId === modelId ? '大约要 ' : '预计 '}<strong>{eta}</strong>{st.lastRun && st.modelId === modelId ? `（上一张实测 ${formatDuration(st.lastRun.ms)}，已按这台电脑的速度折算）` : '（含第一次加载模型的时间）'}。</div>
-        <div className="lm-line lm-line--muted">出图途中可以取消：那张图不要了，生图服务会一起停掉（下次出图重新加载模型）。</div>
+        <div className="lm-line lm-line--muted">中途取消会把生图服务一起停掉，下次出图重新加载</div>
       </div>
     </section>
   );

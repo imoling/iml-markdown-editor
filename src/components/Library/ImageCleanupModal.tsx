@@ -69,8 +69,8 @@ export const ImageCleanupModal: React.FC<Props> = ({ onClose }) => {
           ) : (
             <>
               <div className="hint mb-12">
-                下面这些图片的文件名没有出现在任何笔记里。判断偏保守：只要文件名在任何文本文件里出现过就不会列出来。
-                删除是移入系统废纸篓，随时可以找回。
+                这些图片的文件名没在任何笔记里出现过
+                删除是移入废纸篓，随时可以找回
               </div>
               <div className="cleanup-grid">
                 {items.map((img) => (

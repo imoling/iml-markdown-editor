@@ -74,7 +74,7 @@ export const ImageInsertDialog: React.FC<ImageInsertDialogProps> = ({ onConfirm,
       setAiImages(results);
       if (results.length > 0) setAiSelected(0);
     } catch (err: any) {
-      setAiError(err.message || (local ? '本机生图失败' : '生成失败，请检查 API Key 配置'));
+      setAiError(err.message || (local ? '本机生图失败' : '生成失败，检查一下 AI 配图的配置'));
     } finally {
       if (timer) clearInterval(timer);
       setAiElapsed('');
@@ -135,8 +135,8 @@ export const ImageInsertDialog: React.FC<ImageInsertDialogProps> = ({ onConfirm,
                 ) : (
                   <div className="dropzone__hint">
                     <div className="dropzone__icon">🖼️</div>
-                    <div className="text-md text-secondary fw-500">点击选择或拖拽图片到此处</div>
-                    <div className="text-xs text-muted mt-4">支持 JPG、PNG、GIF、WebP</div>
+                    <div className="text-md text-secondary fw-500">拖进来，或点一下选文件</div>
+                    <div className="text-xs text-muted mt-4"></div>
                   </div>
                 )}
               </div>
@@ -163,7 +163,7 @@ export const ImageInsertDialog: React.FC<ImageInsertDialogProps> = ({ onConfirm,
                   autoFocus type="text" value={aiPrompt}
                   onChange={(e) => setAiPrompt(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') handleGenerate(); if (e.key === 'Escape') closeDialog(); }}
-                  placeholder="描述你想要的图片…"
+                  placeholder="描述你想要的图片"
                   className="field-input field-input--xs flex-1"
                 />
                 <button onClick={handleGenerate} disabled={!aiPrompt.trim() || aiLoading} className="btn btn-gradient btn-xs image-dialog__generate">
@@ -193,10 +193,10 @@ export const ImageInsertDialog: React.FC<ImageInsertDialogProps> = ({ onConfirm,
                   {!imageGenConfig.apiKey ? (
                     <span className="image-dialog__tip--warn">
                       需先配置 API Key<br />
-                      <span className="image-dialog__tip-small">菜单「智能」→ AI 配图 → 选择提供商并填入 Key</span>
+                      <span className="image-dialog__tip-small">到「智能 → AI 配图」里选服务并填 Key</span>
                     </span>
                   ) : (
-                    <>输入描述后点击「生成」<br />
+                    <>先写一句描述<br />
                     <span className="image-dialog__tip-small">当前提供商：{imageGenConfig.provider}　可在「智能」→ AI 配图中切换</span></>
                   )}
                 </div>
@@ -206,7 +206,7 @@ export const ImageInsertDialog: React.FC<ImageInsertDialogProps> = ({ onConfirm,
 
           {tab !== 'ai' && (
             <div className="col gap-6">
-              <label className="text-sm text-secondary fw-500">图片描述 <span className="text-muted fw-400">(可选)</span></label>
+              <label className="text-sm text-secondary fw-500">图片描述 <span className="text-muted fw-400">可选</span></label>
               <input type="text" value={alt} onChange={(e) => setAlt(e.target.value)} onKeyDown={onInputKey} placeholder="图片说明文字" className="field-input field-input--xs" />
             </div>
           )}

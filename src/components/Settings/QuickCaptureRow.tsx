@@ -50,7 +50,7 @@ export const QuickCaptureRow: React.FC<Props> = ({ value, onChange }) => {
           <Zap size={18} color="var(--text-muted)" />
           <div>
             <div className="settings-row__title">快速捕获</div>
-            <div className="settings-row__desc">在任何软件里按全局快捷键，弹出一个小输入框；回车，这句话带上时间存进今天的日记，你留在原来的软件里</div>
+            <div className="settings-row__desc">在任何软件里按快捷键弹出小输入框，回车就存进今天的日记</div>
           </div>
         </div>
         <label className={`toggle ${value.enabled ? 'toggle--on' : ''}`}>

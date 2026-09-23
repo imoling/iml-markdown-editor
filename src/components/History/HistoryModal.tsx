@@ -132,7 +132,7 @@ export const HistoryModal: React.FC<Props> = ({ onClose }) => {
         </div>
 
         <footer className="modal-footer">
-          <span className="hint history-modal__note">历史保存在本机应用数据里，不写进笔记库；保留最近 60 天。</span>
+          <span className="hint history-modal__note">历史存在本机，不写进笔记库，保留 60 天</span>
           <button className="btn btn-secondary btn-wide" disabled={content === null} onClick={() => { if (content !== null) { navigator.clipboard.writeText(content); notify('已复制这个版本的全文'); } }}><Copy size={13} /> 复制全文</button>
           <button className="btn btn-primary btn-wide" disabled={content === null || (stats.added === 0 && stats.removed === 0)} onClick={restore}><RotateCcw size={13} /> 恢复此版本</button>
         </footer>

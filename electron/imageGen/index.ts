@@ -313,7 +313,7 @@ export function cancelGeneration() { genController?.abort(); genController = nul
 export function setupImageGen() {
   void killStaleServer();   // 上次崩溃留下的孤儿，启动时收拾掉
   scheduler.register({
-    id: 'image', label: '本机生图', note: '出图时才需要；一张 768 的图在 M 系列上要一两分钟',
+    id: 'image', label: '本机生图', note: '出图时自动启动，一张约一两分钟',
     running: () => server.state.status === 'running' || server.state.status === 'starting',
     busy: () => generating > 0 || server.state.status === 'starting',
     pid: () => server.state.pid,

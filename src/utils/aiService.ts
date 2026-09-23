@@ -10,7 +10,7 @@ export interface ServiceTypeInfo {
 
 export const SERVICE_TYPES: ServiceTypeInfo[] = [
   { id: 'builtin', title: '本机模型', desc: '编辑器自己下载并托管运行，零配置' },
-  { id: 'local', title: '本地模型', desc: 'Ollama / LM Studio / llama.cpp 已在运行' },
+  { id: 'local', title: '本地服务', desc: 'Ollama / LM Studio / llama.cpp 已在运行' },
   { id: 'cloud', title: '网络模型服务', desc: 'Agnes（免费）、OpenAI、DeepSeek，或自定义接口' },
 ];
 
@@ -32,8 +32,8 @@ export const PRESETS: Preset[] = [
   { label: 'LM Studio',  type: 'local', protocol: 'openai', endpoint: 'http://localhost:1234/v1',  model: '', placeholder: '本地服务无需 Key' },
   { label: 'llama.cpp',  type: 'local', protocol: 'openai', endpoint: 'http://localhost:8080/v1',  model: '', placeholder: '本地服务无需 Key' },
   // Agnes 有免费额度，放最前面；国内站 (.cn) 与国际站 (.com) 域名不同、密钥不通用，模型命名一致
-  { label: 'Agnes 国内站', type: 'cloud', protocol: 'openai', endpoint: 'https://api.agnes-ai.cn/v1',    model: 'agnes-2.0-flash', placeholder: 'Agnes 国内站的 API Key', hint: '免费额度：在 www.agnes-ai.cn 注册后创建 API Key。国内站与国际站的 Key 不通用。' },
-  { label: 'Agnes 国际站', type: 'cloud', protocol: 'openai', endpoint: 'https://apihub.agnes-ai.com/v1', model: 'agnes-2.0-flash', placeholder: 'Agnes 国际站的 API Key', hint: '免费额度：在 apihub.agnes-ai.com 注册后创建 API Key。国内站与国际站的 Key 不通用。' },
+  { label: 'Agnes 国内站', type: 'cloud', protocol: 'openai', endpoint: 'https://api.agnes-ai.cn/v1',    model: 'agnes-2.0-flash', placeholder: 'Agnes 国内站的 API Key', hint: '在 www.agnes-ai.cn 创建 Key；有免费额度' },
+  { label: 'Agnes 国际站', type: 'cloud', protocol: 'openai', endpoint: 'https://apihub.agnes-ai.com/v1', model: 'agnes-2.0-flash', placeholder: 'Agnes 国际站的 API Key', hint: '在 apihub.agnes-ai.com 创建 Key；有免费额度' },
   { label: 'OpenAI',     type: 'cloud', protocol: 'openai',    endpoint: 'https://api.openai.com/v1',          model: 'gpt-4o',            placeholder: 'sk-...' },
   { label: 'Anthropic',  type: 'cloud', protocol: 'anthropic', endpoint: 'https://api.anthropic.com/v1',       model: 'claude-sonnet-4-5', placeholder: 'sk-ant-...' },
   { label: 'DeepSeek',   type: 'cloud', protocol: 'openai',    endpoint: 'https://api.deepseek.com/v1',        model: 'deepseek-chat',     placeholder: 'sk-...' },

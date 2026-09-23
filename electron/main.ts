@@ -17,6 +17,7 @@ import { setupQuickCapture } from './capture';
 import { syncFolderCandidates, labelCloudStorageDir, SYNC_LIBRARY_NAME } from './shared/syncFolders';
 import { parseAppUrl, appUrlFromArgv, APP_URL_SCHEME, AppUrlAction } from './shared/appUrl';
 import { registerAssetScheme, handleAssetProtocol, findOrphanImages, filterTrashable, fetchPageTitle } from './assets';
+import { AI_DISABLED } from './shared/uiText';
 
 const isDev = process.env.NODE_ENV === 'development';
 
@@ -697,7 +698,7 @@ app.whenReady().then(() => {
   // 测试连接：按表单里的（未保存的）配置发一条极短的对话，返回耗时
   ipcMain.handle('ai:testConnection', async (_event, cfg: { protocol?: string; endpoint?: string; apiKey?: string; model?: string }) => {
     const endpoint = (cfg?.endpoint || '').replace(/\/$/, '');
-    if (!endpoint) throw new Error('请先填写服务地址（Base URL）');
+    if (!endpoint) throw new Error('请先填写服务地址');
     const protocol: 'openai' | 'anthropic' = cfg?.protocol === 'anthropic' ? 'anthropic' : 'openai';
     const apiKey = cfg?.apiKey || '';
     if (protocol === 'anthropic' && !apiKey) throw new Error('Anthropic 协议需要 API Key');
@@ -846,7 +847,7 @@ app.whenReady().then(() => {
   // 拉取模型列表：兼容 OpenAI /models 与 Anthropic /models；本地 Ollama / LM Studio 无需 Key
   ipcMain.handle('ai:listModels', async (_event, { endpoint, apiKey, protocol }: { endpoint: string; apiKey: string; protocol: string }) => {
     const base = (endpoint || '').replace(/\/$/, '');
-    if (!base) throw new Error('请先填写服务地址（Base URL）');
+    if (!base) throw new Error('请先填写服务地址');
     const headers = buildAuthHeaders(protocol === 'anthropic' ? 'anthropic' : 'openai', apiKey || '');
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 8000);
@@ -857,8 +858,8 @@ app.whenReady().then(() => {
       const list: any[] = Array.isArray(data) ? data : (data.data || data.models || []);
       return list.map((m) => (typeof m === 'string' ? m : m.id || m.name)).filter(Boolean);
     } catch (err: any) {
-      if (err.name === 'AbortError') throw new Error('连接超时：请确认本地模型服务已启动，或检查服务地址');
-      throw new Error(`无法获取模型列表：${err.message}`);
+      if (err.name === 'AbortError') throw new Error('连接超时，确认服务已启动、地址填对了');
+      throw new Error(`拿不到模型列表：${err.message}`);
     } finally {
       clearTimeout(timer);
     }
@@ -923,7 +924,7 @@ app.whenReady().then(() => {
     let localWork = false;
     // 界面上的 AI 入口已经随总开关隐藏；这里再兜一道，保证关掉之后真的不发请求
     if (getAppSettings().aiEnabled === false) {
-      event.sender.send(`ai:chat-error-${requestId}`, 'AI 功能已在设置中关闭');
+      event.sender.send(`ai:chat-error-${requestId}`, AI_DISABLED);
       return;
     }
     const config = getConfig();
@@ -954,11 +955,11 @@ app.whenReady().then(() => {
     }
 
     if (!endpoint) {
-      event.sender.send(`ai:chat-error-${requestId}`, '请先在「智能 → 写作助手」中填写服务地址（Base URL）');
+      event.sender.send(`ai:chat-error-${requestId}`, '请先到「智能 → 写作助手」填写服务地址');
       return;
     }
     if (protocol === 'anthropic' && !apiKey) {
-      event.sender.send(`ai:chat-error-${requestId}`, 'Anthropic 协议需要 API Key，请在「智能 → 写作助手」中填写');
+      event.sender.send(`ai:chat-error-${requestId}`, 'Anthropic 协议需要 API Key，到「智能 → 写作助手」里填');
       return;
     }
 
@@ -1004,7 +1005,7 @@ app.whenReady().then(() => {
 
       if (!response.ok) {
         const errorData: any = await response.json().catch(() => ({}));
-        const msg = errorData.error?.message || errorData.message || `API 请求失败: ${response.status}`;
+        const msg = errorData.error?.message || errorData.message || `模型服务返回错误（${response.status}）`;
         event.sender.send(`ai:chat-error-${requestId}`, msg);
         return;
       }
@@ -1068,7 +1069,7 @@ app.whenReady().then(() => {
       if (err.name === 'AbortError') {
         event.sender.send(`ai:chat-error-${requestId}`, 'REQUEST_ABORTED');
       } else {
-        event.sender.send(`ai:chat-error-${requestId}`, `网络错误: ${err.message}`);
+        event.sender.send(`ai:chat-error-${requestId}`, `网络错误：${err.message}`);
       }
     } finally {
       aiAbortControllers.delete(requestId);
@@ -1110,7 +1111,7 @@ app.whenReady().then(() => {
       return describeRelease(await response.json(), process.platform, process.arch);
     } catch (err: any) {
       console.error('Update check failed:', err);
-      return { success: false, error: '无法连接到更新服务器，请检查网络设置' };
+      return { success: false, error: '连不上更新服务器，检查一下网络' };
     }
   });
 
@@ -1120,6 +1121,15 @@ app.whenReady().then(() => {
     async (event, { prompt, config: cfg }: { prompt: string; config: any }): Promise<{ url: string }[]> => {
       function bufToDataUrl(buf: Buffer, mimeType: string): string {
         return `data:${mimeType};base64,${buf.toString('base64')}`;
+      }
+
+      /**
+       * 服务商报错统一成一句人话。原始回包写进日志，不糊到界面上：
+       * 状态栏那一行放不下 200 字的 JSON，看见了也不知道该做什么
+       */
+      function providerError(who: string, what: string, raw?: unknown): Error {
+        if (raw) console.warn(`[image] ${who} 原始回包：`, String(raw).slice(0, 600));
+        return new Error(`${who}${what}`);
       }
 
       /** 按文件头认图片格式；认不出来按 PNG（data URL 的 MIME 决定落盘时的扩展名） */
@@ -1134,7 +1144,7 @@ app.whenReady().then(() => {
       function assertAsciiHeader(value: string, label: string) {
         for (let i = 0; i < value.length; i++) {
           if (value.charCodeAt(i) > 127) {
-            throw new Error(`${label} 包含非 ASCII 字符（位置 ${i}，字符"${value[i]}"），HTTP Header 不支持中文，请检查配置`);
+            throw new Error(`${label} 里有中文或特殊字符（第 ${i + 1} 个字），请检查是不是复制多了`);
           }
         }
       }
@@ -1160,8 +1170,8 @@ app.whenReady().then(() => {
         );
         let data: any = null;
         try { data = JSON.parse(rawText); } catch { /* 下面按状态码报错 */ }
-        if (status < 200 || status >= 300) throw new Error(`Agnes ${site} HTTP ${status}（${model}）: ${data?.error?.message || rawText.slice(0, 300) || '(empty)'}`);
-        if (!data) throw new Error(`Agnes ${site} 返回非 JSON: ${rawText.slice(0, 200)}`);
+        if (status < 200 || status >= 300) throw providerError(`Agnes ${site}`, `拒绝了请求（HTTP ${status}）${data?.error?.message ? `：${data.error.message}` : ''}`, rawText);
+        if (!data) throw providerError(`Agnes ${site}`, '返回的内容看不懂，检查一下服务地址', rawText);
         if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
         // 回执按 OpenAI 形状为主（data[].url / b64_json），也认几种见过的变体
         const items: any[] = Array.isArray(data.data) ? data.data : Array.isArray(data.output) ? data.output : Array.isArray(data.results) ? data.results : [];
@@ -1174,7 +1184,7 @@ app.whenReady().then(() => {
             results.push({ url: bufToDataUrl(buf, sniffImageMime(buf)) });
           }
         }
-        if (results.length === 0) throw new Error(`Agnes ${site} 未返回图片（${model}）: ${rawText.slice(0, 200)}`);
+        if (results.length === 0) throw providerError(`Agnes ${site}`, `没有返回图片（${model}），换个模型或稍后再试`, rawText);
       } else if (cfg.provider === 'gemini' || cfg.provider === 'gemini-imagen' || cfg.provider === 'gemini-flash') {
         // 未指定模型时默认走 Imagen，与「图片生成配置」界面默认高亮的选项一致
         const useImagen = cfg.provider === 'gemini-imagen'
@@ -1186,10 +1196,10 @@ app.whenReady().then(() => {
             instances: [{ prompt }],
             parameters: { sampleCount: 1, aspectRatio: '16:9' },
           }), { 'Content-Type': 'application/json' });
-          if (status < 200 || status >= 300 || !rawText) throw new Error(`Gemini Imagen HTTP ${status}（${model}）: ${rawText || '(empty)'}`);
+          if (status < 200 || status >= 300 || !rawText) throw providerError('Gemini Imagen', `拒绝了请求（HTTP ${status}）`, rawText);
           let data: any;
-          try { data = JSON.parse(rawText); } catch { throw new Error(`Gemini Imagen 非 JSON（${status}）: ${rawText.slice(0, 200)}`); }
-          if (!data.predictions?.length) throw new Error(data.error?.message || `Imagen 未返回图片: ${rawText.slice(0, 200)}`);
+          try { data = JSON.parse(rawText); } catch { throw providerError('Gemini Imagen', '返回的内容看不懂', rawText); }
+          if (!data.predictions?.length) throw providerError('Gemini Imagen', data.error?.message ? `：${data.error.message}` : '没有返回图片，换个模型或稍后再试', rawText);
           for (const pred of data.predictions) {
             const b64 = pred.bytesBase64Encoded;
             if (!b64) continue;
@@ -1201,9 +1211,9 @@ app.whenReady().then(() => {
             contents: [{ parts: [{ text: prompt }] }],
             generationConfig: { responseModalities: ['IMAGE', 'TEXT'], temperature: 1.0 },
           }), { 'Content-Type': 'application/json' });
-          if (status < 200 || status >= 300) throw new Error(`Gemini Flash HTTP ${status}: ${rawText.slice(0, 300)}`);
+          if (status < 200 || status >= 300) throw providerError('Gemini Flash', `拒绝了请求（HTTP ${status}）`, rawText);
           let data: any;
-          try { data = JSON.parse(rawText); } catch { throw new Error(`Gemini Flash 非 JSON: ${rawText.slice(0, 200)}`); }
+          try { data = JSON.parse(rawText); } catch { throw providerError('Gemini Flash', '返回的内容看不懂', rawText); }
           if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
           const parts: any[] = data.candidates?.[0]?.content?.parts || [];
           for (const part of parts) {
@@ -1213,7 +1223,7 @@ app.whenReady().then(() => {
               break;
             }
           }
-          if (results.length === 0) throw new Error(`Gemini Flash 未返回图片（${model}）`);
+          if (results.length === 0) throw providerError('Gemini Flash', `没有返回图片（${model}），换个模型或稍后再试`);
         }
       } else if (cfg.provider === 'minimax') {
         const { status, text: rawText } = await nodePost(
@@ -1221,14 +1231,14 @@ app.whenReady().then(() => {
           JSON.stringify({ model: cfg.model || 'image-01', prompt, response_format: 'url', n: 1, aspect_ratio: '16:9', prompt_optimizer: false }),
           { Authorization: `Bearer ${cfg.apiKey}`, 'Content-Type': 'application/json' },
         );
-        if (status < 200 || status >= 300) throw new Error(`MiniMax HTTP ${status}: ${rawText.slice(0, 300)}`);
+        if (status < 200 || status >= 300) throw providerError('MiniMax', `拒绝了请求（HTTP ${status}）`, rawText);
         let data: any;
-        try { data = JSON.parse(rawText); } catch { throw new Error(`MiniMax 返回非 JSON: ${rawText.slice(0, 200)}`); }
+        try { data = JSON.parse(rawText); } catch { throw providerError('MiniMax', '返回的内容看不懂', rawText); }
         if (data.base_resp?.status_code && data.base_resp.status_code !== 0) {
           throw new Error(data.base_resp.status_msg || `MiniMax 错误码 ${data.base_resp.status_code}`);
         }
         const imageUrls: string[] = data.data?.image_urls || [];
-        if (imageUrls.length === 0) throw new Error(`MiniMax 未返回图片: ${rawText.slice(0, 200)}`);
+        if (imageUrls.length === 0) throw providerError('MiniMax', '没有返回图片，换个模型或稍后再试', rawText);
         for (const imageUrl of imageUrls) {
           results.push({ url: bufToDataUrl(await nodeGetBuffer(imageUrl), 'image/jpeg') });
         }
@@ -1239,12 +1249,12 @@ app.whenReady().then(() => {
           JSON.stringify({ model, prompt, size: '2560x1440', n: 1, response_format: 'url' }),
           { Authorization: `Bearer ${cfg.apiKey}`, 'Content-Type': 'application/json' },
         );
-        if (status < 200 || status >= 300) throw new Error(`火山引擎 HTTP ${status}: ${rawText.slice(0, 300)}`);
+        if (status < 200 || status >= 300) throw providerError('火山引擎', `拒绝了请求（HTTP ${status}）`, rawText);
         let data: any;
-        try { data = JSON.parse(rawText); } catch { throw new Error(`火山引擎返回非 JSON: ${rawText.slice(0, 200)}`); }
+        try { data = JSON.parse(rawText); } catch { throw providerError('火山引擎', '返回的内容看不懂', rawText); }
         if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
         const items: any[] = data.data || [];
-        if (items.length === 0) throw new Error(`火山引擎未返回图片: ${rawText.slice(0, 200)}`);
+        if (items.length === 0) throw providerError('火山引擎', '没有返回图片，换个模型或稍后再试', rawText);
         for (const item of items) {
           if (item.b64_json) {
             results.push({ url: bufToDataUrl(Buffer.from(item.b64_json, 'base64'), 'image/png') });
@@ -1259,7 +1269,7 @@ app.whenReady().then(() => {
           { Authorization: `Bearer ${cfg.apiKey}`, 'Content-Type': 'application/json' },
         );
         let data: any;
-        try { data = JSON.parse(rawText); } catch { throw new Error(`Custom 端点返回非 JSON: ${rawText.slice(0, 200)}`); }
+        try { data = JSON.parse(rawText); } catch { throw providerError('这个接口', '返回的内容看不懂，检查一下服务地址', rawText); }
         const imgs: any[] = data.data || data.images || data.output || [];
         for (const img of imgs) {
           const b64 = img.b64_json || img.base64;
@@ -1270,11 +1280,11 @@ app.whenReady().then(() => {
           }
         }
       } else {
-        throw new Error(`未知图片生成提供商「${cfg.provider || '(未配置)'}」，请在「智能 → AI 配图」中选择提供商并填入 API Key`);
+        throw new Error(`还没选好配图服务，到「智能 → AI 配图」里选一个并填 Key`);
       }
 
       if (results.length === 0) {
-        throw new Error('图片生成未返回结果，请检查 API Key 是否正确，或尝试更换模型');
+        throw new Error('没有生成出图片，检查 API Key 或换个模型');
       }
       return results;
     },

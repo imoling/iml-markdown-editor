@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { X, Gauge, Play, PowerOff } from 'lucide-react';
 import { useAppStore } from '../../stores/appStore';
+import { LiveSettingsNote } from './CopyNotes';
 
 interface Props { onClose: () => void }
 
@@ -67,7 +68,7 @@ const ResourcesModal: React.FC<Props> = ({ onClose }) => {
         <header className="modal-head">
           <div>
             <h1 className="modal-title">本机资源</h1>
-            <p className="modal-subtitle">哪几组本机模型在跑、各占多少内存。内存不够时才会请人让位（让完自动回来），空闲久了自动停；正在干活的不会被停，会等它干完</p>
+            <p className="modal-subtitle">本机模型的内存占用与启停</p>
           </div>
           <button className="icon-btn" onClick={onClose} aria-label="关闭"><X size={18} /></button>
         </header>
@@ -88,10 +89,9 @@ const ResourcesModal: React.FC<Props> = ({ onClose }) => {
                 <label className="lm-check lm-check--stack">
                   <input type="checkbox" checked={state.config.exclusiveImage} onChange={async (e) => setState(await window.api.resources.setConfig({ exclusiveImage: e.target.checked }))} />
                   <span>
-                    生图时总是先给它腾地方
+                    出图前先停掉对话模型
                     <em className="lm-check__note">
-                      不开（默认）：内存真不够时才请对话模型让位。开着：每次出图都先把它停掉，画完自动回来
-                      {state.totalBytes >= 32 * GB ? '。这台电脑 32 GB 以上，这一项不生效' : ''}
+                      {state.totalBytes >= 32 * GB ? '这台电脑内存 32 GB 以上，这一项不生效' : '画完自动恢复；不开则只在内存不够时才请它让位'}
                     </em>
                   </span>
                 </label>
@@ -110,10 +110,10 @@ const ResourcesModal: React.FC<Props> = ({ onClose }) => {
                       {s.note && <div className="lm-line lm-line--muted">{s.note}</div>}
                       <div className="lm-line lm-line--muted">
                         {s.status === 'stopped'
-                          ? `${s.measured ? '上次实测占' : '启动后约占'} ${fmtGB(s.estimateBytes)}`
+                          ? `启动后约占 ${fmtGB(s.estimateBytes)}`
                           : s.rssBytes != null ? `占用 ${fmtGB(s.rssBytes)}` : `约占 ${fmtGB(s.estimateBytes)}`}
                         {' · '}最近使用：{fmtAgo(s.lastUsedAt)}
-                        {s.displacedBy && ` · 给${state?.services.find((x) => x.id === s.displacedBy)?.label || '别的服务'}腾了地方，完事自动回来`}
+                        {s.displacedBy && ` · 让位给${state?.services.find((x) => x.id === s.displacedBy)?.label || '别的模型'}，完事自动回来`}
                       </div>
                     </div>
                     <div className="res-row__side">
@@ -139,7 +139,7 @@ const ResourcesModal: React.FC<Props> = ({ onClose }) => {
           {!state && !error && <div className="lm-line lm-line--muted">正在读取…</div>}
         </div>
         <footer className="modal-footer">
-          <span className="hint history-modal__note">改动即时生效，不需要保存。</span>
+          <LiveSettingsNote className="hint history-modal__note" />
           <button onClick={onClose} className="btn btn-primary btn-wide">完成</button>
         </footer>
       </div>

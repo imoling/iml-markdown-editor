@@ -332,12 +332,12 @@ describe('转写一段已有的录音', () => {
     const { useTranscribeStore, useAppStore, api } = await setup();
     audioMock.duration = 3 * 3600;
     await useTranscribeStore.getState().transcribeFile('/rec/三小时的课.mp3');
-    expect(useTranscribeStore.getState().error).toContain('最多转写 90 分钟');
+    expect(useTranscribeStore.getState().error).toContain('最多转 90 分钟');
     expect(useTranscribeStore.getState().status).toBe('idle');
     expect(api.asr.start).not.toHaveBeenCalled();
     expect(useAppStore.getState().tabs).toEqual([]);
     await useTranscribeStore.getState().transcribeFile('/rec/不是录音.pdf');
-    expect(useTranscribeStore.getState().error).toContain('不是能转写的录音文件');
+    expect(useTranscribeStore.getState().error).toContain('这个格式转不了');
   });
 
   it('转到一半点「取消」：不再往下转，已经转出来的照样写进笔记', async () => {

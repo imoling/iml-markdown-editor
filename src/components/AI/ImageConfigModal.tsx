@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Cloud, Cpu } from 'lucide-react';
 import { useAppStore, type ImageGenConfig } from '../../stores/appStore';
 import { LocalImageSection } from './LocalImageSection';
+import { KeyPrivacyNote } from './CopyNotes';
 import { stripIpcError } from './ModelConfigModal';
 
 interface Props {
@@ -13,18 +14,18 @@ type CloudProvider = Exclude<ImageGenConfig['provider'], 'local' | 'gemini-image
 
 /** 和写作助手一样两大类：编辑器代管的本机模型，或者填 Key 的网络服务 */
 const SERVICE_TYPES: { id: ImageServiceType; title: string; desc: string; icon: React.ReactNode }[] = [
-  { id: 'builtin', title: '本机生图', desc: 'Z-Image Turbo 或 Qwen-Image 2.1，编辑器代管，不联网；模型 6.7 ~ 10.3 GB', icon: <Cpu size={14} /> },
+  { id: 'builtin', title: '本机生图', desc: '模型跑在这台电脑上，不联网；需下载 6.7 ~ 10.3 GB', icon: <Cpu size={14} /> },
   { id: 'cloud', title: '网络服务', desc: 'Agnes、Gemini、火山引擎、MiniMax 或自定义接口', icon: <Cloud size={14} /> },
 ];
 
 // Agnes 有免费额度，排最前；国内站 (.cn) 与国际站 (.com) 域名不同、Key 不通用（与写作助手里的一致）
 const PROVIDERS: { id: CloudProvider; label: string; placeholder: string; hint: string; request: string }[] = [
-  { id: 'agnes-cn', label: 'Agnes 国内站', placeholder: 'Agnes 国内站的 API Key', hint: 'www.agnes-ai.cn → API Key（与国际站不通用；和写作助手里的 Agnes 国内站是同一个 Key）', request: 'OpenAI 兼容的 images/generations 接口，有免费额度，国内直连' },
-  { id: 'agnes', label: 'Agnes 国际站', placeholder: 'Agnes 国际站的 API Key', hint: 'apihub.agnes-ai.com → API Key（与国内站不通用；和写作助手里的 Agnes 国际站是同一个 Key）', request: 'OpenAI 兼容的 images/generations 接口，有免费额度，需境外访问' },
-  { id: 'gemini', label: 'Google Gemini', placeholder: 'AIza...', hint: 'aistudio.google.com → Get API key', request: 'Imagen 走 predict 接口、Flash 走 generateContent，需境外访问' },
-  { id: 'volcengine', label: '火山引擎 豆包', placeholder: '火山方舟 API Key', hint: 'console.volcengine.com → 火山方舟 → API Key 管理', request: 'Seedream 系列，国内稳定' },
-  { id: 'minimax', label: 'MiniMax 海螺', placeholder: 'eyJ...', hint: 'platform.minimaxi.com → API Key 管理', request: '国产文生图大模型' },
-  { id: 'custom', label: '自定义端点', placeholder: 'Bearer token', hint: '', request: 'OpenAI 兼容的 POST …/images/generations' },
+  { id: 'agnes-cn', label: 'Agnes 国内站', placeholder: '粘贴国内站的 Key', hint: '在 www.agnes-ai.cn 创建 Key', request: '有免费额度，国内直连' },
+  { id: 'agnes', label: 'Agnes 国际站', placeholder: '粘贴国际站的 Key', hint: '在 apihub.agnes-ai.com 创建 Key', request: '有免费额度，需境外访问' },
+  { id: 'gemini', label: 'Google Gemini', placeholder: 'AIza...', hint: 'aistudio.google.com → Get API key', request: '需境外访问' },
+  { id: 'volcengine', label: '火山引擎 豆包', placeholder: '火山方舟 API Key', hint: '在火山方舟控制台创建 Key', request: 'Seedream 系列，国内稳定' },
+  { id: 'minimax', label: 'MiniMax 海螺', placeholder: 'eyJ...', hint: '在 MiniMax 开放平台创建 Key', request: '国产文生图大模型' },
+  { id: 'custom', label: '自定义端点', placeholder: 'Bearer token', hint: '', request: 'OpenAI 兼容的 images/generations 接口' },
 ];
 
 const AGNES_MODELS = [{ id: 'agnes-image-2.0-flash', name: 'Image 2.0 Flash（免费档）' }];
@@ -112,7 +113,7 @@ export const ImageConfigModal: React.FC<Props> = ({ onClose }) => {
         <header className={`modal-head ${isStandalone ? 'modal-head--standalone' : ''}`}>
           <div>
             <h1 className="modal-title">AI 配图</h1>
-            <p className="modal-subtitle">AI 气泡和插入图片对话框里生成图片用哪个服务</p>
+            <p className="modal-subtitle">生成图片用哪个服务</p>
           </div>
           {(!isStandalone || !isMac) && (
             <button onClick={onClose} className="icon-btn" title="关闭"><X size={20} /></button>
@@ -122,7 +123,7 @@ export const ImageConfigModal: React.FC<Props> = ({ onClose }) => {
 
         <div className={isStandalone ? 'standalone-scroll standalone-scroll--headed' : 'modal-body modal-body--headed'}>
           {loading ? (
-            <div className="empty-state">加载中...</div>
+            <div className="empty-state">加载中…</div>
           ) : (
             <div>
               <label className="field-label">服务类型</label>
@@ -164,12 +165,12 @@ export const ImageConfigModal: React.FC<Props> = ({ onClose }) => {
                       ))}
                     </div>
                   )}
-                  <input className="field-input field-input--mono" type="text" value={presets ? currentModel : config.model} onChange={(e) => update({ model: e.target.value })} placeholder={cloud === 'custom' ? 'dall-e-3 / stable-diffusion-xl / ...' : cloud === 'minimax' ? 'image-01' : '输入模型 ID...'} />
+                  <input className="field-input field-input--mono" type="text" value={presets ? currentModel : config.model} onChange={(e) => update({ model: e.target.value })} placeholder={cloud === 'custom' ? 'dall-e-3 / stable-diffusion-xl' : cloud === 'minimax' ? 'image-01' : '输入模型 ID'} />
 
                   <div className="info-box info-box--flush">
                     <div className="info-box__row">{providerInfo.request}</div>
                     {providerInfo.hint && <div className="info-box__row">{providerInfo.hint}</div>}
-                    <div className="info-box__row">🔒 API Key 加密后保存在本机（macOS 钥匙串 / Windows DPAPI），不会上传。</div>
+                    <KeyPrivacyNote />
                   </div>
                 </>
               )}
@@ -179,7 +180,7 @@ export const ImageConfigModal: React.FC<Props> = ({ onClose }) => {
 
         <footer className={isStandalone ? 'standalone-footer' : 'modal-footer'}>
           <button onClick={handleSave} disabled={saving || loading} className="btn btn-primary btn-block">
-            {saving ? '保存中...' : '保存配置'}
+            {saving ? '保存中…' : '保存配置'}
           </button>
           <button onClick={() => (isStandalone ? window.close() : onClose())} className="btn btn-secondary btn-wide">取消</button>
         </footer>

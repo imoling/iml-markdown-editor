@@ -12,7 +12,7 @@ import { app } from 'electron';
 export const CHUNK_SAMPLES = 1600; // 100 ms @ 16 kHz，和麦克风一致
 const CHUNK_BYTES = CHUNK_SAMPLES * 4;
 
-export const SCREEN_PERMISSION_HINT = '收系统声音需要「屏幕录制」权限：系统设置 → 隐私与安全性 → 屏幕录制 里允许 iML Markdown Editor，然后再试';
+export const SCREEN_PERMISSION_HINT = '收系统声音要先给「屏幕录制」权限：系统设置 → 隐私与安全性 → 屏幕录制';
 
 /** 把字节流切成整块的 float32 PCM；不够一块的留到下一次 */
 export class PcmChunker {
@@ -62,7 +62,7 @@ export function startSystemAudio(onChunk: (samples: Float32Array) => void, onExi
   return new Promise((resolve, reject) => {
     if (process.platform !== 'darwin') return reject(new Error('系统声音目前只支持 macOS'));
     const bin = helperPath();
-    if (!fs.existsSync(bin)) return reject(new Error('缺少系统声音捕获工具（开发模式：先跑 node scripts/build-syscap.mjs）'));
+    if (!fs.existsSync(bin)) return reject(new Error('缺少系统声音捕获工具'));
     const child: ChildProcess = spawn(bin, [], { stdio: ['pipe', 'pipe', 'pipe'] });
     const chunker = new PcmChunker();
     let stderr = '';

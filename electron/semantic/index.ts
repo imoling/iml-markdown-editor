@@ -362,7 +362,7 @@ async function startDownload(id: string) {
 
 export function setupSemantic(d: Deps) {
   scheduler.register({
-    id: 'embed', label: '嵌入模型', note: '相关笔记、问你的笔记的检索用它；很小，停了再起也快',
+    id: 'embed', label: '嵌入模型', note: '相关笔记和问笔记的检索用它',
     groupWith: 'chat',   // 和对话模型一套「文本能力」，一起起、一起停、一起让位
     running: () => server.state.status !== 'stopped',
     busy: () => server.state.status === 'starting',

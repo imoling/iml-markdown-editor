@@ -118,12 +118,12 @@ export const TitleBar: React.FC = () => {
       <div className={`titlebar-menus ${isMac ? '' : 'titlebar-menus--win'}`}>
         <Menu id="file" label="文件" width={220}>
           <MenuItem icon={<Plus size={14} />} label="新建文档" hint="⌘N" onClick={run(createNewFile)} />
-          <MenuItem icon={<FileUp size={14} />} label="打开..." hint="⌘O" onClick={run(openFile)} />
+          <MenuItem icon={<FileUp size={14} />} label="打开…" hint="⌘O" onClick={run(openFile)} />
           <MenuItem icon={<Search size={14} />} label="快速打开笔记…" hint="⌘T" onClick={run(() => openDialog('quick-open'))} />
           <MenuItem icon={<CalendarDays size={14} />} label="今日日记" hint="⇧⌘D" onClick={run(openDailyNote)} />
           <MenuDivider />
           <MenuItem icon={<Save size={14} />} label="保存" hint="⌘S" disabled={!activeTab} onClick={run(() => saveActiveFile())} />
-          <MenuItem icon={<Save size={14} />} label="另存为..." hint="⇧⌘S" disabled={!activeTab} onClick={run(() => saveActiveFile(true))} />
+          <MenuItem icon={<Save size={14} />} label="另存为…" hint="⇧⌘S" disabled={!activeTab} onClick={run(() => saveActiveFile(true))} />
           <MenuDivider />
           <MenuItem icon={<History size={14} />} label="版本历史…" hint="⇧⌘H" disabled={!activeTab} onClick={run(() => openDialog('history'))} />
           <MenuDivider />

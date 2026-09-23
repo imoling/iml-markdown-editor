@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>界面文案体检与优化方案 · iML Markdown Editor 26.5</title>
+<style>
+  :root{
+    --ink:#1c1c1e; --ink2:#48484a; --muted:#8e8e93; --line:#e5e5ea; --bg:#fafafa; --card:#fff;
+    --brand:#5b5bd6; --bad:#d64545; --good:#2a9d63; --warn:#c77700;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:15px/1.75 -apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",Arial,sans-serif;}
+  .wrap{max-width:1080px;margin:0 auto;padding:48px 28px 96px}
+  h1{font-size:30px;line-height:1.35;margin:0 0 8px;letter-spacing:-.4px}
+  h2{font-size:21px;margin:56px 0 14px;padding-top:18px;border-top:1px solid var(--line);letter-spacing:-.2px}
+  h3{font-size:16px;margin:30px 0 10px}
+  h4{font-size:14px;margin:20px 0 8px;color:var(--ink2)}
+  p{margin:10px 0}
+  .lead{color:var(--ink2);font-size:16px}
+  .meta{color:var(--muted);font-size:13px;margin-bottom:28px}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:22px 0 8px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+  .card b{display:block;font-size:26px;font-weight:650;letter-spacing:-.5px}
+  .card span{color:var(--muted);font-size:12px}
+  table{width:100%;border-collapse:separate;border-spacing:0;background:var(--card);
+    border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:14px 0;font-size:14px}
+  th,td{text-align:left;padding:10px 13px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#f5f5f7;font-weight:600;font-size:13px;color:var(--ink2)}
+  tr:last-child td{border-bottom:none}
+  td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--muted)}
+  code,.src{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px}
+  .src{color:var(--muted)}
+  .before{color:var(--bad)}
+  .after{color:var(--good)}
+  .before::before{content:"现状 ";color:var(--muted);font-size:11px}
+  .after::before{content:"改后 ";color:var(--muted);font-size:11px}
+  ul,ol{margin:10px 0;padding-left:22px}
+  li{margin:5px 0}
+  .box{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:14px 0}
+  .box--bad{border-left:3px solid var(--bad)}
+  .box--good{border-left:3px solid var(--good)}
+  .box--note{border-left:3px solid var(--brand);background:#f7f7ff}
+  .tag{display:inline-block;padding:1px 7px;border-radius:5px;font-size:11.5px;margin-right:6px;
+    background:#eef;color:var(--brand);white-space:nowrap}
+  .tag--p0{background:#fdecec;color:var(--bad)}
+  .tag--p1{background:#fff4e2;color:var(--warn)}
+  .tag--p2{background:#eef6f1;color:var(--good)}
+  pre{background:#f5f5f7;border:1px solid var(--line);border-radius:10px;padding:14px;overflow:auto;
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;line-height:1.6}
+  .kicker{color:var(--brand);font-size:12px;font-weight:600;letter-spacing:.6px;text-transform:uppercase}
+  .twocol{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:760px){.twocol{grid-template-columns:1fr}}
+  footer{margin-top:64px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="kicker">文案体检</div>
+<h1>界面上的字，比功能本身更像「半成品」</h1>
+<p class="lead">把 <code>src/</code> 与 <code>electron/</code> 里所有用户可见的中文字符串全量抓出来逐条读了一遍：
+2112 条、28 679 字。结论不是「文案太多」，而是<strong>界面在替用户做阅读理解</strong>——
+把设计取舍、实现细节、免责声明都写进了控件下面那行小字。</p>
+<p class="meta">iML Markdown Editor v26.5.0 · 2026-09-23 · 扫描范围：src/**、electron/**（不含测试与注释）<br><strong style="color:var(--good)">状态：方案已全部实施，见文末「实际效果」</strong></p>
+
+<div class="cards">
+  <div class="card"><b>2112</b><span>用户可见字符串</span></div>
+  <div class="card"><b>28 679</b><span>中文字符总量</span></div>
+  <div class="card"><b>186</b><span>≥20 字的纯说明文案</span></div>
+  <div class="card"><b>6053</b><span>这 186 条占的字数</span></div>
+  <div class="card"><b>42</b><span>一字不差的重复文案</span></div>
+  <div class="card"><b>128</b><span>带括号补充的句子</span></div>
+</div>
+
+<div class="box box--note">
+<strong>一句话诊断：</strong>成熟应用的小字回答「不做会怎样」，这个应用的小字在回答「这是什么、为什么这么设计、顺便我保证不干坏事」。
+把后两件事拿掉，说明文案能砍掉一半以上，而且没有一个功能会因此变得难懂。
+</div>
+
+<h2>一、体检数据</h2>
+
+<table>
+<tr><th>指标</th><th class="num">数量</th><th>说明</th></tr>
+<tr><td>用户可见字符串</td><td class="num">2112 条</td><td>含按钮、标签、提示、错误、菜单、空状态</td></tr>
+<tr><td>≥20 字的说明文案</td><td class="num">186 条 / 6053 字</td><td>问题最集中的地方，下面的改写清单主要针对它</td></tr>
+<tr><td>一字不差的重复</td><td class="num">42 句 / 91 处</td><td>同一句话写在 2~3 个文件里，改一处漏一处</td></tr>
+<tr><td>带括号补充</td><td class="num">128 条（6%）</td><td>括号是「这句话没想清楚」的信号</td></tr>
+<tr><td>省略号混用</td><td class="num">「…」104 条 / 「...」17 条</td><td>同一个界面里两种写法</td></tr>
+<tr><td>中文里用半角冒号</td><td class="num">22 条</td><td><code>API 请求失败: 500</code></td></tr>
+<tr><td>句末句号不统一</td><td class="num">带「。」71 条 / 不带 401 条</td><td>同一个弹窗里两种都有</td></tr>
+<tr><td>技术名词直接暴露</td><td class="num">llama-server 7 · GGUF 5 · SHA256 3 · DPAPI 2 · Base URL 4 · HTTP 5</td><td>面向使用者的界面里出现实现细节</td></tr>
+<tr><td>叫法不统一</td><td class="num">本机 50 / 本地 17 · 笔记 144 / 文档 25 · 点一下 5 / 点击 11 · 设置里 5 / 设置中 2</td><td>同一个东西两个名字</td></tr>
+</table>
+
+<h2>二、七类病症（都有实例）</h2>
+
+<h3>1. 把「为什么这么设计」写进了界面 <span class="tag tag--p0">P0</span></h3>
+<p>这是最典型、也最伤气质的一类。用户要的是「这个开关干什么」，得到的是一段设计说明。</p>
+<div class="box box--bad">
+<span class="src">src/components/AI/ResourcesModal.tsx:93</span>
+<p class="before">不开（默认）：内存真不够时才请对话模型让位。开着：每次出图都先把它停掉，画完自动回来</p>
+<p class="after">出图前先停掉对话模型，画完自动恢复</p>
+<p style="color:var(--muted);font-size:13px;margin:6px 0 0">默认值本身就是默认值，不需要在标签里再声明一遍「默认不开」；「不开会怎样」由这个开关的关闭状态表达。</p>
+</div>
+<div class="box box--bad">
+<span class="src">src/components/AI/ResourcesModal.tsx:70（弹窗副标题，60 字）</span>
+<p class="before">哪几组本机模型在跑、各占多少内存。内存不够时才会请人让位（让完自动回来），空闲久了自动停；正在干活的不会被停，会等它干完</p>
+<p class="after">本机模型的内存占用与启停</p>
+</div>
+<div class="box box--bad">
+<span class="src">electron/localModel/index.ts:409（面板里那一行说明，50 字）</span>
+<p class="before">写作助手、整理纪要、问你的笔记都用它，嵌入模型跟着它一起启停；停掉后下次用时自动重新加载，要等十几秒</p>
+<p class="after">写作助手、纪要、问笔记都用它。停掉后下次用时自动加载，约十几秒</p>
+</div>
+
+<h3>2. 控件已经说清楚了，下面再说一遍 <span class="tag tag--p0">P0</span></h3>
+<div class="box box--bad">
+<span class="src">src/components/Settings/SettingsModal.tsx:204</span>
+<p class="before">正文字体 <span style="color:var(--muted)">／ 富文本与预览的正文；代码始终用等宽字体</span></p>
+<p class="after">正文字体（副文案整行删掉）</p>
+</div>
+<div class="box box--bad">
+<span class="src">src/components/Editor/dialogs/ImageInsertDialog.tsx</span>
+<p class="before">点击选择或拖拽图片到此处 <span style="color:var(--muted)">／ 支持 JPG、PNG、GIF、WebP</span></p>
+<p class="after">拖进来，或点一下选文件</p>
+<p style="color:var(--muted);font-size:13px;margin:6px 0 0">格式白名单属于「选错了才需要知道」，放到失败提示里，不占正常路径的视野。</p>
+</div>
+<div class="box box--bad">
+<span class="src">src/components/AI/TranscribeConfigModal.tsx:269</span>
+<p class="before">允许使用麦克风 <span style="color:var(--muted)">／ 系统会弹一次授权框；声音只用来在本机识别成文字。</span></p>
+<p class="after">允许使用麦克风（副文案删掉，隐私承诺在弹窗顶部已经说过一次）</p>
+</div>
+
+<h3>3. 一句话塞三件事 <span class="tag tag--p1">P1</span></h3>
+<div class="box box--bad">
+<span class="src">src/components/AI/TranscribeConfigModal.tsx:249（71 字，三个分句 + 一个括号）</span>
+<p class="before">录音只存在这台电脑上：放进笔记时存到笔记旁边的 assets 文件夹（一小时约 11 MB）；还没放进笔记的先留在应用数据里，点「清空」才删。</p>
+<p class="after">录音存在笔记旁的 assets 里，一小时约 11 MB</p>
+</div>
+<div class="box box--bad">
+<span class="src">src/components/Settings/SettingsModal.tsx:245</span>
+<p class="before">笔记库里 .iml/snippets.css 的样式会叠加到界面上，保存即生效；只是样式表，不执行任何代码，也不会联网</p>
+<p class="after">笔记库里的 .iml/snippets.css，保存即生效</p>
+</div>
+
+<h3>4. 上一个产品的文案残留 <span class="tag tag--p0">P0 · 必须改</span></h3>
+<p>设置最底部这一块不像是这个应用的字：用「您」、用夸张比喻、提到根本不存在的「星标状态与记忆目录」。
+而它实际做的事很朴素——清掉 <code>localStorage</code> 里的 <code>iml_session</code>（标签页、最近打开、星标、文件树展开状态、侧边栏宽度）然后重载。</p>
+<div class="box box--bad">
+<span class="src">src/components/Settings/SettingsModal.tsx:352-356 与 :143</span>
+<p class="before">安全逃生舱 · 销毁本地记忆快照 · 一键抹除全部现场，并让应用浴火重生。<br>
+弹窗：警告：此操作将彻底抹除当前一切会话现场（包括您的星标状态与记忆目录）。点击确认后主窗口将会立即重载。确定要继续吗？</p>
+<p class="after">重置界面状态 · 关掉所有标签页，清空最近打开和星标，文件树收起。笔记和设置不动。<br>
+弹窗：重置界面状态？标签页、最近打开、星标会清空，笔记和设置不受影响。<br>按钮：重置</p>
+</div>
+<p>同一区域还有两处旧叫法：<code>起始控制台</code>（:281）、<code>每次打开知识库时呈现的画面</code>（:276）——
+全应用只有这一处叫「知识库」，其余 34 处都叫「笔记库」。</p>
+
+<h3>5. 实现细节漏到界面上 <span class="tag tag--p1">P1</span></h3>
+<table>
+<tr><th>位置</th><th>现在写的</th><th>用户其实需要知道的</th></tr>
+<tr><td class="src">ModelConfigModal:267-268</td><td>Anthropic Messages API，Base URL 须填到 /v1。实际请求：…<br>OpenAI Chat Completions 格式，适用于 OpenAI、DeepSeek、Gemini、本地服务与各类兼容接口</td><td>两个单选项叫什么就够了；协议差异收进「?」气泡，真填错时报错里再说</td></tr>
+<tr><td class="src">ImageConfigModal:172 / ModelConfigModal:274</td><td>🔒 API Key 加密后保存在本机（macOS 钥匙串 / Windows DPAPI），不会上传。</td><td>Key 加密存在本机，不上传 —— 钥匙串/DPAPI 是实现，用户不关心</td></tr>
+<tr><td class="src">LocalModelPanel:100</td><td>首次启动检查中（系统会对新程序做一次安全扫描，约十几秒）…</td><td>系统正在检查新程序，约十几秒…</td></tr>
+<tr><td class="src">main.ts:1164-1262（10 条）</td><td>Agnes 国内站 返回非 JSON: {原始响应前 200 字}<br>Gemini Imagen 非 JSON（500）: …<br>MiniMax 错误码 1027</td><td>统一成「AI 配图失败：<em>一句人话</em>」+ 可展开的「详情」，别把服务端原文糊在状态栏上</td></tr>
+<tr><td class="src">main.ts:1137</td><td>${label} 包含非 ASCII 字符（位置 12，字符"中"），HTTP Header 不支持中文，请检查配置</td><td>API Key 里有中文字符，请检查是不是复制多了</td></tr>
+</table>
+
+<h3>6. 同一句话抄在好几处 <span class="tag tag--p1">P1</span></h3>
+<p>42 句一字不差的重复，改一处就漏一处。最典型的三条：</p>
+<table>
+<tr><th>重复的句子</th><th>出现在</th></tr>
+<tr><td>🔒 API Key 加密后保存在本机（macOS 钥匙串 / Windows DPAPI），不会上传。</td><td>ImageConfigModal:172、ModelConfigModal:274</td></tr>
+<tr><td>改动即时生效，不需要保存。</td><td>ResourcesModal、SemanticIndexModal、TranscribeConfigModal</td></tr>
+<tr><td>这次转写已经开始，改动从下一场生效。</td><td>TranscribeConfigModal:225、:251</td></tr>
+</table>
+<p>都该抽成共用的小组件（<code>&lt;KeyPrivacyNote /&gt;</code>、<code>&lt;LiveSettingsNote /&gt;</code>），而不是复制字符串。</p>
+
+<h3>7. 标点与术语各写各的 <span class="tag tag--p2">P2</span></h3>
+<ul>
+<li>省略号：<code>正在检查更新...</code>（App.tsx:564）、<code>AI 正在生成内容...</code>（StatusBar:116）、<code>加载中...</code>（两个配置弹窗）用的是三个点；另外 104 处用的是「…」。</li>
+<li>冒号：<code>API 请求失败: 500</code>、<code>网络错误: xxx</code> 用半角，中文语境里其余地方用「：」。</li>
+<li>句末句号：≥15 字的说明文案里 401 条不带句号、71 条带，同一个弹窗内混用（TranscribeConfigModal 里两种都有）。</li>
+<li>叫法：本机 / 本地、笔记 / 文档、点一下 / 点击、设置里 / 设置中、停掉 / 停止 —— 都是同一件事的两种写法。</li>
+</ul>
+
+<h2>三、文案规范（建议写进 CLAUDE.md，以后照着写）</h2>
+
+<h3>信息层级：一个控件最多三行，第三行通常不该存在</h3>
+<table>
+<tr><th>行</th><th>写什么</th><th>例</th></tr>
+<tr><td>标题</td><td>这个控件<em>是什么</em>，用动词或名词短语，≤ 8 字</td><td>粘贴图片时压缩</td></tr>
+<tr><td>副文案（可选）</td><td>只写<em>不做会怎样、代价、例外</em>，≤ 25 字，且必须是标题推不出来的信息</td><td>大图转成 WebP，通常小一半；动图不动</td></tr>
+<tr><td>第三行</td><td>不要有。要解释原理 → 新特性介绍 / README；要免责 → 全局说一次</td><td>—</td></tr>
+</table>
+
+<h4>该写的</h4>
+<ul>
+<li>不可逆、会花钱、会花很长时间的后果：<code>删除后需要重新下载 6.7 GB</code></li>
+<li>非直觉的副作用：<code>停掉后下次用时自动加载，约十几秒</code></li>
+<li>生效范围与时机：<code>只在源码模式生效</code>、<code>改动从下一场转写生效</code></li>
+<li>用户看不见的位置：<code>存在笔记旁的 assets 里</code></li>
+</ul>
+<h4>不该写的</h4>
+<ul>
+<li>标题的同义复述（<code>正文字体 / 富文本与预览的正文</code>）</li>
+<li>设计理由与权衡（<code>默认不开：内存真不够时本来就会请它们让位，不必每次都折腾</code>）</li>
+<li>实现细节（钥匙串、DPAPI、llama-server、SHA256、GGUF、Base URL）</li>
+<li>重复的隐私承诺 —— 全应用只在两处说：状态栏的 AI 指示器、各能力弹窗的顶部副标题，各说一次</li>
+<li>操作说明书式的引导（<code>点「试一下」看看麦克风有没有在收音</code> —— 按钮就在旁边）</li>
+</ul>
+
+<h3>术语表（一个概念一个词）</h3>
+<table>
+<tr><th>用</th><th>不用</th><th>备注</th></tr>
+<tr><td>笔记库</td><td>知识库、资料库、工作区</td><td>SettingsModal:276 是唯一漏网的</td></tr>
+<tr><td>笔记</td><td>文档</td><td>「文档」只在指非 Markdown 文件时用（导出 Word 文档）</td></tr>
+<tr><td>本机</td><td>本地</td><td>「本地」只用于「本地文件 / 本地上传」这种物理含义</td></tr>
+<tr><td>启动 / 停止</td><td>起来 / 停掉 / 起停</td><td>按钮和状态用书面词，正文可以口语</td></tr>
+<tr><td>点一下</td><td>点击</td><td>全应用口吻偏口语，统一到「点一下」</td></tr>
+<tr><td>设置里</td><td>设置中</td><td>—</td></tr>
+<tr><td>让位</td><td>腾地方、腾干净</td><td>已经是这一版的正式说法，界面上只用这一个</td></tr>
+</table>
+
+<h3>标点</h3>
+<ul>
+<li>中文语境一律全角：<code>：，。「」（）</code>；省略号只用 <code>…</code>。</li>
+<li>说明文案<strong>不加句末句号</strong>（现状 401:71，少数服从多数）；两句以上时中间用「；」，仍然不加句号。</li>
+<li>按钮、标签、菜单项不带任何句末标点；进行中的按钮用 <code>正在…</code>（<code>正在保存…</code>）。</li>
+<li>数字与单位、中英文之间留一个空格：<code>8.9 GB</code>、<code>90 分钟</code>、<code>Markdown 文件</code>。</li>
+<li>状态词：进行中 <code>正在 X…</code>，完成 <code>已 X</code>，失败 <code>X 失败：原因</code>。</li>
+</ul>
+
+<h3>错误信息三段式</h3>
+<pre>&lt;发生了什么&gt;：&lt;一句人话的原因&gt;
+[详情]  ← 折叠，放原始响应 / HTTP 码 / 堆栈
+
+例：AI 配图失败：火山引擎没有返回图片
+    详情 › HTTP 400 InvalidParameter: model not found</pre>
+
+<h2>四、逐面改写清单</h2>
+<p>下面每条都能直接照抄。「省」列是这一条减少的字数。</p>
+
+<h3>设置弹窗 <span class="tag tag--p0">P0</span> <span class="src">SettingsModal.tsx</span></h3>
+<table>
+<tr><th>行</th><th>现状 → 改后</th><th class="num">省</th></tr>
+<tr><td class="src">352-356<br>143</td><td><span class="before"></span>安全逃生舱 / 销毁本地记忆快照 / 一键抹除全部现场，并让应用浴火重生。<br>
+<span class="after"></span>重置界面状态 / 关掉所有标签页，清空最近打开和星标，文件树收起。笔记和设置不动。<br>
+<span class="before"></span>警告：此操作将彻底抹除当前一切会话现场（包括您的星标状态与记忆目录）。点击确认后主窗口将会立即重载。确定要继续吗？<br>
+<span class="after"></span>重置界面状态？标签页、最近打开、星标会清空，笔记和设置不受影响。</td><td class="num">−55</td></tr>
+<tr><td class="src">276/281</td><td><span class="before"></span>起始控制台 / 每次打开知识库时呈现的画面<br><span class="after"></span>首页 / 打开应用时显示</td><td class="num">−9</td></tr>
+<tr><td class="src">291-292</td><td><span class="before"></span>静默自动保存 / 编辑器失焦时无感存盘；未命名文档会自动存入笔记库<br><span class="after"></span>自动保存 / 切走时存盘，未命名的存进笔记库</td><td class="num">−12</td></tr>
+<tr><td class="src">203-204</td><td><span class="before"></span>正文字体 / 富文本与预览的正文；代码始终用等宽字体<br><span class="after"></span>正文字体（删副文案）</td><td class="num">−19</td></tr>
+<tr><td class="src">241</td><td><span class="before"></span>截图等大图转成 WebP 再存进笔记旁的 assets/，体积通常小一半以上；动图、矢量图不动<br><span class="after"></span>大图转成 WebP，通常小一半；动图和矢量图不动</td><td class="num">−24</td></tr>
+<tr><td class="src">245</td><td><span class="before"></span>笔记库里 .iml/snippets.css 的样式会叠加到界面上，保存即生效；只是样式表，不执行任何代码，也不会联网<br><span class="after"></span>笔记库里的 .iml/snippets.css，保存即生效</td><td class="num">−39</td></tr>
+<tr><td class="src">250</td><td><span class="before"></span>鼠标在 [[链接]] 上停半秒，就地弹出那篇笔记（或那个小节）的内容<br><span class="after"></span>鼠标停在 [[链接]] 上半秒，弹出那篇的内容</td><td class="num">−12</td></tr>
+<tr><td class="src">254</td><td><span class="before"></span>拼写检查 / 用系统词典给拼错的英文单词标红；中文笔记建议关闭<br><span class="after"></span>英文拼写检查 / 用系统词典标红拼错的英文词</td><td class="num">−10</td></tr>
+<tr><td class="src">263</td><td><span class="before"></span>关闭后所有 AI 入口隐藏（写作助手、AI 配图、相关笔记、语义搜索），应用不向任何模型服务发请求<br><span class="after"></span>关掉后隐藏所有 AI 入口，也不再发任何请求</td><td class="num">−27</td></tr>
+<tr><td class="src">309</td><td><span class="before"></span>侧边栏的树根；新建与静默保存的笔记都放在这里<br><span class="after"></span>新建的笔记都放在这里</td><td class="num">−12</td></tr>
+<tr><td class="src">333</td><td><span class="before"></span>笔记库就是一个普通文件夹：放进任何同步盘的目录里，同步交给同步盘。只是换个地方看，笔记文件不会自动搬过去。<br><span class="after"></span>笔记库就是个普通文件夹，放进同步盘的目录即可；选目录不会搬动已有笔记</td><td class="num">−21</td></tr>
+</table>
+
+<h3>本机资源 <span class="tag tag--p0">P0</span> <span class="src">ResourcesModal.tsx</span></h3>
+<table>
+<tr><th>位置</th><th>现状 → 改后</th><th class="num">省</th></tr>
+<tr><td class="src">:70 副标题</td><td><span class="before"></span>哪几组本机模型在跑、各占多少内存。内存不够时才会请人让位（让完自动回来），空闲久了自动停；正在干活的不会被停，会等它干完<br><span class="after"></span>本机模型的内存占用与启停</td><td class="num">−48</td></tr>
+<tr><td class="src">:91-95 开关</td><td><span class="before"></span>生图时总是先给它腾地方 + 不开（默认）：内存真不够时才请对话模型让位。开着：每次出图都先把它停掉，画完自动回来<br><span class="after"></span>出图前先停掉对话模型 / 画完自动恢复</td><td class="num">−45</td></tr>
+<tr><td class="src">:116 行内</td><td><span class="before"></span>· 给对话模型（含嵌入模型）腾了地方，完事自动回来<br><span class="after"></span>· 让位给本机生图，完事自动回来</td><td class="num">−8</td></tr>
+<tr><td class="src">index.ts:409</td><td><span class="before"></span>写作助手、整理纪要、问你的笔记都用它，嵌入模型跟着它一起启停；停掉后下次用时自动重新加载，要等十几秒<br><span class="after"></span>写作助手、纪要、问笔记都用它。停掉后下次用时自动加载，约十几秒</td><td class="num">−19</td></tr>
+<tr><td class="src">imageGen:316</td><td><span class="before"></span>出图时才需要；一张 768 的图在 M 系列上要一两分钟<br><span class="after"></span>出图时自动启动，一张约一两分钟</td><td class="num">−9</td></tr>
+</table>
+
+<h3>实时转写设置 <span class="tag tag--p1">P1</span> <span class="src">TranscribeConfigModal.tsx</span></h3>
+<table>
+<tr><th>位置</th><th>现状 → 改后</th><th class="num">省</th></tr>
+<tr><td class="src">:249</td><td><span class="before"></span>录音只存在这台电脑上：放进笔记时存到笔记旁边的 assets 文件夹（一小时约 11 MB）；还没放进笔记的先留在应用数据里，点「清空」才删。<br><span class="after"></span>录音存在笔记旁的 assets 里，一小时约 11 MB</td><td class="num">−50</td></tr>
+<tr><td class="src">:303</td><td><span class="before"></span>正在听「设备名」——说句话，条会跟着跳；一动不动就是没收到声音<br><span class="after"></span>正在听「设备名」，说句话音量条会跳</td><td class="num">−12</td></tr>
+<tr><td class="src">:269</td><td><span class="before"></span>系统会弹一次授权框；声音只用来在本机识别成文字。<br><span class="after"></span>（删）</td><td class="num">−24</td></tr>
+<tr><td class="src">:310</td><td><span class="before"></span>目前只收麦克风的声音；戴耳机开线上会议时，对方的声音进不来（Windows 上的系统声音在计划中）。<br><span class="after"></span>只收麦克风；戴耳机时对方的声音进不来</td><td class="num">−32</td></tr>
+<tr><td class="src">:195</td><td><span class="before"></span>转写里标出每句话是谁说的；点名字可以改，改成同一个名字就是合并<br><span class="after"></span>标出每句话是谁说的；点名字可以改名或合并</td><td class="num">−12</td></tr>
+<tr><td class="src">:225/:251</td><td>两处一模一样的「这次转写已经开始，改动从下一场生效。」→ 抽成一个组件，且去掉句号</td><td class="num">去重</td></tr>
+</table>
+
+<h3>写作助手 / AI 配图配置 <span class="tag tag--p1">P1</span></h3>
+<table>
+<tr><th>位置</th><th>现状 → 改后</th><th class="num">省</th></tr>
+<tr><td class="src">两处 :172/:274</td><td><span class="before"></span>🔒 API Key 加密后保存在本机（macOS 钥匙串 / Windows DPAPI），不会上传。<br><span class="after"></span>Key 加密存在本机，不上传（抽成共用组件，去掉 emoji）</td><td class="num">−2×24</td></tr>
+<tr><td class="src">ImageConfig:22/23</td><td><span class="before"></span>www.agnes-ai.cn → API Key（与国际站不通用；和写作助手里的 Agnes 国内站是同一个 Key）<br><span class="after"></span>输入框占位符写 <code>www.agnes-ai.cn 上创建的 Key</code>，描述行只留「国内直连，有免费额度」</td><td class="num">−2×35</td></tr>
+<tr><td class="src">ImageConfig:16</td><td><span class="before"></span>Z-Image Turbo 或 Qwen-Image 2.1，编辑器代管，不联网；模型 6.7 ~ 10.3 GB<br><span class="after"></span>模型跑在这台电脑上，不联网；需下载 6.7 ~ 10.3 GB</td><td class="num">−19</td></tr>
+<tr><td class="src">ModelConfig:267/268</td><td>两段协议说明 → 收进「?」气泡，选项行只留「Anthropic」「OpenAI 兼容」</td><td class="num">−100</td></tr>
+<tr><td class="src">LocalModelPanel:214</td><td><span class="before"></span>启动时预留的上下文长度，越大越占内存。写作场景 32k 已够用，128k 能装下一整本书<br><span class="after"></span>越大越占内存；写作 32k 够用</td><td class="num">−30</td></tr>
+<tr><td class="src">LocalModelPanel:100</td><td><span class="before"></span>首次启动检查中（系统会对新程序做一次安全扫描，约十几秒）…<br><span class="after"></span>系统正在检查新程序，约十几秒…</td><td class="num">−14</td></tr>
+</table>
+
+<h3>面板与空状态 <span class="tag tag--p2">P2</span></h3>
+<table>
+<tr><th>位置</th><th>现状 → 改后</th><th class="num">省</th></tr>
+<tr><td class="src">AskPanel:153</td><td><span class="before"></span>需要先开启「相关笔记」：它用一个很小的本机模型读懂每篇笔记的意思，问答靠它找到相关内容。<br><span class="after"></span>先开启「相关笔记」，问答要靠它找到相关内容</td><td class="num">−24</td></tr>
+<tr><td class="src">TasksPanel:112-114</td><td>三条提示留两条：删掉「会议纪要里的「待办」一节会自动汇进来，不用再抄一遍」（属于惊喜，不必预告）</td><td class="num">−26</td></tr>
+<tr><td class="src">TranscribePanel:277</td><td><span class="before"></span>手机录的会议、课程录音……选一个音频文件，转写成一篇笔记（m4a / mp3 / wav 等，单个最长 90 分钟）<br><span class="after"></span>选一个音频文件转成笔记，单个最长 90 分钟</td><td class="num">−37</td></tr>
+<tr><td class="src">TranscribePanel:288</td><td><span class="before"></span>还没打开笔记库，这一场没有对应的笔记；停下来之后再选放到哪。<br><span class="after"></span>还没打开笔记库，停下来之后再选放到哪</td><td class="num">−12</td></tr>
+<tr><td class="src">Sidebar:278</td><td><span class="before"></span>还没有其他笔记链接到这里。在别的笔记里输入 [[ 即可引用。<br><span class="after"></span>还没有笔记链接到这里，在别处输入 [[ 就能引用</td><td class="num">−7</td></tr>
+</table>
+
+<h3>状态、进度与错误 <span class="tag tag--p1">P1</span></h3>
+<table>
+<tr><th>位置</th><th>现状 → 改后</th></tr>
+<tr><td class="src">StatusBar:116</td><td><span class="before"></span>AI 正在生成内容... → <span class="after"></span>正在生成…</td></tr>
+<tr><td class="src">App.tsx:564</td><td><span class="before"></span>正在检查更新... → <span class="after"></span>正在检查更新…</td></tr>
+<tr><td class="src">App.tsx:612</td><td><span class="before"></span>下载后退出应用、装上新的即可，笔记和设置都不受影响。这个版本不会再主动弹出，「帮助」菜单上的红点会一直留到你更新。<br><span class="after"></span>装上新版本即可，笔记和设置不受影响。这个提示不会再弹，「帮助」里的红点会留到你更新</td></tr>
+<tr><td class="src">localImageEta:64</td><td><span class="before"></span>正在出图 3/8 步，还要约 45 秒 · 1:12 → <span class="after"></span>正在出图 3/8 · 还要约 45 秒<br><span style="color:var(--muted);font-size:13px">已用时长和剩余时间同时显示，两个数字互相打架；留一个就够</span></td></tr>
+<tr><td class="src">main.ts:1164-1262</td><td>10 条服务商错误 → 统一 <code>AI 配图失败：&lt;人话&gt;</code> + 折叠「详情」</td></tr>
+<tr><td class="src">main.ts:1007/1071</td><td><span class="before"></span>API 请求失败: 500 ／ 网络错误: xxx → <span class="after"></span>模型服务返回错误（500） ／ 网络错误：xxx</td></tr>
+</table>
+
+<h2>五、实施计划</h2>
+<p>不建议一次全改：文案散在 60 多个文件里，一次性大改很难验收。按「能不能被用户看见」和「会不会丢脸」排序，分四批。</p>
+
+<table>
+<tr><th>批次</th><th>内容</th><th>范围</th><th>验收</th></tr>
+<tr><td><span class="tag tag--p0">第一批</span><br>丢脸的</td>
+<td>旧产品残留（安全逃生舱、浴火重生、您、星标状态 / 记忆目录）、知识库→笔记库、ASCII 省略号与冒号</td>
+<td>SettingsModal、App.tsx、StatusBar、main.ts 共约 10 处</td>
+<td>加一个 lint 测试（见下），跑 <code>npm run check</code> 全绿</td></tr>
+
+<tr><td><span class="tag tag--p0">第二批</span><br>最吵的</td>
+<td>三个高频弹窗的副文案瘦身：本机资源、实时转写设置、设置</td>
+<td>约 30 条文案，字数减半</td>
+<td>逐个弹窗截图前后对比，贴进本报告</td></tr>
+
+<tr><td><span class="tag tag--p1">第三批</span><br>系统化</td>
+<td>重复文案抽组件（Key 隐私、即时生效、下次生效）；错误信息三段式 + 「详情」折叠；术语统一</td>
+<td>AI 配置族、main.ts 错误分支</td>
+<td>重复文案计数归零；随机断网 / 填错 Key 走一遍错误路径</td></tr>
+
+<tr><td><span class="tag tag--p2">第四批</span><br>长尾</td>
+<td>面板空状态、tooltip、slash 菜单描述、新特性介绍（5433 字，单独一次）</td>
+<td>其余全部</td>
+<td>全量重新抓一次字符串，对照规范复查</td></tr>
+</table>
+
+<h3>防回潮：把规范写成测试</h3>
+<p>文案最容易「改完又长回来」。建议加一个 <code>src/test/uiCopy.test.ts</code>，扫描源码里的中文字面量并断言：</p>
+<pre>// 这几条是机器能判的，判不了的（比如「是不是在解释设计理由」）靠 review
+expect(所有 UI 字符串).not.toContain('...');        // 省略号只用 …
+expect(中文语境里的冒号).toBe('：');                  // 不出现 ": "
+expect(禁用词表).toEqual([]);                        // 知识库 / 您 / 浴火重生 / 会话现场
+expect(重复出现 ≥2 次的长文案).toEqual([]);          // 必须抽组件
+expect(副文案.每一条.length).toBeLessThanOrEqual(30); // 超过 30 字说明没想清楚
+expect(技术词表命中).toEqual([]);                    // DPAPI / GGUF / SHA256 / Base URL…</pre>
+<p>扫描脚本本次已经写好（<code>/tmp/ui_strings.py</code> 的提取逻辑），搬进仓库即可复用。</p>
+
+<h2>六、实际效果（2026-09-23 已全部落地）</h2>
+<div class="box box--good">
+四批一次做完，<code>npm run check</code> 全绿（68 个测试文件 / 713 条用例，其中 8 条是新加的文案护栏）。
+下面的数字排除了写给模型的提示词、新特性介绍和测试文件，只算真正的界面文案。
+</div>
+<div class="cards">
+  <div class="card"><b>−42%</b><span>说明文案字数 5372 → 3139</span></div>
+  <div class="card"><b>168 → 125</b><span>≥20 字的说明文案条数</span></div>
+  <div class="card"><b>0</b><span>ASCII 省略号（原 17）</span></div>
+  <div class="card"><b>0</b><span>跨文件重复的长句（原 42）</span></div>
+  <div class="card"><b>0</b><span>旧产品残留词</span></div>
+  <div class="card"><b>8</b><span>护栏测试条数</span></div>
+</div>
+<h3>落地清单</h3>
+<table>
+<tr><th>做了什么</th><th>在哪儿</th></tr>
+<tr><td>设置里「安全逃生舱 / 浴火重生 / 您 / 星标状态」整块重写成「重置界面状态」，如实说明它只清标签页、最近打开和星标</td><td class="src">SettingsModal.tsx</td></tr>
+<tr><td>「知识库」「起始控制台」「静默自动保存」「恢复上次会话」改成笔记库 / 首页 / 自动保存 / 上次打开的笔记</td><td class="src">SettingsModal.tsx</td></tr>
+<tr><td>三个高频弹窗的副文案瘦身：本机资源（副标题 60 → 12 字）、实时转写、AI 配图 / 写作助手</td><td class="src">ResourcesModal、TranscribeConfigModal、ImageConfigModal、ModelConfigModal</td></tr>
+<tr><td>重复文案抽成共用件：<code>KeyPrivacyNote</code> / <code>LiveSettingsNote</code>（组件）、<code>uiText.ts</code>（界面常量）、<code>electron/shared/uiText.ts</code>（主进程与界面共用）</td><td class="src">CopyNotes.tsx、src/utils/uiText.ts、electron/shared/uiText.ts</td></tr>
+<tr><td>10 条服务商报错改成一句人话，原始回包只进日志（<code>providerError()</code>）</td><td class="src">electron/main.ts</td></tr>
+<tr><td>标点统一：省略号全改「…」，中文里的半角冒号清零</td><td class="src">全局</td></tr>
+<tr><td>护栏测试：省略号、半角冒号、禁用词、术语、副文案长度（按视觉宽度算）、实现细节词、跨文件重复</td><td class="src">src/test/uiCopy.test.ts</td></tr>
+<tr><td>规范写进全局 <code>~/.claude/CLAUDE.md</code>「界面文案」一节；术语表与例外放项目 <code>CLAUDE.md</code></td><td class="src">CLAUDE.md</td></tr>
+</table>
+<h3>扫描器踩的坑</h3>
+<p>第一版护栏漏了 <strong>跨行的 JSX 正文</strong>——最长的那几条（转写设置里 67 字讲声纹的那段、清理图片弹窗里 69 字的说明）
+正是写成多行 JSX 才躲过按行匹配的。现在整篇一起匹配，并先剥掉注释。</p>
+<p>更重要的不是字数：<strong>界面不再替用户做阅读理解，用户才会相信这些功能是稳的。</strong>
+现在每个开关下面都挂着一段解释，传递出来的潜台词是「这功能有点复杂，我得先跟你解释一下」——
+而成熟应用的潜台词是「按就行了，出问题我会告诉你」。</p>
+
+<footer>
+生成于 2026-09-23 · 扫描版本 v26.5.0 · 文件：<code>docs/ui-copy-audit.html</code><br>
+数据来源：src/** 与 electron/** 全量中文字符串提取（2112 条 / 28 679 字），逐条人工阅读分类。
+</footer>
+
+</div>
+</body>
+</html>

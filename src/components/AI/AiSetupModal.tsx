@@ -5,6 +5,7 @@ import { PRESETS } from '../../utils/aiService';
 import { pickBestLocalModel, useAiReadiness } from '../../utils/aiReadiness';
 import { stripIpcError } from './ModelConfigModal';
 import type { LocalState } from '../../types/window';
+import { GATEKEEPER_SCAN, DOWNLOAD_IN_BACKGROUND } from '../../utils/uiText';
 
 interface Props {
   onClose: () => void;
@@ -112,7 +113,7 @@ export const AiSetupModal: React.FC<Props> = ({ onClose }) => {
     if (!local.runtime.installed) {
       if (local.install.phase === 'downloading') return `下载推理运行时 ${installPct}%`;
       if (local.install.phase === 'extracting') return '解压推理运行时…';
-      if (local.install.phase === 'warming') return '首次启动检查中（系统在扫描新程序，约十几秒）…';
+      if (local.install.phase === 'warming') return GATEKEEPER_SCAN;
       return '准备安装推理运行时…';
     }
     if (dl?.phase === 'verifying') return '校验模型完整性…';
@@ -128,7 +129,7 @@ export const AiSetupModal: React.FC<Props> = ({ onClose }) => {
         <header className="modal-head">
           <div>
             <h1 className="modal-title">快速开始 AI</h1>
-            <p className="modal-subtitle">续写、润色、配图都要先有一个模型。下面三条路选一条，选完就能用</p>
+            <p className="modal-subtitle">续写、润色、配图都要先有一个模型，三条路选一条</p>
           </div>
           <button onClick={onClose} className="icon-btn" title="关闭"><X size={20} /></button>
         </header>
@@ -136,7 +137,7 @@ export const AiSetupModal: React.FC<Props> = ({ onClose }) => {
         <div className="modal-body modal-body--headed">
           {!aiEnabled && (
             <div className="lm-line lm-line--error mb-16">
-              AI 功能已在「设置 → AI 与隐私」里关掉了，先打开总开关。
+              AI 功能在设置里关掉了，先打开总开关
             </div>
           )}
 
@@ -158,10 +159,10 @@ export const AiSetupModal: React.FC<Props> = ({ onClose }) => {
                 {running ? (
                   <>
                     <button className="btn btn-secondary btn-xs" onClick={cancelOneClick}>取消</button>
-                    <span className="lm-line lm-line--muted">下载在后台继续，可以关掉这个窗口</span>
+                    <span className="lm-line lm-line--muted">{DOWNLOAD_IN_BACKGROUND}</span>
                   </>
                 ) : builtinDone ? (
-                  <span className="lm-line"><Check size={13} /> 已就绪，回到文档里按空格就能用</span>
+                  <span className="lm-line"><Check size={13} /> 已就绪，回到笔记里按空格就能用</span>
                 ) : (
                   <>
                     <button className="btn btn-primary btn-xs" disabled={!aiEnabled || !local} onClick={startOneClick}>一键装好</button>
@@ -180,7 +181,7 @@ export const AiSetupModal: React.FC<Props> = ({ onClose }) => {
                 <span className="lm-badge lm-badge--info">免费额度 · 不占磁盘</span>
               </div>
               <div className="lm-line">
-                在 www.agnes-ai.cn 注册后创建一个 API Key 填进来即可，不用下载模型。请求会发往 Agnes 的服务器。
+                在 www.agnes-ai.cn 创建 Key 填进来，不用下载模型
               </div>
               <div className="lm-actions">
                 <button className="btn btn-secondary btn-xs" disabled={!aiEnabled} onClick={useAgnes}>填 Key 用起来</button>
@@ -195,7 +196,7 @@ export const AiSetupModal: React.FC<Props> = ({ onClose }) => {
                 <div className="lm-card__title"><Plug size={14} /> 我已经有模型服务</div>
               </div>
               <div className="lm-line">
-                OpenAI、DeepSeek、Anthropic 这类账号，或者本机已经跑着的 Ollama / LM Studio，填地址和 Key 就能接上。
+                OpenAI、DeepSeek，或自己跑着的 Ollama / LM Studio
               </div>
               <div className="lm-actions">
                 <button className="btn btn-secondary btn-xs" disabled={!aiEnabled} onClick={() => openDialog('ai-config')}>去填写…</button>
@@ -205,7 +206,7 @@ export const AiSetupModal: React.FC<Props> = ({ onClose }) => {
         </div>
 
         <footer className="modal-footer">
-          <span className="hint history-modal__note">这些设置随时可以在「智能 → 写作助手」里改。</span>
+          <span className="hint history-modal__note">这些设置随时可以在「智能 → 写作助手」里改</span>
           <button onClick={onClose} className="btn btn-primary btn-wide">完成</button>
         </footer>
       </div>

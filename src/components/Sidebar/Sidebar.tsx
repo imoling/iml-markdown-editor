@@ -21,13 +21,13 @@ const MD_RE = /\.(md|markdown|mdown|mkd)$/i;
 export const ActivityBar: React.FC = () => {
   const { sidebarTab, setSidebarTab, sidebarVisible } = useAppStore();
   const tabs = [
-    { id: 'library' as const, icon: <BookOpen size={16} />, label: '笔记库', title: '笔记库（所有笔记与文件夹）' },
-    { id: 'catalog' as const, icon: <List size={16} />, label: '目录', title: '当前文档目录、反向链接与相关笔记' },
+    { id: 'library' as const, icon: <BookOpen size={16} />, label: '笔记库', title: '笔记库' },
+    { id: 'catalog' as const, icon: <List size={16} />, label: '目录', title: '目录、反向链接与相关笔记' },
     { id: 'tags' as const, icon: <Hash size={16} />, label: '标签', title: '所有标签' },
-    { id: 'tasks' as const, icon: <ListChecks size={16} />, label: '待办', title: '全库待办：散在各篇笔记里的 - [ ] 汇到一处' },
+    { id: 'tasks' as const, icon: <ListChecks size={16} />, label: '待办', title: '全库待办' },
     { id: 'search' as const, icon: <Search size={16} />, label: '搜索', title: '搜索所有笔记 (⇧⌘F)' },
     { id: 'ask' as const, icon: <MessageCircleQuestion size={16} />, label: '问答', title: '问你的笔记 (⌘J)' },
-    { id: 'transcribe' as const, icon: <Mic size={16} />, label: '转写', title: '实时转写：会议、听课的语音在本机变成文字' },
+    { id: 'transcribe' as const, icon: <Mic size={16} />, label: '转写', title: '实时转写' },
   ];
   return (
     <div className="activity-bar">
@@ -52,7 +52,7 @@ async function openNote(path: string, title: string) {
   if (result.success && result.content !== undefined) {
     openTab({ id: path, title, content: result.content, isDirty: false, mode: 'word' });
   } else {
-    useAppStore.getState().notify(`打不开「${title}」：文件可能已被移动或删除，刷新一下笔记库试试`, 8000);
+    useAppStore.getState().notify(`打不开「${title}」：文件可能已被移动或删除`, 8000);
   }
 }
 
@@ -258,7 +258,7 @@ const BacklinksPanel: React.FC = () => {
   const link = async (notePath: string, snippet: MentionSnippet) => {
     const grown = await linkMention(notePath, snippet, activeTabId);
     if (grown === null) {
-      notify('那篇笔记刚被改过，位置对不上了，已重新查找。');
+      notify('那篇笔记刚改过，位置已重新查找');
       setReload((n) => n + 1);
       return;
     }
@@ -275,7 +275,7 @@ const BacklinksPanel: React.FC = () => {
     <div className="backlinks">
       <div className="sidebar-section-title">🔗 反向链接{links.length ? ` · ${links.length}` : ''}</div>
       {links.length === 0 ? (
-        <div className="tree-empty tree-empty--root">还没有其他笔记链接到这里。在别的笔记里输入 [[ 即可引用。</div>
+        <div className="tree-empty tree-empty--root">还没有笔记链接到这里，在别处输入 [[ 就能引用</div>
       ) : (
         links.map((l) => (
           <div key={l.path} className="search-result" onClick={() => openFileByPath(l.path)} title={l.path}>
@@ -458,7 +458,7 @@ export const Sidebar: React.FC = () => {
           <div className="empty-state">
             <BookOpen size={28} color="var(--text-muted)" className="empty-state__icon" />
             <div className="text-sm text-secondary mb-8">笔记库未配置</div>
-            <div className="hint mb-16">选一个文件夹作为笔记库，<br />所有笔记与子文件夹都在这里管理</div>
+            <div className="hint mb-16">选一个文件夹作为笔记库，<br />所有笔记都在这里</div>
             <button onClick={() => useAppStore.getState().openDialog('settings')} className="btn btn-ghost btn-xs"><Settings size={11} /> 前往设置</button>
           </div>
         ) : (
@@ -489,7 +489,7 @@ export const Sidebar: React.FC = () => {
 
             <div className="workspace-tree">
               {fileTree.length === 0 ? (
-                <div className="tree-empty tree-empty--root">还没有笔记，点上方 ＋ 新建一篇</div>
+                <div className="tree-empty tree-empty--root">还没有笔记，点上方 ＋ 新建</div>
               ) : (
                 sortFileNodes(fileTree, fileSort).map((node) => <FileTreeItem key={node.path} node={node} level={1} />)
               )}

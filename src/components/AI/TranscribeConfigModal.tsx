@@ -8,6 +8,7 @@ import { startSystemCapture } from '../../utils/systemCapture';
 import { formatClock } from '../../utils/transcript';
 import { stripIpcError } from './ModelConfigModal';
 import { LevelBars } from './MicLevel';
+import { LiveSettingsNote } from './CopyNotes';
 
 interface Props { onClose: () => void }
 
@@ -96,7 +97,7 @@ export const TranscribeConfigModal: React.FC<Props> = ({ onClose }) => {
   };
 
   const uninstall = async () => {
-    if (!window.confirm(`删除已下载的语音模型和识别组件（${formatSize(asr.installedBytes)}）？以后要用时可以再下载。`)) return;
+    if (!window.confirm(`删除语音模型和识别组件（${formatSize(asr.installedBytes)}）？以后可以重新下载。`)) return;
     try { await window.api.asr.uninstall(); await t.refresh(); notify('success', '已删除'); } catch (err) { notify('error', stripIpcError(err)); }
   };
 
@@ -112,7 +113,7 @@ export const TranscribeConfigModal: React.FC<Props> = ({ onClose }) => {
         <header className="modal-head">
           <div>
             <h1 className="modal-title">实时转写</h1>
-            <p className="modal-subtitle">开会、听课时边听边出字。识别在这台电脑上完成，声音不上传</p>
+            <p className="modal-subtitle">开会、听课时边听边出字，识别在这台电脑上完成</p>
           </div>
           <button onClick={onClose} className="icon-btn" title="关闭"><X size={20} /></button>
           {message && <div className={`toast toast--under-head toast--${message.type}`}>{message.text}</div>}
@@ -137,7 +138,7 @@ export const TranscribeConfigModal: React.FC<Props> = ({ onClose }) => {
                 {t.status === 'recording'
                   ? <button className="btn btn-secondary btn-xs" onClick={() => void t.stop()}><Square size={11} /> 停止转写</button>
                   : <button className="btn btn-primary btn-xs" disabled={!ready} onClick={() => { onClose(); openTranscribe(); }}><Mic size={12} /> 打开转写面板</button>}
-                <span className="lm-line lm-line--muted">只在转写时运行，平时不占内存。</span>
+                <span className="lm-line lm-line--muted">只在转写时运行，平时不占内存</span>
               </div>
             </div>
           </section>
@@ -154,7 +155,7 @@ export const TranscribeConfigModal: React.FC<Props> = ({ onClose }) => {
                   <div className="lm-model__body">
                     <div className="lm-model__title">SenseVoice 多语种 <span className="lm-model__quant">· int8</span></div>
                     <div className="lm-model__meta"><span>阿里通义</span><span>约 {formatSize(asr.downloadBytes)}</span><span>识别组件 sherpa-onnx{asr.runtimeVersion ? ` ${asr.runtimeVersion}` : ''}</span></div>
-                    <div className="lm-model__desc">中文、英语、粤语、日语、韩语，自动加标点。</div>
+                    <div className="lm-model__desc">中文、英语、粤语、日语、韩语，自动加标点</div>
                     {dl?.active && (
                       <>
                         <div className="lm-progress"><div className="lm-progress__bar" style={{ width: `${pct}%` }} /></div>
@@ -169,7 +170,7 @@ export const TranscribeConfigModal: React.FC<Props> = ({ onClose }) => {
                         : <button className="btn btn-primary btn-xs" onClick={t.install}>{dl?.error ? '重试' : '下载'}</button>}
                   </div>
                 </div>
-                <div className="lm-line lm-line--muted">只下载一次；下载源与「本机模型」共用。</div>
+                <div className="lm-line lm-line--muted">只下载一次，下载源与「本机模型」共用</div>
               </div>
             </section>
           )}
@@ -192,7 +193,7 @@ export const TranscribeConfigModal: React.FC<Props> = ({ onClose }) => {
                       <input type="checkbox" checked={on} onChange={(e) => toggle(e.target.checked)} />
                       <span className="toggle__track"><span className="toggle__thumb" /></span>
                     </label>
-                    <span className="lm-line">{on ? '转写里标出每句话是谁说的；点名字可以改，改成同一个名字就是合并' : '转写里只有时间和文字，不分谁说的'}</span>
+                    <span className="lm-line">{on ? '标出每句话是谁说的；点名字可以改名或合并' : '转写里只有时间和文字，不分谁说的'}</span>
                   </div>
                   {on && (
                     <div className="lm-model lm-model--static">
@@ -221,8 +222,8 @@ export const TranscribeConfigModal: React.FC<Props> = ({ onClose }) => {
                     </div>
                   )}
                   <div className="lm-line lm-line--muted">
-                    声纹只在这台电脑上算、只存在这台电脑上。「好的」「嗯」这种很短的话判断不了，不会标；几个人离麦克风远近差很多、或者抢着说话时，会标错。
-                    {recording && ' 这次转写已经开始，改动从下一场生效。'}
+                    声纹只在这台电脑上算。很短的话判断不了，抢着说话时会标错
+                    {recording && ' 改动从下一场转写生效'}
                   </div>
                 </div>
               </section>
@@ -242,13 +243,13 @@ export const TranscribeConfigModal: React.FC<Props> = ({ onClose }) => {
                     <input type="checkbox" checked={t.keepRecording} onChange={(e) => t.setKeepRecording(e.target.checked)} />
                     <span className="toggle__track"><span className="toggle__thumb" /></span>
                   </label>
-                  <span className="lm-line">{t.keepRecording ? '转写的同时留一份录音，点哪句话就从哪句开始听' : '只留文字，声音识别完就丢掉'}</span>
+                  <span className="lm-line">{t.keepRecording ? '留一份录音，点哪句话就从哪句开始听' : '只留文字，声音识别完就丢掉'}</span>
                 </div>
                 <div className="lm-line lm-line--muted">
                   {t.keepRecording
-                    ? '录音只存在这台电脑上：放进笔记时存到笔记旁边的 assets 文件夹（一小时约 11 MB）；还没放进笔记的先留在应用数据里，点「清空」才删。'
-                    : '适合不方便留录音的场合。已经留下的录音不受影响。'}
-                  {recording && ' 这次转写已经开始，改动从下一场生效。'}
+                    ? '录音存在笔记旁的 assets 里，一小时约 11 MB'
+                    : '已经留下的录音不受影响'}
+                  {recording && ' 改动从下一场转写生效'}
                 </div>
               </div>
             </section>
@@ -266,13 +267,12 @@ export const TranscribeConfigModal: React.FC<Props> = ({ onClose }) => {
                 {permission === 'ask' && (
                   <div className="lm-actions">
                     <button className="btn btn-primary btn-xs" onClick={() => void allow()}>允许使用麦克风</button>
-                    <span className="lm-line lm-line--muted">系统会弹一次授权框；声音只用来在本机识别成文字。</span>
                   </div>
                 )}
                 {permission === 'blocked' && (
                   <div className="lm-actions">
                     <button className="btn btn-primary btn-xs" onClick={() => void window.api.asr.openMicSettings()}>打开系统设置</button>
-                    <span className="lm-line lm-line--muted">在「隐私与安全性 → 麦克风」里打开 iML Markdown Editor，回来就能用。</span>
+                    <span className="lm-line lm-line--muted">在「隐私与安全性 → 麦克风」里打开它</span>
                   </div>
                 )}
 
@@ -296,25 +296,25 @@ export const TranscribeConfigModal: React.FC<Props> = ({ onClose }) => {
                           ? <button className="btn btn-secondary btn-xs" onClick={stopTest}><Square size={11} /> 停止</button>
                           : <button className="btn btn-secondary btn-xs" onClick={() => void startTest()}><Play size={11} /> 试一下</button>}
                     </div>
-                    {missing && <div className="lm-line lm-line--error">之前选的麦克风现在没连上，暂时跟随系统；插回来会自动用回它。</div>}
+                    {missing && <div className="lm-line lm-line--error">之前选的麦克风没连上，暂时跟随系统</div>}
                     <div className="tc-meter">
                       <LevelBars getLevel={getLevel} running={testing || t.status === 'recording'} bars={48} />
                       <span className="lm-line lm-line--muted">
-                        {testing ? `正在听${testLabel ? `「${testLabel}」` : ''}——说句话，条会跟着跳；一动不动就是没收到声音` : t.status === 'recording' ? (t.silent ? '没有声音进来：麦克风可能被静音了，或者选错了设备' : '转写中的实时音量') : '点「试一下」看看麦克风有没有在收音'}
+                        {testing ? `正在听${testLabel ? `「${testLabel}」` : ''}，说句话音量条会跳` : t.status === 'recording' ? (t.silent ? '没有声音进来，检查麦克风是否静音或选错设备' : '转写中的实时音量') : '点「试一下」看看麦克风有没有在收音'}
                       </span>
                     </div>
                   </>
                 )}
                 {asr.systemAudio
-                  ? <div className="lm-line lm-line--muted">选「系统声音」收的是电脑放出来的声音（网课、线上会议里对方说的话）；第一次用系统会请求「屏幕录制」权限，声音只在本机识别，不会传出去。{t.micId === SYSTEM_AUDIO_ID && <> 没收到声音的话，<button className="btn-link" onClick={() => void window.api.asr.openScreenSettings()}>打开屏幕录制设置</button></>}</div>
-                  : <div className="lm-line lm-line--muted">目前只收麦克风的声音；戴耳机开线上会议时，对方的声音进不来（Windows 上的系统声音在计划中）。</div>}
+                  ? <div className="lm-line lm-line--muted">「系统声音」收的是电脑放出来的声音；第一次用会请求「屏幕录制」权限。{t.micId === SYSTEM_AUDIO_ID && <> 没收到声音的话，<button className="btn-link" onClick={() => void window.api.asr.openScreenSettings()}>打开屏幕录制设置</button></>}</div>
+                  : <div className="lm-line lm-line--muted">只收麦克风；戴耳机时对方的声音进不来</div>}
               </div>
             </section>
           )}
         </div>
 
         <footer className="modal-footer">
-          <span className="hint history-modal__note">改动即时生效，不需要保存。</span>
+          <LiveSettingsNote className="hint history-modal__note" />
           <button onClick={onClose} className="btn btn-primary btn-wide">完成</button>
         </footer>
       </div>

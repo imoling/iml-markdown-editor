@@ -79,7 +79,7 @@ export const AIPalette: React.FC<AIPaletteProps> = ({ onClose, onAction, onStop,
             e.target.style.height = e.target.scrollHeight + 'px';
           }}
           onKeyDown={handleKeyDown}
-          placeholder="输入指令让 AI 生成内容..."
+          placeholder="输入指令让 AI 生成内容…"
           rows={1}
           className="ai-palette__input"
         />

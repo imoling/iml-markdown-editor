@@ -4,6 +4,7 @@
  * 返回的形状和 startMicCapture 一样，转写那边不用区分。
  */
 import type { MicCapture } from './micCapture';
+import { AUDIO_WORKLET_FAILED } from './uiText';
 
 export const SYSTEM_AUDIO_LABEL = '系统声音';
 
@@ -48,7 +49,7 @@ export async function startSystemCapture(onChunk: (samples: Float32Array, level:
     await ctx.audioWorklet.addModule(`data:application/javascript;charset=utf-8,${encodeURIComponent(WORKLET)}`);
   } catch (err: any) {
     await ctx.close().catch(() => {});
-    throw new Error(`音频处理模块加载失败：${err?.message || err}`);
+    throw new Error(`${AUDIO_WORKLET_FAILED}：${err?.message || err}`);
   }
   const src = new AudioWorkletNode(ctx, 'iml-pcm-source', { numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [1] });
   const dest = ctx.createMediaStreamDestination();

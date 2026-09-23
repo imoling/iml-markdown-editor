@@ -10,6 +10,7 @@ import { extractArchive } from '../localModel/runtime';
 import { resolveModelUrl } from '../localModel/catalog';
 import { getDownloadSettings } from '../localModel';
 import { AUDIO_EXT_RE } from '../assets';
+import { AI_DISABLED, MIC_DENIED } from '../shared/uiText';
 
 /**
  * 实时转写（26.3）：管下载、管识别进程、在渲染进程和识别进程之间转发音频与文字。
@@ -225,13 +226,13 @@ function killWorker() {
 
 async function startSession(opts: { speakers?: boolean; source?: 'mic' | 'file' | 'system' } = {}): Promise<AsrState> {
   if (session !== 'idle') return getAsrState();
-  if (deps && !deps.isAiEnabled()) throw new Error('AI 功能已在设置里关闭');
+  if (deps && !deps.isAiEnabled()) throw new Error(AI_DISABLED);
   if (!isInstalled()) throw new Error('还没有下载转写组件');
 
   // macOS：麦克风要过系统这一关。用户之前点过「不允许」的话这里直接返回 false，只能去系统设置里改
   if (process.platform === 'darwin' && opts.source !== 'file' && opts.source !== 'system') {   // 转写录音文件、收系统声音都用不着麦克风
     const granted = await systemPreferences.askForMediaAccess('microphone');
-    if (!granted) throw new Error('没有麦克风权限：请到「系统设置 → 隐私与安全性 → 麦克风」里允许 iML Markdown Editor');
+    if (!granted) throw new Error(MIC_DENIED);
   }
 
   await scheduler.ensureCapacity('asr');
@@ -335,7 +336,7 @@ export function confirmDiscardTranscript(win: BrowserWindow | null): boolean {
     defaultId: 0,
     cancelId: 0,
     message: '正在转写',
-    detail: `现在退出，已经转写出来的文字下次打开还在${unsavedTranscript.recording ? '，但正在录的这一段录音会丢' : ''}。先点「停止」再退出就什么都不丢。`,
+    detail: `现在退出，转写出来的文字下次打开还在${unsavedTranscript.recording ? '，但正在录的这段录音会丢' : ''}。`,
   });
   if (choice !== 1) return false;
   discardConfirmed = true;   // 退出流程里窗口关闭和 before-quit 会先后来问，只问一次
@@ -356,7 +357,7 @@ export function stopAsr() {
 export function setupAsr(d: Deps) {
   deps = d;
   scheduler.register({
-    id: 'asr', label: '实时转写', note: '录音、转写文件时自己起，一场结束自己退，不用管',
+    id: 'asr', label: '实时转写', note: '录音、转写文件时自动启动，结束后自动退出',
     managed: false,   // 用的时候才起、用完就退，面板上多给一个开关只会让人以为还得手动管它
     running: () => !!worker,
     busy: () => session !== 'idle',
