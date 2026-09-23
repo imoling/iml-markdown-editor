@@ -356,11 +356,13 @@ export function stopAsr() {
 export function setupAsr(d: Deps) {
   deps = d;
   scheduler.register({
-    id: 'asr', label: '实时转写', note: '录音、转写文件时才起，一场结束就退出',
+    id: 'asr', label: '实时转写', note: '录音、转写文件时自己起，一场结束自己退，不用管',
+    managed: false,   // 用的时候才起、用完就退，面板上多给一个开关只会让人以为还得手动管它
     running: () => !!worker,
     busy: () => session !== 'idle',
     pid: () => worker?.pid ?? null,
     estimateBytes: () => 700 * 1024 * 1024,
+    memoKey: () => 'sensevoice',
     stop: async () => { if (session !== 'idle') await stopSession(); killWorker(); },
   });
   ipcMain.handle('asr:getState', () => getAsrState());

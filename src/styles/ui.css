@@ -507,7 +507,8 @@
 .lm-card__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .lm-card__title { font-size: 13px; font-weight: 600; color: var(--text-primary); display: flex; align-items: center; gap: 6px; }
 .lm-card__title svg { color: var(--color-brand-indigo); }
-.lm-kv { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px 16px; font-size: 12px; }
+/* 两项时一行两列，三项（内存 / 其它程序 / 可用）时一行三列：三个数是一笔账，拆行就看不出加起来正好是总数 */
+.lm-kv { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 6px 16px; font-size: 12px; }
 .lm-kv__k { color: var(--text-muted); margin-right: 6px; }
 .lm-kv__v { color: var(--text-primary); font-weight: 500; }
 .lm-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 500; white-space: nowrap; }
@@ -550,6 +551,10 @@
 .lm-model .lm-progress { width: 100%; margin-top: 2px; }
 .lm-check { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary); cursor: pointer; user-select: none; }
 .lm-check input { accent-color: var(--color-brand-indigo); margin: 0; }
+/* 开关的标题一行、解释一行：解释混在标题里，勾上了还在说「默认不开」，读着自相矛盾 */
+.lm-check--stack { align-items: flex-start; }
+.lm-check--stack input { margin-top: 2px; }
+.lm-check__note { display: block; margin-top: 2px; font-style: normal; font-size: 11px; color: var(--text-muted); line-height: 1.5; }
 .lm-select {
   padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border-subtle); background-color: var(--bg-surface); color: var(--text-primary);
   font-size: 12px; font-family: inherit; outline: none;
@@ -687,6 +692,8 @@
 .res-row__side { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .res-row__idle { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); }
 .res-row__idle .lm-select { min-width: 0; width: auto; }
+/* 用的时候自己起、用完自己退的（转写）：不给开关，只说一句 */
+.res-row__auto { font-size: 12px; color: var(--text-muted); }
 .btn-sm { padding: 5px 10px; font-size: 12px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; }
 
 /* 本机生图的模型挑选 */

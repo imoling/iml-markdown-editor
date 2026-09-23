@@ -406,7 +406,7 @@ export function setupLocalModel(d: Deps) {
   ipcMain.handle('local:getState', () => getLocalState());
   // 接进本机资源调度：空闲自动停、启动前算内存、和生图互斥
   scheduler.register({
-    id: 'chat', label: '对话模型', note: '写作助手、整理纪要、问你的笔记都用它；停掉后下次用时自动重新加载，要等十几秒',
+    id: 'chat', label: '对话模型', note: '写作助手、整理纪要、问你的笔记都用它，嵌入模型跟着它一起启停；停掉后下次用时自动重新加载，要等十几秒',
     running: () => server.state.status === 'running' || server.state.status === 'starting',
     busy: () => server.state.status === 'starting',
     pid: () => server.state.pid,
@@ -415,9 +415,14 @@ export function setupLocalModel(d: Deps) {
       const model = resolveModel(cfg.modelId, cfg);
       let size = 0;
       try { size = model ? fs.statSync(model.path).size : 0; } catch { size = 0; }
-      // 模型文件 + 上下文的 KV 缓存（粗估每 token 48 KB，封顶 2 GB）
-      return size ? Math.round(size * 1.1 + Math.min(2 * 1024 ** 3, Math.min(cfg.ctxSize, model?.maxContext || cfg.ctxSize) * 48 * 1024)) : 0;
+      // 模型文件 + 上下文的 KV 缓存。**不能给 KV 封顶**：早先封在 2 GB，结果 4.4 GB 的模型开 128k 上下文
+      // 实际吃到 8.8 GB，调度却按 6.7 GB 算，该拦的没拦。每 token 多少字节各模型差得远（跟层数、KV 头数有关），
+      // 这里按 40 KB 粗估，跑过一次之后调度就改用实测值了
+      const ctx = Math.min(cfg.ctxSize, model?.maxContext || cfg.ctxSize);
+      return size ? Math.round(size * 1.1 + ctx * 40 * 1024) : 0;
     },
+    // 换模型、改上下文，上次的实测就不作数了
+    memoKey: () => { const cfg = localConfig(); return `${cfg.modelId}@${cfg.ctxSize}`; },
     stop: () => stopServer(),
     start: async () => { await startServer(); },
     restorable: true,   // 给生图让位之后自己回来，不用等下次提问才慢吞吞加载
