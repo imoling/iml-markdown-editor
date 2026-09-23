@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { isNewerVersion } from '../utils/version';
 import type { UpdateInfo } from '../types/window';
+import { detectDailyLayout, dailyNoteSubDirs } from '../utils/calendar';
 import { formatDate } from '../utils/date';
 import { deriveNoteTitle } from '../utils/noteTitle';
 import { useAskStore } from './askStore';
@@ -771,7 +772,12 @@ export const useAppStore = create<AppState>((set, get) => ({
     const root = get().workspacePath || get().defaultLibraryPath;
     if (!root) return null;
     const sep = pathSep(root);
-    const dir = `${root}${sep}${DAILY_DIR}`;
+    // 用户可能按年、按年月分目录（日记/2026/09/2026-09-23.md）。跟着他已有的习惯放，
+    // 别在整理好的年月目录旁边再甩一个平铺的文件
+    let notes: { path: string }[] = [];
+    try { notes = await window.api.search.listNotes(); } catch { notes = []; }
+    const layout = detectDailyLayout(notes, root);
+    const dir = [`${root}${sep}${DAILY_DIR}`, ...dailyNoteSubDirs(day, layout)].join(sep);
     if (!(await window.api.fs.exists(dir))) await window.api.fs.mkdir(dir);
     const today = formatDate(day);
     const filePath = `${dir}${sep}${today}.md`;

@@ -75,3 +75,51 @@ export function diaryLevel(chars: number): 1 | 2 | 3 | 4 {
   if (chars >= DIARY_LEVELS[0]) return 2;
   return 1;
 }
+
+/** 日记放在哪一层：日记/2026-09-23.md、日记/2026/2026-09-23.md、日记/2026/09/2026-09-23.md */
+export type DailyLayout = 'flat' | 'year' | 'year-month';
+
+/** 一条日记路径在 日记/ 下面还隔了几层目录 */
+function layoutOfPath(path: string, root: string): DailyLayout | null {
+  const sep = root.includes('\\') ? '\\' : '/';
+  const prefix = root.replace(/[/\\]+$/, '') + sep + DAILY_DIR + sep;
+  if (!path.startsWith(prefix)) return null;
+  const rest = path.slice(prefix.length).split(/[/\\]/);
+  if (rest.length === 1) return 'flat';
+  if (rest.length === 2) return 'year';
+  if (rest.length === 3) return 'year-month';
+  return null;   // 更深的不猜，按平铺处理
+}
+
+/**
+ * 从已有的日记推断用户习惯把它们放在哪一层——新建时跟着来，不要在人家整理好的年月目录旁边
+ * 再甩一个平铺的文件。一个都没有就按平铺。
+ * 几种层次混着用时按多数；一样多就跟最近那篇（文件名就是日期，按名字排最大的那个）
+ */
+export function detectDailyLayout(notes: { path: string }[], root: string): DailyLayout {
+  if (!root) return 'flat';
+  const seen: { layout: DailyLayout; name: string }[] = [];
+  for (const { path } of notes) {
+    const name = (path.split(/[/\\]/).pop() || '').replace(/\.(md|markdown|mdown|mkd|txt)$/i, '');
+    if (!DAILY_NAME_RE.test(name)) continue;
+    const layout = layoutOfPath(path, root);
+    if (layout) seen.push({ layout, name });
+  }
+  if (!seen.length) return 'flat';
+  const counts = new Map<DailyLayout, number>();
+  for (const { layout } of seen) counts.set(layout, (counts.get(layout) || 0) + 1);
+  const top = Math.max(...counts.values());
+  const tied = [...counts.entries()].filter(([, n]) => n === top).map(([l]) => l);
+  if (tied.length === 1) return tied[0];
+  const newest = seen.reduce((a, b) => (b.name > a.name ? b : a));
+  return tied.includes(newest.layout) ? newest.layout : tied[0];
+}
+
+/** 这一天的日记该放在 日记/ 下面的哪几层（不含 日记 本身） */
+export function dailyNoteSubDirs(date: Date, layout: DailyLayout): string[] {
+  const year = String(date.getFullYear());
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  if (layout === 'year') return [year];
+  if (layout === 'year-month') return [year, month];
+  return [];
+}
