@@ -1,4 +1,4 @@
-# iML Markdown Editor · [![Release v26.5.1](https://img.shields.io/badge/Release-v26.5.1-indigo?style=for-the-badge&logo=github)](https://github.com/imoling/iml-markdown-editor/releases)
+# iML Markdown Editor · [![Release v26.6.0](https://img.shields.io/badge/Release-v26.6.0-indigo?style=for-the-badge&logo=github)](https://github.com/imoling/iml-markdown-editor/releases)
 <!--
   图片为什么不用相对路径（screenshots/xxx.png）：
   相对路径会被 GitHub 发到 raw.githubusercontent.com，而这个域名在国内多数网络下被 DNS 污染（解析到 0.0.0.0），
@@ -43,7 +43,7 @@ macOS（Apple 芯片 / Intel）· Windows（x64 / ARM）· 80 ~ 90 MB · MIT 开
 
 ## 特性
 
-### ⌨️ 打字停一下，它接着写
+### ⌨️ 打字停一下，它接着写（26.6）
 
 - **自动续写**：打字停下来一会儿，光标后面浮出一小段灰字；`Tab` 收下，`Esc` 或者接着打字就消失。接着打的字正好和灰字开头一样时，灰字跟着缩短而不是整段没掉
 - **默认关着**：在「智能 → 自动续写…」里开，停顿多久可调（0.5 / 1 / 2 秒）。出错不吭声——写到一半弹一条报错比不续写更烦人
@@ -235,10 +235,10 @@ macOS（Apple 芯片 / Intel）· Windows（x64 / ARM）· 80 ~ 90 MB · MIT 开
 
 | 平台 | 安装包 |
 |---|---|
-| macOS Apple Silicon（M 系列） | `iML.Markdown.Editor-26.5.1-arm64.dmg` |
-| macOS Intel（x64） | `iML.Markdown.Editor-26.5.1-x64.dmg` |
-| Windows（绝大多数电脑选这个） | `iML.Markdown.Editor-Setup-26.5.1-x64.exe` |
-| Windows on ARM（骁龙本等） | `iML.Markdown.Editor-Setup-26.5.1-arm64.exe` |
+| macOS Apple Silicon（M 系列） | `iML.Markdown.Editor-26.6.0-arm64.dmg` |
+| macOS Intel（x64） | `iML.Markdown.Editor-26.6.0-x64.dmg` |
+| Windows（绝大多数电脑选这个） | `iML.Markdown.Editor-Setup-26.6.0-x64.exe` |
+| Windows on ARM（骁龙本等） | `iML.Markdown.Editor-Setup-26.6.0-arm64.exe` |
 
 前往 [Releases](https://github.com/imoling/iml-markdown-editor/releases) 下载最新版本（80 ~ 90 MB）。已经装了的，应用会在发现新版本时提醒一次，并直接给出对应的安装包。安装包由 GitHub Actions 在打 `v*` 标签时自动构建并发布。
 
@@ -310,6 +310,12 @@ Windows 上把 `⌘` 换成 `Ctrl`，`⌥` 换成 `Alt`。
 ---
 
 ## 版本历史
+
+**26.6.0（2026-09-24）— 打字停一下，它接着写**
+
+- **自动续写**：打字停顿一下，光标后浮出一小段灰字，`Tab` 收下，`Esc` 或接着打字就消失；停顿时长可调，代码块与标题里不打扰。走写作助手同一个模型，本机模型就够用，笔记不出这台电脑；默认关着，在「智能 → 自动续写…」里开
+- 启动页与空状态的文案返工：Windows 上快捷键不再显示成 `Cmd`，「星标」统一叫「收藏」
+- 731 个测试用例
 
 **26.5.1（2026-09-23）— 把界面上的话说清楚**
 

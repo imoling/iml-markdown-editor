@@ -1,4 +1,4 @@
-# iML Markdown Editor · [![Release v26.5.1](https://img.shields.io/badge/Release-v26.5.1-indigo?style=for-the-badge&logo=github)](https://github.com/imoling/iml-markdown-editor/releases)
+# iML Markdown Editor · [![Release v26.6.0](https://img.shields.io/badge/Release-v26.6.0-indigo?style=for-the-badge&logo=github)](https://github.com/imoling/iml-markdown-editor/releases)
 
 **[中文](README.md)** · English
 
@@ -95,10 +95,10 @@ with inline styles.
 
 | Platform | Installer |
 |---|---|
-| macOS Apple Silicon | `iML.Markdown.Editor-26.5.1-arm64.dmg` |
-| macOS Intel | `iML.Markdown.Editor-26.5.1-x64.dmg` |
-| Windows x64 | `iML.Markdown.Editor-Setup-26.5.1-x64.exe` |
-| Windows on ARM | `iML.Markdown.Editor-Setup-26.5.1-arm64.exe` |
+| macOS Apple Silicon | `iML.Markdown.Editor-26.6.0-arm64.dmg` |
+| macOS Intel | `iML.Markdown.Editor-26.6.0-x64.dmg` |
+| Windows x64 | `iML.Markdown.Editor-Setup-26.6.0-x64.exe` |
+| Windows on ARM | `iML.Markdown.Editor-Setup-26.6.0-arm64.exe` |
 
 → **[Latest release](https://github.com/imoling/iml-markdown-editor/releases/latest)**
 

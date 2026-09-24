@@ -6,7 +6,8 @@ export type WhatsNewImage =
   | 'v262-hero' | 'v262-source' | 'v262-compat' | 'v262-paste' | 'v262-history' | 'v262-semantic' | 'v262-focus'
   | 'v263-hero' | 'v263-ask' | 'v263-transcribe' | 'v263-playback' | 'v263-config' | 'v263-update'
   | 'v264-hero' | 'v264-palette' | 'v264-tasks' | 'v264-daily' | 'v264-export' | 'v264-transcribe' | 'v264-asrconfig'
-  | 'v265-image' | 'v265-hero' | 'v265-resources' | 'v265-fold' | 'v265-syscap' | 'v265-wechat' | 'v265-daily';
+  | 'v265-image' | 'v265-hero' | 'v265-resources' | 'v265-fold' | 'v265-syscap' | 'v265-wechat' | 'v265-daily'
+  | 'v266-autocontinue' | 'v266-accepted' | 'v266-settings' | 'v266-start';
 
 export interface WhatsNewPage {
   key: string;
@@ -32,6 +33,37 @@ export interface WhatsNewEntry {
 
 /** 每个大版本一条；新版本加在最前面 */
 export const WHATS_NEW: WhatsNewEntry[] = [
+  {
+    version: '26.6',
+    title: '打字停一下，它接着写',
+    releaseUrl: 'https://github.com/imoling/iml-markdown-editor/releases/tag/v26.6.0',
+    pages: [
+      {
+        key: 'ghost', kicker: '新特性', title: '打字停一下，它接着写', hint: '智能 → 自动续写…',
+        desc: '写着写着停下来想下一句，光标后面会浮出一小段灰字。它读的是你这一段前面的文字，接着你最后一个字往下写，语气跟着你走。',
+        bullets: ['灰字只是画上去的，文档一个字都没动', '默认关着，在「智能 → 自动续写…」里开', '⌘⇧P 搜「自动续写」可以随时开关'],
+        image: 'v266-autocontinue',
+      },
+      {
+        key: 'accept', kicker: '自动续写', title: '合意就 Tab，不合意接着打', hint: 'Tab 收下 · Esc 不要',
+        desc: '按 Tab 灰字变成正文，光标停在末尾，接着往下写；不想要就按 Esc，或者直接接着打字，它自己消失。',
+        bullets: ['你打的字正好和灰字开头一样时，灰字跟着缩短，而不是整段没掉', '收下之后停一下，下一段建议又会出来', '一次只给一句；想要更长就收下再停一下'],
+        image: 'v266-accepted',
+      },
+      {
+        key: 'settings', kicker: '自动续写', title: '停顿多久，用哪个模型', hint: '智能 → 自动续写…',
+        desc: '弹窗里有一小块实时演示，开关、停顿时长改完当场就能看出区别。打字快的人把停顿调长一点，想边写边看建议的调短。',
+        bullets: ['停顿 0.5 秒 / 1 秒 / 2 秒三挡', '和写作助手同一个模型：本机模型就够用，笔记不出这台电脑', '代码块与标题里不打扰；正在选字、拼音没上屏时也不打扰'],
+        image: 'v266-settings',
+      },
+      {
+        key: 'copy', kicker: '还有这些', title: '把话说得更准',
+        desc: '启动页和几处空状态重写了一遍：小字只说下一步该做什么，不再解释设计。',
+        bullets: ['Windows 上启动页的快捷键不再写成 Cmd', '「星标」统一叫「收藏」，和右键菜单对上了', '目录空着时说「这篇笔记还没有标题」，不再说「暂无目录层级」'],
+        image: 'v266-start',
+      },
+    ],
+  },
   {
     version: '26.5',
     title: '想要的图，这台电脑自己画',
