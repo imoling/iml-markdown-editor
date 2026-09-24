@@ -221,14 +221,16 @@ Interface is Chinese today; the README has an English version and an English UI 
 
 | 文件 | 规格 | 用在哪 |
 |---|---|---|
-| `media/demo-vertical.mp4` | 1080×1920 竖屏 · 78 秒 · 3.1 MB | 抖音、视频号、小红书 |
-| `media/demo-landscape.mp4` | 1920×1080 横屏 · 78 秒 · 3.2 MB | B 站、V2EX、YouTube、官网 |
+| `media/demo-vertical.mp4` | 1080×1920 竖屏 · 2 分钟 · 5.0 MB | 抖音、视频号、小红书 |
+| `media/demo-landscape.mp4` | 1920×1080 横屏 · 2 分钟 · 5.1 MB | B 站、V2EX、YouTube、官网 |
 | `media/cover-vertical.jpg` | 1080×1920 | 抖音 / 视频号封面 |
 | `media/cover-xhs.jpg` | 1080×1440（3:4） | 小红书封面 |
 | `screenshots/demo-image-gen.gif` | 900×611 · 13 秒 · 1.2 MB | README、Reddit、论坛 |
 
 **内容顺序**：片头 →「笔记就是普通的 .md 文件」→ 双模切换 → 斜杠菜单 → 折叠 →
-`[[` 链接与悬浮预览 → 命令面板 → 问你的笔记 → 实时转写 → 本机生图 → 本机资源 → 片尾。
+`[[` 链接与悬浮预览 → 命令面板 → 闪念随手记 `⌃⌥N`（在浏览器里呼出小窗记三条）→ 点日历看当天日记 →
+本机大模型写作助手 → 问你的笔记 → 转写（麦克风收现场 / 系统声音收网课）→ 本机生图 →
+单机多模型按内存灵活调度 → 轻量版 Lite → 片尾。
 解说词就是每一章的字幕，重录时改 `docs/launch-kit.md` 这一节对应的文案即可。
 
 ### 抖音 / 视频号
@@ -239,7 +241,8 @@ Interface is Chinese today; the README has an English version and an English UI 
 正文：
 做了一个 Markdown 编辑器，写作、问笔记、开会转写、配图，
 四件事的 AI 全在本机跑，笔记和录音都不上传。
-模型用到才下载，装包只有 80 MB。
+在任何软件里按 ⌃⌥N 就能随手记一句，晚上点开日历全在当天的日记里。
+不需要 AI 的，还有不到 4 MB 的轻量版 Lite。
 开源免费，macOS 和 Windows 都有，GitHub 搜 iML Markdown Editor。
 
 #效率工具 #Markdown #本地部署 #AI工具 #开源软件 #笔记软件
@@ -257,13 +260,15 @@ Interface is Chinese today; the README has an English version and an English UI 
 一直不太愿意把笔记发给别人的服务器，所以自己写了个 Markdown 编辑器，
 把 AI 那部分全搬到了本机：
 
-· 写作助手：续写、润色、整理
+· 写作助手：本机大模型，空行按空格说一句，直接写进笔记
 · 问你的笔记：答案只来自你写过的东西，每条都标出处
-· 实时转写：开会边听边出字，还能分清谁在说
+· 实时转写：上课开会收现场，看网课收电脑里的声音
 · 本机生图：说一句想要什么，几分钟后图出现在笔记里
+· 闪念随手记：在哪个软件里都能按 ⌃⌥N 记一句，自动进当天日记
 
 全程离线，笔记就是普通的 .md 文件，放在自己的文件夹里。
 模型用到才下载，安装包只有 80 MB。开源免费，macOS / Windows 都有。
+只想要个干净的编辑器？还有轻量版 iML 编辑器 Lite，安装包不到 4 MB。
 
 #效率工具 #笔记软件 #Markdown #开源 #本地AI #数字生活 #程序员
 ```
@@ -281,6 +286,7 @@ Interface is Chinese today; the README has an English version and an English UI 
 笔记和声音都不出门。模型用到才下载，安装包 80 MB。
 
 开源地址：https://github.com/imoling/iml-markdown-editor
+轻量版（没有 AI，安装包不到 4 MB）：https://github.com/imoling/iml-editor-lite
 macOS（Apple 芯片 / Intel）、Windows（x64 / ARM）都有安装包。
 
 分区：科技 → 软件应用
