@@ -77,6 +77,10 @@ macOS（Apple 芯片 / Intel）· Windows（x64 / ARM）· 80 ~ 90 MB · MIT 开
 - **导出 Word**（.docx）与**导出长图**（PNG，超长自动分张、切在段落边界、带出处角标）；导出成功的提示带「打开」「在访达中显示」
 - 还有：文件树排序、同步盘一键（可反悔）、源码模式 `⌘D` 与可选 Vim 键位、`⌥↑` / `⌥↓` 整块移动、脚注点击跳转、`.iml/snippets.css` 自定义样式、`iml://` 链接唤起；修复了切换标签页后 `⌘Z` 会把上一篇内容撤销进当前篇的问题
 
+![关联笔记之后，鼠标停在链接上就能看到那篇的开头，不用点过去](https://cdn.jsdelivr.net/gh/imoling/iml-markdown-editor@main/screenshots/demo-wikilink.gif)
+
+![在别的软件里按 ⌃⌥N 弹出小窗，敲完回车就进了今天的日记，焦点回到原来的软件](https://cdn.jsdelivr.net/gh/imoling/iml-markdown-editor@main/screenshots/demo-capture.gif)
+
 | 链接织完了：嵌入、悬浮预览、日记月历 | 全库待办：按日期分段，打勾写回原笔记 |
 |---|---|
 | ![链接与嵌入](https://cdn.jsdelivr.net/gh/imoling/iml-markdown-editor@main/screenshots/链接与嵌入.png) | ![全库待办](https://cdn.jsdelivr.net/gh/imoling/iml-markdown-editor@main/screenshots/全库待办.png) |
@@ -91,6 +95,8 @@ macOS（Apple 芯片 / Intel）· Windows（x64 / ARM）· 80 ~ 90 MB · MIT 开
 - **问你的笔记**（`⌘J`）：用大白话问，不用想关键词。先在向量索引里找出最相关的几段原文（向量召回 + 字面重排），再让模型只根据这几段回答，**每个结论标着出处，点一下跳到原文那一段**；笔记里没写的，它会直说没有。转写的内容同样问得到
 - **智能 → 实时转写…**：能不能用一眼看清；语音模型的下载与删除；录音留不留；选麦克风、点「试一下」看音量条 —— 没有声音进来时转写面板也会提醒
 - **更轻更快**：安装包 Windows 250 MB → 79 MB、macOS 153 MB → 88 MB；启动要加载的代码少了三分之一；发现新版本只主动提醒一次，写明更新了什么，并直接给出这台电脑该下的安装包
+
+![实时转写：边说边出字，停顿后自动定稿加标点，你照常在右边记自己的要点](https://cdn.jsdelivr.net/gh/imoling/iml-markdown-editor@main/screenshots/demo-transcribe.gif)
 
 | 转写中：你照常记要点，全文它来记 | 问你的笔记：答案标着出处，点一下跳到原文 |
 |---|---|
@@ -147,6 +153,8 @@ macOS（Apple 芯片 / Intel）· Windows（x64 / ARM）· 80 ~ 90 MB · MIT 开
 - **双向链接**：输入 `[[` 自动补全笔记名，回车插入，`[[笔记名|显示文本]]` 支持别名；点击链接直达目标，不存在则就地新建；目录面板底部显示「反向链接」（谁链到了这篇）；源码模式同样支持 `[[` 补全
 - **全文搜索**：`⌘⇧F` 搜索整个笔记库，多词 AND、标题优先、命中片段高亮；回车打开笔记并定位到第一处
 - **每日日记与模板**：`⌘⇧D` 打开今天的日记（`笔记库/日记/YYYY-MM-DD.md`），不存在就按模板新建；`笔记库/模板` 下的文件可一键新建笔记，支持 `{{date}}` `{{time}}` `{{title}}` `{{weekday}}` 变量，首次使用可生成示例模板
+
+![行首输入 / ，标题、列表、表格、代码块、公式、提示块都在一个菜单里](https://cdn.jsdelivr.net/gh/imoling/iml-markdown-editor@main/screenshots/demo-slash.gif)
 
 | 斜杠菜单 `/` | 双向链接 `[[` |
 |---|---|
