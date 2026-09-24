@@ -704,3 +704,23 @@
 .img-model__name { font-size: 13px; font-weight: 600; }
 .img-model__check { color: var(--color-brand-indigo); margin-left: auto; }
 .img-model__note { font-size: 11.5px; color: var(--text-muted); line-height: 1.5; }
+
+/* 自动续写弹窗：顶上一行假的编辑器，演示灰字和 Tab */
+.auto-continue-modal { max-width: 520px; }
+.auto-continue-modal .modal-body { display: flex; flex-direction: column; gap: 14px; }
+.auto-continue-demo {
+  padding: 16px 18px; border-radius: 12px; border: 1px solid var(--border-subtle); background-color: var(--bg-page);
+  font-size: 15px; line-height: 1.8; color: var(--text-primary);
+}
+.auto-continue-demo__caret {
+  display: inline-block; width: 2px; height: 1.1em; margin: 0 1px; vertical-align: -0.15em;
+  background-color: var(--color-accent-indigo, var(--color-brand-indigo)); animation: auto-continue-blink 1.1s steps(1) infinite;
+}
+.auto-continue-demo__ghost { color: var(--text-muted); opacity: 0.75; }
+.auto-continue-demo kbd {
+  margin-left: 6px; padding: 0 5px; font-size: 11px; line-height: 1.5; vertical-align: 0.15em;
+  border: 1px solid var(--border-strong); border-radius: 4px; color: var(--text-muted); font-family: var(--font-body);
+}
+@keyframes auto-continue-blink { 50% { opacity: 0; } }
+.auto-continue-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.auto-continue-row .btn-link { margin-left: 8px; }

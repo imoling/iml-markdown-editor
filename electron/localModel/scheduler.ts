@@ -350,6 +350,8 @@ export class Scheduler extends EventEmitter {
     if (restored.length) { this.emit('restored', { ids: restored, by }); this.emit('change'); }
     return restored;
   }
+  /** 正在给别的服务让位（等着被叫回来） */
+  isDisplaced(id: ServiceId) { return this.displaced.has(this.leaderOf(id)) || this.displaced.has(id); }
   isBusy(id: ServiceId) { return (this.work.get(id) || 0) > 0 || !!this.drivers.get(id)?.busy(); }
 
   setConfig(patch: Partial<SchedulerConfig>) {

@@ -67,6 +67,17 @@ export function inferServiceType(config: { serviceType?: string | null; endpoint
   return isLocalEndpoint(endpoint) ? 'local' : 'cloud';
 }
 
+/** AI 请求发往哪里：让「笔记内容会不会离开这台电脑」一眼可见（状态栏、自动续写弹窗共用） */
+export function describeAiDestination(config: any): { label: string; kind: 'local' | 'cloud' } {
+  if (inferServiceType(config) === 'builtin') return { label: '本机模型', kind: 'local' };
+  const endpoint = String(config?.endpoint || '');
+  if (!endpoint) return { label: '未配置', kind: 'local' };
+  if (isLocalEndpoint(endpoint)) return { label: '本地服务', kind: 'local' };
+  let host = endpoint;
+  try { host = new URL(endpoint).host; } catch { /* 保持原样 */ }
+  return { label: `云端 · ${host}`, kind: 'cloud' };
+}
+
 /** 「切回模型服务」时回到的类型：不能是本机模型 */
 export function fallbackServiceType(config: { endpoint?: string | null } | null | undefined): Exclude<AIServiceType, 'builtin'> {
   const t = inferServiceType({ ...(config || {}), serviceType: null });

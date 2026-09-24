@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { useAppStore } from '../../stores/appStore';
 import { Minus, Plus, Loader2, ChevronUp } from 'lucide-react';
-import { isLocalEndpoint, inferServiceType } from '../../utils/aiService';
+import { describeAiDestination } from '../../utils/aiService';
 import { useTranscribeStore } from '../../stores/transcribeStore';
 import { formatClock } from '../../utils/transcript';
 
@@ -14,17 +14,6 @@ function countWords(content: string) {
   const nonCjk = content.replace(CJK_RE, ' ').trim();
   const westernWords = nonCjk ? nonCjk.split(/\s+/).length : 0;
   return { words: cjkCount + westernWords, lines: content.split('\n').length };
-}
-
-/** AI 请求发往哪里：让「笔记内容会不会离开这台电脑」一眼可见 */
-function describeAiDestination(config: any): { label: string; kind: 'local' | 'cloud' } {
-  if (inferServiceType(config) === 'builtin') return { label: '本机模型', kind: 'local' };
-  const endpoint = String(config?.endpoint || '');
-  if (!endpoint) return { label: '未配置', kind: 'local' };
-  if (isLocalEndpoint(endpoint)) return { label: '本地服务', kind: 'local' };
-  let host = endpoint;
-  try { host = new URL(endpoint).host; } catch { /* 保持原样 */ }
-  return { label: `云端 · ${host}`, kind: 'cloud' };
 }
 
 /**

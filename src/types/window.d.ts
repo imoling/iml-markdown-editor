@@ -99,7 +99,8 @@ declare global {
       ai: {
         getConfig: () => Promise<any>;
         saveConfig: (config: any) => Promise<{ success: boolean; error?: string }>;
-        chat: (messages: any[], onStream: (chunk: string) => void, requestId: string, maxTokens?: number, temperature?: number) => Promise<string>;
+        /** quiet：自动续写这类「顺手要一下」的请求，本机模型正在让位时不去抢内存 */
+        chat: (messages: any[], onStream: (chunk: string) => void, requestId: string, maxTokens?: number, temperature?: number, opts?: { quiet?: boolean }) => Promise<string>;
         stop: (requestId: string) => void;
         generateImage: (params: { prompt: string; config: any }) => Promise<{ url: string }[]>;
         listModels: (params: { endpoint: string; apiKey: string; protocol: string }) => Promise<string[]>;

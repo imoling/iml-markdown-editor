@@ -34,6 +34,8 @@ import { TagHighlight } from '../../extensions/TagHighlight';
 import { Kbd, Subscript, Superscript, Highlight, SoftAwareHardBreak, NoteLink } from '../../extensions/InlineMarks';
 import { NoteImage } from '../../extensions/NoteImage';
 import { FocusMode } from '../../extensions/FocusMode';
+import { AutoContinue } from '../../extensions/AutoContinue';
+import { autoContinueProvider } from './autoContinueProvider';
 
 
 /** 富文本编辑器的全部扩展；测试里也用同一份，保证序列化结果与真实编辑器一致 */
@@ -59,6 +61,7 @@ export const editorExtensions = [
   InlineMath,
   TagHighlight,
   FocusMode,
+  AutoContinue.configure({ provider: autoContinueProvider }),
   Kbd,
   Subscript,
   Superscript,

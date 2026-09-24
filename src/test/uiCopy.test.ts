@@ -22,6 +22,7 @@ const NOT_UI = [
   /components[/\\]Editor[/\\]useEditorAI\.ts$/,      // 给模型的系统提示词
   /utils[/\\]transcript\.ts$/,                        // 纪要提示词与笔记模板
   /utils[/\\]askNotes\.ts$/,                          // 问答提示词
+  /utils[/\\]autoContinue\.ts$/,                      // 续写提示词
   /semantic[/\\]catalog\.ts$/,                        // 嵌入模型的指令前缀
   /utils[/\\]noteTemplates\.ts$/,                     // 新笔记模板的正文
   /data[/\\]whatsNew\.ts$/,                           // 新特性介绍是成段的文章，另一套写法

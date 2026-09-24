@@ -16,8 +16,9 @@ import { applyUserCss, snippetsPathOf, SNIPPETS_TEMPLATE } from '../utils/userCs
 const FILE_SORT_KEY = 'iml.fileSort';
 import { renameTagInMarkdown, isValidTagName, tagMatches } from '../../electron/shared/noteMeta';
 
-export type DialogId = 'about' | 'shortcuts' | 'quick-open' | 'command-palette' | 'ai-config' | 'ai-setup' | 'image-config' | 'semantic-config' | 'transcribe-config' | 'settings' | 'whats-new' | 'history' | 'image-cleanup' | 'wechat-copy' | 'resources';
+export type DialogId = 'about' | 'shortcuts' | 'quick-open' | 'command-palette' | 'ai-config' | 'ai-setup' | 'image-config' | 'semantic-config' | 'transcribe-config' | 'settings' | 'whats-new' | 'history' | 'image-cleanup' | 'wechat-copy' | 'resources' | 'auto-continue';
 import { DAILY_DIR, TEMPLATE_DIR, DEFAULT_DAILY_TEMPLATE, SAMPLE_TEMPLATES, renderNoteTemplate } from '../utils/noteTemplates';
+import { DEFAULT_AUTO_CONTINUE, normalizeAutoContinue, type AutoContinuePrefs } from '../utils/autoContinue';
 
 export interface FileNode {
   name: string;
@@ -293,6 +294,9 @@ export interface AppState {
   /** AI 总开关：关掉后所有 AI 入口隐藏，应用不会向任何模型服务发请求 */
   aiEnabled: boolean;
   editorPrefs: EditorPrefs;
+  /** 自动续写：打字停顿时光标后浮出灰字，Tab 收下 */
+  autoContinue: AutoContinuePrefs;
+  setAutoContinue: (patch: Partial<AutoContinuePrefs>) => void;
 
   // File Management State
   selectedNodePath: string | null;
@@ -563,6 +567,12 @@ export const useAppStore = create<AppState>((set, get) => ({
   spellcheck: false,
   aiEnabled: true,
   editorPrefs: DEFAULT_EDITOR_PREFS,
+  autoContinue: DEFAULT_AUTO_CONTINUE,
+  setAutoContinue: (patch) => {
+    const autoContinue = normalizeAutoContinue({ ...get().autoContinue, ...patch });
+    set({ autoContinue });
+    void window.api.app.saveSettings({ autoContinue });
+  },
 
   toggleStar: (path: string) => set((state) => ({
     starredFiles: state.starredFiles.includes(path)
@@ -1410,6 +1420,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           spellcheck: !!settings.spellcheck,
           aiEnabled: settings.aiEnabled ?? true,
           editorPrefs: normalizeEditorPrefs(settings.editorPrefs),
+          autoContinue: normalizeAutoContinue(settings.autoContinue),
         });
         applyEditorPrefs(get().editorPrefs);
         void get().reloadUserCss(); // 设置里开 / 关了「自定义样式」

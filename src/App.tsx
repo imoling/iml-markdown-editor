@@ -20,6 +20,7 @@ import { exportActiveTabToPdf, exportActiveTabToHtml, exportActiveTabToDocx, exp
 import { HistoryModal } from './components/History/HistoryModal';
 import { ImageCleanupModal } from './components/Library/ImageCleanupModal';
 import { SemanticIndexModal } from './components/AI/SemanticIndexModal';
+import { AutoContinueModal } from './components/AI/AutoContinueModal';
 import { TranscribeConfigModal } from './components/AI/TranscribeConfigModal';
 import { AiSetupModal } from './components/AI/AiSetupModal';
 import { QuickOpenModal } from './components/QuickOpen/QuickOpenModal';
@@ -525,6 +526,7 @@ const App: React.FC = () => {
       {dialog === 'resources' && <ResourcesModal onClose={closeDialog} />}
       {dialog === 'image-cleanup' && <ImageCleanupModal onClose={closeDialog} />}
       {dialog === 'semantic-config' && <SemanticIndexModal onClose={closeDialog} />}
+      {dialog === 'auto-continue' && <AutoContinueModal onClose={closeDialog} />}
       {dialog === 'transcribe-config' && <TranscribeConfigModal onClose={closeDialog} />}
       {dialog === 'ai-setup' && <AiSetupModal onClose={closeDialog} />}
       {dialog === 'quick-open' && <QuickOpenModal onClose={closeDialog} />}

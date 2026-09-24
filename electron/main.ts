@@ -919,8 +919,9 @@ app.whenReady().then(() => {
   });
 
   // temperature：整理纪要、问笔记这类「照着材料写」的任务传一个低温度，小模型才守规矩；不传就用服务端默认值（写作要有变化）
-  ipcMain.on('ai:chat', async (event, { messages, requestId, maxTokens, temperature }) => {
-    const sampling = typeof temperature === 'number' ? { temperature } : {};
+  // quiet：自动续写发的请求。本机模型没在跑、又正给生图 / 转写让位时直接跳过——停顿一下就把出图的内存抢回来不划算
+  ipcMain.on('ai:chat', async (event, { messages, requestId, maxTokens, temperature, quiet }) => {
+    let sampling: Record<string, unknown> = typeof temperature === 'number' ? { temperature } : {};
     let localWork = false;
     // 界面上的 AI 入口已经随总开关隐藏；这里再兜一道，保证关掉之后真的不发请求
     if (getAppSettings().aiEnabled === false) {
@@ -940,6 +941,12 @@ app.whenReady().then(() => {
         event.sender.send(`ai:chat-error-${requestId}`, hint);
         return;
       }
+      if (quiet && !isLocalServerActive() && (scheduler.isDisplaced('chat') || scheduler.isBusy('image') || scheduler.isBusy('asr'))) {
+        event.sender.send(`ai:chat-error-${requestId}`, 'SKIPPED');
+        return;
+      }
+      // 开着思考模式也别让续写先想半天
+      if (quiet) sampling = { ...sampling, chat_template_kwargs: { enable_thinking: false } };
       try {
         const local = await ensureBuiltinEndpoint();
         scheduler.beginWork('chat');

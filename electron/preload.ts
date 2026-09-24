@@ -58,7 +58,7 @@ contextBridge.exposeInMainWorld('api', {
   ai: {
     getConfig: () => ipcRenderer.invoke('ai:getConfig'),
     saveConfig: (config: any) => ipcRenderer.invoke('ai:saveConfig', config),
-    chat: (messages: any[], onStream: (chunk: string) => void, requestId: string, maxTokens?: number, temperature?: number) => {
+    chat: (messages: any[], onStream: (chunk: string) => void, requestId: string, maxTokens?: number, temperature?: number, opts?: { quiet?: boolean }) => {
       const chunkListener = (_event: any, content: string) => onStream(content);
       ipcRenderer.on(`ai:chat-chunk-${requestId}`, chunkListener);
       return new Promise((resolve, reject) => {
@@ -70,7 +70,7 @@ contextBridge.exposeInMainWorld('api', {
           ipcRenderer.removeListener(`ai:chat-chunk-${requestId}`, chunkListener);
           reject(new Error(error));
         });
-        ipcRenderer.send('ai:chat', { messages, requestId, maxTokens, temperature });
+        ipcRenderer.send('ai:chat', { messages, requestId, maxTokens, temperature, quiet: !!opts?.quiet });
       });
     },
     stop: (requestId: string) => ipcRenderer.send('ai:stop', requestId),
