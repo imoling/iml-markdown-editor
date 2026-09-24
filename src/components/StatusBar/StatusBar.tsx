@@ -94,7 +94,7 @@ export const StatusBar: React.FC = () => {
             <span>共 {stats.lines} 行</span>
           </>
         ) : (
-          <span className="statusbar-dim">未选择文档</span>
+          <span className="statusbar-dim">没有打开的笔记</span>
         )}
         <RecordingIndicator />
       </div>

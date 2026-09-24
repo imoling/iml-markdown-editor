@@ -140,7 +140,7 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
     if (result && result.length > 0) setLocal((s) => ({ ...s, defaultLibraryPath: result[0] }));
   };
   const handleClearSession = () => {
-    if (window.confirm('重置界面状态？标签页、最近打开、星标会清空，笔记和设置不受影响。')) {
+    if (window.confirm('重置界面状态？标签页、最近打开、收藏会清空，笔记和设置不受影响。')) {
       // 会话只存在于主窗口，这里通知主窗口清空并重载
       window.api.app.clearSession();
       close();
@@ -351,7 +351,7 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
               <div className="settings-card settings-card--danger">
                 <div>
                   <div className="settings-row__title settings-row__title--danger">重置界面状态</div>
-                  <div className="settings-row__desc">关掉所有标签页，清空最近打开和星标；笔记和设置不动</div>
+                  <div className="settings-row__desc">关掉所有标签页，清空最近打开和收藏；笔记和设置不动</div>
                 </div>
                 <button onClick={handleClearSession} className="btn btn-danger"><Trash2 size={14} /> 重置</button>
               </div>

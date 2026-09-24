@@ -4,6 +4,10 @@ import { Plus, FolderOpen, FileText, Settings, Clock, Star, CalendarDays, Wand2,
 import { formatVersion } from '../../utils/version';
 import { useAiReadiness } from '../../utils/aiReadiness';
 
+const isMac = window.api.app.platform === 'darwin';
+/** 快捷键按平台写：mac 用符号，别的平台用 Ctrl+ */
+const key = (mac: string, other: string) => (isMac ? mac : other);
+
 function greetingForNow(): string {
   const hour = new Date().getHours();
   if (hour < 6) return '夜深了';
@@ -56,17 +60,17 @@ export const StartPage: React.FC = () => {
             {timeGreeting}，欢迎来到 <span className="start-page__brand">iML Markdown Editor</span>
           </h1>
           <p className="start-page__subtitle">
-            <span><span className="text-brand fw-600">AI 时代</span>的敏捷知识编辑中枢</span>
+            <span><span className="text-brand fw-600">本机智能</span>，笔记不出门</span>
             <span className="start-page__version">v{formatVersion(window.api.appVersion)}</span>
           </p>
         </div>
 
         <div className="start-page__actions">
-          <ActionButton icon={Plus} label="新建文档" hotkey="Cmd + N" onClick={createNewFile} />
-          <ActionButton icon={CalendarDays} label="今日日记" hotkey="Shift + Cmd + D" onClick={openDailyNote} />
-          <ActionButton icon={FolderOpen} label="切换笔记库" hotkey="Shift + Cmd + O" onClick={openDirectory} />
-          <ActionButton icon={FileText} label="打开单文件" hotkey="Cmd + O" onClick={openFile} />
-          <ActionButton icon={Settings} label="全局设置" hotkey="Cmd + ," onClick={() => openDialog('settings')} />
+          <ActionButton icon={Plus} label="新建笔记" hotkey={key('⌘N', 'Ctrl+N')} onClick={createNewFile} />
+          <ActionButton icon={CalendarDays} label="今日日记" hotkey={key('⇧⌘D', 'Ctrl+Shift+D')} onClick={openDailyNote} />
+          <ActionButton icon={FolderOpen} label="切换笔记库" hotkey={key('⇧⌘O', 'Ctrl+Shift+O')} onClick={openDirectory} />
+          <ActionButton icon={FileText} label="打开文件" hotkey={key('⌘O', 'Ctrl+O')} onClick={openFile} />
+          <ActionButton icon={Settings} label="设置" hotkey={key('⌘,', 'Ctrl+,')} onClick={() => openDialog('settings')} />
         </div>
 
         {!readiness.ready && readiness.blocker !== 'disabled' && (
@@ -79,12 +83,12 @@ export const StartPage: React.FC = () => {
 
         <div className="start-page__cards">
           <div className="start-card">
-            <div className="start-card__title"><Clock size={16} /> <span>近期打开</span></div>
-            <FileList paths={recentFiles} icon={<FileText size={14} color="var(--text-muted)" />} empty="暂无近期文件记录" onOpen={openFileByPath} />
+            <div className="start-card__title"><Clock size={16} /> <span>最近打开</span></div>
+            <FileList paths={recentFiles} icon={<FileText size={14} color="var(--text-muted)" />} empty="还没有打开过的笔记" onOpen={openFileByPath} />
           </div>
           <div className="start-card">
-            <div className="start-card__title"><Star size={16} color="#f59e0b" fill="#f59e0b" /> <span>核心收藏</span></div>
-            <FileList paths={starredFiles} icon={<Star size={14} color="#f59e0b" />} empty="暂无收藏文件，可在侧边栏星标" onOpen={openFileByPath} />
+            <div className="start-card__title"><Star size={16} color="#f59e0b" fill="#f59e0b" /> <span>收藏</span></div>
+            <FileList paths={starredFiles} icon={<Star size={14} color="#f59e0b" />} empty="在笔记库里点一下笔记旁的星星就能收藏" onOpen={openFileByPath} />
           </div>
         </div>
       </div>

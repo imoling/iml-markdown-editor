@@ -450,7 +450,7 @@ export const Sidebar: React.FC = () => {
           <TasksPanel />
         ) : sidebarTab === 'catalog' ? (
           <div className="catalog-view">
-            {outline.length === 0 ? <div className="empty-state">暂无目录层级</div> : outline.map((item) => <OutlineItem key={item.id} node={item} />)}
+            {outline.length === 0 ? <div className="empty-state">这篇笔记还没有标题</div> : outline.map((item) => <OutlineItem key={item.id} node={item} />)}
             <BacklinksPanel />
             <RelatedPanel />
           </div>
