@@ -20,6 +20,7 @@ Most "AI notes" apps ship your text to somebody's server. This one downloads the
 | What | Runs where | Model |
 |---|---|---|
 | Writing assistant (continue, polish, summarize, diagrams) | **Your machine** (or any OpenAI-compatible endpoint) | llama.cpp, your pick of GGUF |
+| Inline completion while you type (`Tab` to accept) | **Your machine** | same model as the writing assistant |
 | Ask your notes (`⌘J`, answers cite the source note) | **Your machine** | local embeddings + local chat model |
 | Live transcription (meetings, lectures) | **Your machine** | sherpa-onnx + SenseVoice, 5 languages |
 | Speaker diarization | **Your machine** | 3D-Speaker CAM++ voiceprints, stored locally |
@@ -43,20 +44,50 @@ Chat + embeddings + transcription + image generation do not fit in 24 GB simulta
 
 ## Features
 
-**Editing** — rich text and source mode (CodeMirror 6, optional Vim keys), slash menu, command palette (`⌘⇧P`),
-tables, KaTeX math, Mermaid diagrams, SVG blocks, callouts, footnotes, code folding for headings and lists (`⌥⌘[`).
+### Inline completion — pause, and it writes the next line
 
-**Round-trip fidelity** — edit one word, and `git diff` shows one line. Untouched blocks are written back byte-for-byte
-(40+ syntax variants verified in tests).
+Stop typing for a moment and a grey suggestion appears after the cursor. `Tab` accepts it; `Esc` or just
+keep typing and it goes away. Off by default — turn it on under *Intelligence → Auto-continue* and pick the
+pause length (0.5 / 1 / 2 s). It only fires at the end of a real paragraph, never inside code blocks or
+headings, and it uses the same model as the writing assistant, so it works with no network at all.
 
-**Moving in from Obsidian** — `[[note#section]]`, `[[#section]]`, `[[note#^block]]`, `![[embeds]]`, aliases,
-hover preview, backlinks, unlinked mentions, frontmatter properties, tags, daily notes, vault-wide tasks.
+![Pause while typing and a grey suggestion appears after the cursor; Tab accepts it](https://cdn.jsdelivr.net/gh/imoling/iml-markdown-editor@main/screenshots/demo-autocontinue.gif)
 
-**Notes library** — full-text and semantic search, quick open (`⌘T`, pinyin initials work), tag rename/merge,
-file tree sorting, version history, image cleanup, global quick capture hotkey.
+### Editing
 
-**Export** — PDF, HTML, Word (.docx), long image (auto-split at paragraph boundaries), and
-"copy as WeChat article" with inline styles.
+Rich text and source mode (CodeMirror 6, optional Vim keys), slash menu, command palette (`⌘⇧P`),
+tables, KaTeX math, Mermaid diagrams, SVG blocks, callouts, footnotes, folding for headings and lists (`⌥⌘[`).
+
+![Type / at the start of a line: headings, lists, tables, code blocks, math and callouts in one menu](https://cdn.jsdelivr.net/gh/imoling/iml-markdown-editor@main/screenshots/demo-slash.gif)
+
+**Round-trip fidelity** — edit one word, and `git diff` shows one line. Untouched blocks are written back
+byte-for-byte (40+ syntax variants verified in tests).
+
+### Moving in from Obsidian
+
+`[[note#section]]`, `[[#section]]`, `[[note#^block]]`, `![[embeds]]`, aliases, hover preview, backlinks,
+unlinked mentions, frontmatter properties, tags, daily notes, vault-wide tasks.
+
+![Hover a wiki link and the beginning of that note appears, without leaving the page](https://cdn.jsdelivr.net/gh/imoling/iml-markdown-editor@main/screenshots/demo-wikilink.gif)
+
+### Meetings and lectures
+
+Live transcription writes the full text while you keep your own notes; speaker diarization labels who said
+what; click any line to jump the recording to that moment. Recording and voiceprints stay on your machine.
+
+![Live transcription: text appears as you speak, punctuation is added when you pause](https://cdn.jsdelivr.net/gh/imoling/iml-markdown-editor@main/screenshots/demo-transcribe.gif)
+
+### Notes library
+
+Full-text and semantic search, quick open (`⌘T`, pinyin initials work), tag rename/merge, file tree sorting,
+version history, image cleanup, and a global hotkey that appends a line to today's note from any other app.
+
+![Press the global hotkey in any app, type one line, and it lands in today note](https://cdn.jsdelivr.net/gh/imoling/iml-markdown-editor@main/screenshots/demo-capture.gif)
+
+### Export
+
+PDF, HTML, Word (.docx), long image (auto-split at paragraph boundaries), and "copy as WeChat article"
+with inline styles.
 
 ---
 
@@ -95,7 +126,7 @@ The app is not notarized by Apple and not code-signed on Windows. On macOS, righ
 ```bash
 npm install
 npm run dev          # development
-npm run check        # typecheck + ESLint + 714 tests
+npm run check        # typecheck + ESLint + 731 tests
 npm run build:mac    # macOS installers (arm64 + x64)
 npm run build:win    # Windows installers
 ```
