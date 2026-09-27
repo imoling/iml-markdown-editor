@@ -15,7 +15,7 @@ let fedSamples = 0;
 
 function init(msg: InitMessage) {
   const t0 = Date.now();
-  // 胶水层在 userData 里，路径运行时才知道
+  // 胶水层是运行时下载的（在模型存放位置里），路径运行时才知道
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const sherpa = require(path.join(msg.glueDir, 'sherpa-onnx.js'));
   const offline = new sherpa.OfflineRecognizer({

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { X, Gauge, Play, PowerOff } from 'lucide-react';
 import { useAppStore } from '../../stores/appStore';
 import { LiveSettingsNote } from './CopyNotes';
+import { StorageCard } from './StorageCard';
 
 interface Props { onClose: () => void }
 
@@ -68,7 +69,7 @@ const ResourcesModal: React.FC<Props> = ({ onClose }) => {
         <header className="modal-head">
           <div>
             <h1 className="modal-title">本机资源</h1>
-            <p className="modal-subtitle">本机模型的内存占用与启停</p>
+            <p className="modal-subtitle">本机模型的内存占用、启停与存放位置</p>
           </div>
           <button className="icon-btn" onClick={onClose} aria-label="关闭"><X size={18} /></button>
         </header>
@@ -137,6 +138,7 @@ const ResourcesModal: React.FC<Props> = ({ onClose }) => {
             </>
           )}
           {!state && !error && <div className="lm-line lm-line--muted">正在读取…</div>}
+          <StorageCard />
         </div>
         <footer className="modal-footer">
           <LiveSettingsNote className="hint history-modal__note" />

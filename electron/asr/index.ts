@@ -5,6 +5,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { ASR_RUNTIME_VERSION, GLUE_PACKAGE, MODEL_FILES, SPEAKER_MODEL, nativePackageFor, nativeDirName, npmTarballUrls, totalDownloadBytes, type AsrDownload } from './catalog';
+import { storageDir } from '../modelStorage';
 import { downloadFile, DownloadError } from '../localModel/download';
 import { extractArchive } from '../localModel/runtime';
 import { resolveModelUrl } from '../localModel/catalog';
@@ -52,7 +53,7 @@ let installController: AbortController | null = null;
 let speakerInstall: AsrState['speaker']['install'] = null;
 let speakerController: AbortController | null = null;
 
-const rootDir = () => path.join(app.getPath('userData'), 'asr');
+const rootDir = () => storageDir('asr');
 const runtimeDir = () => path.join(rootDir(), 'runtime', ASR_RUNTIME_VERSION);
 const modelsDir = () => path.join(rootDir(), 'models');
 const glueDir = () => path.join(runtimeDir(), 'sherpa-onnx-node');
@@ -347,6 +348,14 @@ export function confirmDiscardTranscript(win: BrowserWindow | null): boolean {
 export function forgetUnsavedTranscript() { unsavedTranscript = null; discardConfirmed = false; }
 
 /** 应用退出时调用 */
+/** 换模型存放位置之前问一句：有没有正在下载的 */
+export function asrBusyReason(): string | null {
+  return install?.active || speakerInstall?.active ? '转写的识别组件正在下载' : null;
+}
+
+/** 模型存放位置换了：装没装要重新看 */
+export function refreshAsrStorage() { broadcast(); }
+
 export function stopAsr() {
   installController?.abort();
   speakerController?.abort();

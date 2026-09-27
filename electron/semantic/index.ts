@@ -146,6 +146,16 @@ async function ensureServer(): Promise<{ port: number; alias: string }> {
   return { port: server.state.port, alias: server.state.alias || 'embedding' };
 }
 
+/** 换模型存放位置之前问一句：有没有正在下载、正在建索引的 */
+export function semanticBusyReason(): string | null {
+  if ([...downloads.values()].some((d) => d.state.active)) return '嵌入模型正在下载';
+  if (indexing) return '正在给笔记建语义索引';
+  return null;
+}
+
+/** 模型存放位置换了：装没装要重新看 */
+export function refreshSemanticStorage() { broadcast(); }
+
 export async function stopSemanticServer() {
   await store?.save();
   await server.stop();

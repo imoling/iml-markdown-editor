@@ -2,12 +2,13 @@
  * 本机生图：下载运行时（stable-diffusion.cpp）和 Qwen-Image 2.1 的三个模型文件，托管 sd-server，给 ai:generateImage 出图。
  * 接进本机资源调度：出图前先 ensureCapacity('image')（24 GB 以下会先停对话与嵌入），出图算「正在忙」，空闲几分钟自动停。
  */
-import { app, ipcMain, BrowserWindow } from 'electron';
+import { ipcMain, BrowserWindow } from 'electron';
 import os from 'os';
 import fs from 'fs';
 import path from 'path';
 import { execFile } from 'child_process';
 import { IMAGE_MODELS, SD_RUNTIME, runtimeAssetFor, sizeOf, stepsForModel, localImageEstimateBytes, imageModelOf, modelTotalBytes, DEFAULT_IMAGE_MODEL, type ImageFileSpec, type ImageModelSpec } from './catalog';
+import { storageDir } from '../modelStorage';
 import { SdServer, type SdState, type ImageProgress } from './server';
 import { downloadFile, DownloadError } from '../localModel/download';
 import { resolveModelUrl } from '../localModel/catalog';
@@ -54,7 +55,7 @@ const PORT = 18280;
 /** 32 GB 以上的机器不 offload：快约 15%，峰值 10 GB 它扛得住（实测见 server.ts 的参数注释） */
 const ROOMY_MEMORY_BYTES = 32 * 1024 ** 3;
 
-const rootDir = () => path.join(app.getPath('userData'), 'image-gen');
+const rootDir = () => storageDir('image-gen');
 const pidFile = () => path.join(rootDir(), 'server.pid');
 const modelsDir = (modelId: string) => path.join(rootDir(), 'models', modelId);
 const runtimeDir = () => path.join(rootDir(), 'runtime', SD_RUNTIME.version);
@@ -268,6 +269,14 @@ async function ensureServer(steps: number): Promise<void> {
   })().finally(() => { startPromise = null; broadcast(); });
   await startPromise;
 }
+
+/** 换模型存放位置之前问一句：有没有正在下载的 */
+export function imageGenBusyReason(): string | null {
+  return install?.active ? '生图模型正在下载' : null;
+}
+
+/** 模型存放位置换了：装没装要重新看 */
+export function refreshImageGenStorage() { broadcast(); }
 
 export async function stopImageServer() { await server.stop(); fs.rmSync(pidFile(), { force: true }); }
 

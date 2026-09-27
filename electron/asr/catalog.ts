@@ -1,6 +1,6 @@
 /**
  * 实时转写要下载的东西：sherpa-onnx 的 Node 原生模块（按平台）+ 12 KB 的 JS 胶水层 + SenseVoice 与 VAD 模型。
- * 都是运行时下载到 userData，不打进安装包 —— 选型与取舍见 docs/transcription-spike.md。
+ * 都是运行时下载到模型存放位置（默认在应用数据目录里），不打进安装包 —— 选型与取舍见 docs/transcription-spike.md。
  * 大小与 SHA256 是 2026-09-20 实际下载后算的；国内镜像与官方源是同一份字节。
  */
 

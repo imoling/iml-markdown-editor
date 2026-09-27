@@ -57,6 +57,12 @@ export function createMockApi(initialFiles: Record<string, string> = {}) {
     clipboard: { writeHtml: vi.fn(async () => true) },
     image: { getState: vi.fn(async () => ({ supported: true, runtime: { installed: false, version: 'x', path: null }, files: [], installedBytes: 0, totalBytes: 0, ready: false, install: null, server: { status: 'stopped', pid: null, port: null, startedAt: null, error: null }, lastLog: '', models: [], modelId: 'z-image-turbo-q4k', lastRun: null })), setModel: vi.fn(), install: vi.fn(), cancelInstall: vi.fn(), delete: vi.fn(), start: vi.fn(), stop: vi.fn(), cancelGeneration: vi.fn(), onState: vi.fn(() => () => {}), onProgress: vi.fn(() => () => {}) },
     resources: { getState: vi.fn(async () => ({ totalBytes: 0, availableBytes: 0, exclusiveApplies: false, services: [], config: { idleMinutes: { chat: 15, embed: 10, asr: 0, image: 5 }, exclusiveImage: true } })), start: vi.fn(), stop: vi.fn(), setConfig: vi.fn(), onState: vi.fn(() => () => {}), onNotice: vi.fn(() => () => {}) },
+    storage: {
+      getState: vi.fn(async () => ({ path: '/userdata', defaultPath: '/userdata', isDefault: true, available: true, usedBytes: 0, moving: null as { movedBytes: number; totalBytes: number } | null })),
+      change: vi.fn(async (target: string | null) => ({ ok: true, error: undefined as string | undefined, state: { path: target || '/userdata', defaultPath: '/userdata', isDefault: !target, available: true, usedBytes: 0, moving: null as { movedBytes: number; totalBytes: number } | null } })),
+      reveal: vi.fn(async () => true),
+      onState: vi.fn(() => () => {}),
+    },
     ai: { getConfig: vi.fn(async () => ({})), saveConfig: vi.fn(async () => ({ success: true })), chat: vi.fn(), stop: vi.fn(), generateImage: vi.fn(), listModels: vi.fn(), testConnection: vi.fn() },
     local: {
       getState: vi.fn(async () => null), installRuntime: vi.fn(), cancelInstall: vi.fn(), pickRuntime: vi.fn(), clearRuntimePath: vi.fn(),

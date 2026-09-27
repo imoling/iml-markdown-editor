@@ -5,12 +5,13 @@ import https from 'https';
 import http from 'http';
 import { setupFileSystemIPC } from './ipc/fileSystem';
 import { SearchIndex } from './searchIndex';
-import { setupLocalModel, ensureBuiltinEndpoint, builtinNotReadyHint, isBuiltinService, isLocalServerActive, stopServer as stopLocalServer } from './localModel';
-import { scheduler } from './localModel/scheduler';
+import { setupLocalModel, ensureBuiltinEndpoint, builtinNotReadyHint, isBuiltinService, isLocalServerActive, stopServer as stopLocalServer, localModelBusyReason, refreshLocalModelStorage } from './localModel';
+import { scheduler, SERVICE_IDS } from './localModel/scheduler';
+import { initModelStorage, setupModelStorage } from './modelStorage';
 import { setupResources } from './localModel/resources';
-import { setupImageGen, generateLocalImage, stopImageServer } from './imageGen';
-import { setupSemantic, syncSemanticIndex, stopSemanticServer, isSemanticServerActive } from './semantic';
-import { setupAsr, stopAsr, confirmDiscardTranscript, forgetUnsavedTranscript } from './asr';
+import { setupImageGen, generateLocalImage, stopImageServer, imageGenBusyReason, refreshImageGenStorage } from './imageGen';
+import { setupSemantic, syncSemanticIndex, stopSemanticServer, isSemanticServerActive, semanticBusyReason, refreshSemanticStorage } from './semantic';
+import { setupAsr, stopAsr, confirmDiscardTranscript, forgetUnsavedTranscript, asrBusyReason, refreshAsrStorage } from './asr';
 import { describeRelease } from './update';
 import { NoteHistory } from './history';
 import { setupQuickCapture } from './capture';
@@ -687,6 +688,9 @@ app.whenReady().then(() => {
   // semantic 字段由语义索引模块自己维护；配置弹窗里那份可能是打开时的旧值，保存时以磁盘上的为准
   ipcMain.handle('ai:saveConfig', (_event, config) => saveConfig({ ...config, semantic: getConfig().semantic }));
 
+  // 模型存放位置要最先定下来：下面几个模块的目录都从它算
+  initModelStorage(getAppSettings().modelStoragePath);
+
   // 本机模型（编辑器托管的 llama-server）：硬件信息、运行时安装、模型下载、进程管理
   try {
     setupLocalModel({ getConfig, saveConfig });
@@ -708,6 +712,29 @@ app.whenReady().then(() => {
     setupImageGen();
   } catch (err) {
     console.error('Failed to setup transcription:', err);
+  }
+
+  // 模型存放位置：换的时候先确认没有正在下载 / 正在用的，把在跑的停掉，搬完再让原来开着的回来
+  try {
+    setupModelStorage({
+      saveSetting: (modelStoragePath) => saveAppSettings({ modelStoragePath }),
+      busyReason: () => {
+        const downloading = localModelBusyReason() || semanticBusyReason() || asrBusyReason() || imageGenBusyReason();
+        if (downloading) return downloading;
+        const busy = SERVICE_IDS.find((id) => scheduler.isBusy(id));
+        return busy ? `${scheduler.get(busy)?.label || '本机模型'}正在忙` : null;
+      },
+      stopServices: async () => {
+        const textWasRunning = !!scheduler.get('chat')?.running() || !!scheduler.get('embed')?.running();
+        if (textWasRunning) await scheduler.stop('chat');
+        if (scheduler.get('image')?.running()) await scheduler.stop('image');
+        stopAsr();
+        return async () => { if (textWasRunning) await scheduler.start('chat'); };
+      },
+      refresh: () => { refreshLocalModelStorage(); refreshSemanticStorage(); refreshAsrStorage(); refreshImageGenStorage(); },
+    });
+  } catch (err) {
+    console.error('Failed to setup model storage:', err);
   }
 
   // 被信号结束（终端 Ctrl+C、系统关机时的 SIGTERM）也走正常退出流程，否则 before-quit 不触发，子进程会变成孤儿

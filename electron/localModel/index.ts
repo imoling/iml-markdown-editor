@@ -1,4 +1,4 @@
-import { app, ipcMain, BrowserWindow, dialog, shell } from 'electron';
+import { ipcMain, BrowserWindow, dialog, shell } from 'electron';
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
@@ -10,6 +10,7 @@ import { downloadFile, DownloadError, type DownloadProgress } from './download';
 import { resolveRuntime, installRuntime, type InstallPhase, type RuntimeInfo } from './runtime';
 import { LlamaServer, pingChat, type ServerState } from './server';
 import { scheduler } from './scheduler';
+import { storageDir } from '../modelStorage';
 
 export { DEFAULT_LOCAL_CONFIG, normalizeLocalConfig };
 export type { AIServiceType, CustomModel, LocalModelConfig, DeviceInfo, RequirementCheck, RuntimeInfo, ServerState, InstallPhase };
@@ -64,7 +65,7 @@ const downloads = new Map<string, { controller: AbortController; state: ModelDow
 let install: InstallState = { active: false, phase: null, tag: null, error: null };
 let installController: AbortController | null = null;
 
-const rootDir = () => path.join(app.getPath('userData'), 'local-model');
+const rootDir = () => storageDir('local-model');
 const runtimeDir = () => path.join(rootDir(), 'runtime');
 const modelsDir = () => path.join(rootDir(), 'models');
 const pidFile = () => path.join(rootDir(), 'server.pid');
@@ -155,6 +156,8 @@ export function onRuntimeChanged(listener: () => void) {
 const runtimeListeners = new Set<() => void>();
 
 export async function getRuntime(force = false): Promise<RuntimeInfo> {
+  // 记着的那个可执行文件不在了（模型放在移动硬盘上、盘被拔了）：重新找，别拿着一个已经没有的路径说「已安装」
+  if (runtimeCache?.path && !fs.existsSync(runtimeCache.path)) runtimeCache = null;
   if (!runtimeCache || force) runtimeCache = await resolveRuntime(runtimeDir(), localConfig().runtimePath);
   return runtimeCache;
 }
@@ -399,9 +402,24 @@ async function testConnection(draft?: Partial<LocalModelConfig>) {
 }
 
 // ── 注册 ─────────────────────────────────────────────────────────────────────
+/** 换模型存放位置之前问一句：有没有正在下载的（搬到一半的文件不能动） */
+export function localModelBusyReason(): string | null {
+  if (install.active) return '对话模型的运行组件正在安装';
+  if ([...downloads.values()].some((d) => d.state.active)) return '对话模型正在下载';
+  return null;
+}
+
+/** 模型存放位置换了：运行组件在哪、哪些模型已下载都要重新看 */
+export function refreshLocalModelStorage() {
+  runtimeCache = null;
+  runtimeListeners.forEach((fn) => fn());
+  broadcast();
+}
+
 export function setupLocalModel(d: Deps) {
   deps = d;
-  fs.mkdirSync(modelsDir(), { recursive: true });
+  // 存放位置在移动硬盘上、这会儿没接上的话建不出来：不能因此连界面都起不来
+  try { fs.mkdirSync(modelsDir(), { recursive: true }); } catch (err) { console.warn('[local-model] 模型目录建不出来:', (err as Error)?.message || err); }
 
   ipcMain.handle('local:getState', () => getLocalState());
   // 接进本机资源调度：空闲自动停、启动前算内存、和生图互斥

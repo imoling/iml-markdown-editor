@@ -7,6 +7,8 @@ import type { SemanticState, SemanticHit, AskSource } from '../../electron/seman
 import type { HistoryEntry } from '../../electron/history';
 import type { ResourceState, ServiceId } from '../../electron/localModel/scheduler';
 import type { ImageGenState } from '../../electron/imageGen/index';
+import type { StorageState } from '../../electron/modelStorage/index';
+export type { StorageState } from '../../electron/modelStorage/index';
 import type { ImageProgress } from '../../electron/imageGen/server';
 import type { OrphanImage } from '../../electron/assets';
 export type { SemanticState, SemanticHit, EmbedModelEntry, AskSource } from '../../electron/semantic/index';
@@ -216,6 +218,14 @@ declare global {
         cancelGeneration: () => Promise<boolean>;
         onState: (cb: (state: ImageGenState) => void) => () => void;
         onProgress: (cb: (p: ImageProgress | null) => void) => () => void;
+      };
+      /** 模型存放位置：在哪、占了多少、换一个地方（已下载的会搬过去，期间本机模型先停止） */
+      storage: {
+        getState: () => Promise<StorageState>;
+        /** target 为 null = 回到默认位置。搬不成不抛错，原因在 error 里 */
+        change: (target: string | null) => Promise<{ ok: boolean; error?: string; state: StorageState }>;
+        reveal: () => Promise<boolean>;
+        onState: (cb: (state: StorageState) => void) => () => void;
       };
       resources: {
         getState: () => Promise<ResourceState>;

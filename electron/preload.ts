@@ -55,6 +55,13 @@ contextBridge.exposeInMainWorld('api', {
     onState: (cb: (state: any) => void) => { const l = (_e: any, s: any) => cb(s); ipcRenderer.on('resources:state', l); return () => ipcRenderer.removeListener('resources:state', l); },
     onNotice: (cb: (text: string) => void) => { const l = (_e: any, t: string) => cb(t); ipcRenderer.on('resources:notice', l); return () => ipcRenderer.removeListener('resources:notice', l); },
   },
+  // 模型存放位置：在哪、占了多少、换一个地方（已下载的会搬过去）
+  storage: {
+    getState: () => ipcRenderer.invoke('storage:getState'),
+    change: (target: string | null) => ipcRenderer.invoke('storage:change', target),
+    reveal: (): Promise<boolean> => ipcRenderer.invoke('storage:reveal'),
+    onState: (cb: (state: any) => void) => { const l = (_e: any, s: any) => cb(s); ipcRenderer.on('storage:state', l); return () => ipcRenderer.removeListener('storage:state', l); },
+  },
   ai: {
     getConfig: () => ipcRenderer.invoke('ai:getConfig'),
     saveConfig: (config: any) => ipcRenderer.invoke('ai:saveConfig', config),
