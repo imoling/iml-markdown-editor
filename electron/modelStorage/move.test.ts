@@ -5,6 +5,8 @@ import path from 'path';
 import { checkTarget, measureTrees, MoveError, rebasePath, transfer } from './move';
 
 const DIRS = ['local-model', 'asr', 'image-gen'] as const;
+/** Windows 没有可执行位这回事：那边只验文件在不在、内容对不对 */
+const hasModeBits = process.platform !== 'win32';
 let base: string;
 let from: string;
 let to: string;
@@ -50,7 +52,8 @@ describe('搬模型', () => {
       expect(handle.bytes).toBe(470_010);
       expect(tree(to)).toEqual(ALL);
       expect(fs.readFileSync(path.join(to, 'local-model/models/chat.gguf')).equals(Buffer.alloc(300_000, 1))).toBe(true);
-      expect(fs.statSync(path.join(to, 'local-model/runtime/b100/llama-server')).mode & 0o777).toBe(0o755);
+      if (hasModeBits) expect(fs.statSync(path.join(to, 'local-model/runtime/b100/llama-server')).mode & 0o777).toBe(0o755);
+      expect(fs.readFileSync(path.join(to, 'local-model/runtime/b100/llama-server'), 'utf8')).toBe('#!/bin/sh\n');
       expect(progress[0]).toBe(0);
       expect(progress[progress.length - 1]).toBe(1);
       if (forceCopy) expect(tree(from)).toEqual([...ALL, 'app-settings.json', 'history/x/index.json'].sort());
@@ -125,10 +128,19 @@ describe('搬模型', () => {
   });
 
   it('登记里的完整路径跟着换：只换在旧位置底下的，名字只是开头相同的不算', () => {
-    expect(rebasePath('/data/old/local-model/runtime/b1/llama-server', '/data/old', '/mnt/new', false)).toBe('/mnt/new/local-model/runtime/b1/llama-server');
-    expect(rebasePath('/data/older/llama-server', '/data/old', '/mnt/new', false)).toBe('/data/older/llama-server');
-    expect(rebasePath('/opt/homebrew/bin/llama-server', '/data/old', '/mnt/new', false)).toBe('/opt/homebrew/bin/llama-server');
-    expect(rebasePath('/DATA/Old/x', '/data/old', '/mnt/new', false)).toBe('/DATA/Old/x');
-    expect(rebasePath('/DATA/Old/x', '/data/old', '/mnt/new', true)).toBe('/mnt/new/x');
+    // 路径用 path 拼：Windows 上带盘符、用反斜杠，写死成 /data/old 那边对不上
+    const old = path.resolve('/data/old');
+    const next = path.resolve('/mnt/new');
+    const under = (root: string) => path.join(root, 'local-model', 'runtime', 'b1', 'llama-server');
+    expect(rebasePath(under(old), old, next, false)).toBe(under(next));
+    expect(rebasePath(old, old, next, false)).toBe(next);
+    const sibling = path.resolve('/data/older/llama-server');
+    expect(rebasePath(sibling, old, next, false)).toBe(sibling);
+    const elsewhere = path.resolve('/opt/homebrew/bin/llama-server');
+    expect(rebasePath(elsewhere, old, next, false)).toBe(elsewhere);
+    // 大小写不同：区分大小写的系统上是两个目录，不区分的（Windows）是同一个
+    const shouting = under(old).toUpperCase();
+    expect(rebasePath(shouting, old, next, false)).toBe(shouting);
+    expect(rebasePath(shouting, old, next, true)).toBe(next + shouting.slice(old.length));
   });
 });
