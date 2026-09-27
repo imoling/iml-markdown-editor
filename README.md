@@ -1,4 +1,4 @@
-# iML Markdown Editor · [![Release v26.6.0](https://img.shields.io/badge/Release-v26.6.0-indigo?style=for-the-badge&logo=github)](https://github.com/imoling/iml-markdown-editor/releases)
+# iML Markdown Editor · [![Release v26.7.0](https://img.shields.io/badge/Release-v26.7.0-indigo?style=for-the-badge&logo=github)](https://github.com/imoling/iml-markdown-editor/releases)
 <!--
   图片为什么不用相对路径（screenshots/xxx.png）：
   相对路径会被 GitHub 发到 raw.githubusercontent.com，而这个域名在国内多数网络下被 DNS 污染（解析到 0.0.0.0），
@@ -42,6 +42,13 @@ macOS（Apple 芯片 / Intel）· Windows（x64 / ARM）· 80 ~ 90 MB · MIT 开
 ---
 
 ## 特性
+
+### 📂 东西放哪，你说了算（26.7）
+
+- **拖进来就打开**：`.md` / `.txt` 拖到窗口任何位置都开成标签页；库里的文件夹在文件树里展开到它，库外的文件夹先问一句再换库。图片拖到正文周围的空白处，接到正文末尾
+- **图片写进笔记里**：设置 → 粘贴与输入 → 图片存放位置，选「笔记里」，粘贴、拖入、AI 配图的图片压缩后直接写进正文，整篇只有一个文件。代价是文件大三分之一左右。源码模式把那一长串折成一个小标签，查找不会搜到它里面去；带图的笔记照样搜得到、照样有版本历史
+- **最近的笔记库**：侧边栏库名后面的小按钮列出最近用过的笔记库，点一下就换过去；「文件」菜单里也有「切换笔记库…」
+- **模型存放位置**：十几 GB 的模型不必挤在系统盘上。「智能 → 本机资源」里换一个目录，已下载的自动搬过去；中途出错会撤回，原来的位置照样能用
 
 ### ⌨️ 打字停一下，它接着写（26.6）
 
@@ -235,10 +242,10 @@ macOS（Apple 芯片 / Intel）· Windows（x64 / ARM）· 80 ~ 90 MB · MIT 开
 
 | 平台 | 安装包 |
 |---|---|
-| macOS Apple Silicon（M 系列） | `iML.Markdown.Editor-26.6.0-arm64.dmg` |
-| macOS Intel（x64） | `iML.Markdown.Editor-26.6.0-x64.dmg` |
-| Windows（绝大多数电脑选这个） | `iML.Markdown.Editor-Setup-26.6.0-x64.exe` |
-| Windows on ARM（骁龙本等） | `iML.Markdown.Editor-Setup-26.6.0-arm64.exe` |
+| macOS Apple Silicon（M 系列） | `iML.Markdown.Editor-26.7.0-arm64.dmg` |
+| macOS Intel（x64） | `iML.Markdown.Editor-26.7.0-x64.dmg` |
+| Windows（绝大多数电脑选这个） | `iML.Markdown.Editor-Setup-26.7.0-x64.exe` |
+| Windows on ARM（骁龙本等） | `iML.Markdown.Editor-Setup-26.7.0-arm64.exe` |
 
 前往 [Releases](https://github.com/imoling/iml-markdown-editor/releases) 下载最新版本（80 ~ 90 MB）。已经装了的，应用会在发现新版本时提醒一次，并直接给出对应的安装包。安装包由 GitHub Actions 在打 `v*` 标签时自动构建并发布。
 
@@ -310,6 +317,14 @@ Windows 上把 `⌘` 换成 `Ctrl`，`⌥` 换成 `Alt`。
 ---
 
 ## 版本历史
+
+**26.7.0（2026-09-27）— 东西放哪，你说了算**
+
+- **拖进来就打开**：笔记拖到窗口任何位置开成标签页；库外的文件夹先问一句再换库；图片拖到正文周围的空白处接到末尾
+- **图片写进笔记里**：整篇只有一个文件，代价是文件大三分之一左右；源码模式把那一长串折起来，带图的笔记照样搜得到、照样有版本历史
+- **最近的笔记库**：侧边栏库名后面的小按钮与菜单栏里都能换；「文件」菜单加了「切换笔记库…」
+- **模型存放位置**可以换，已下载的自动搬过去，中途出错会撤回（[#6](https://github.com/imoling/iml-markdown-editor/issues/6)）
+- 787 个测试用例
 
 **26.6.0（2026-09-24）— 打字停一下，它接着写**
 

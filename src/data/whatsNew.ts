@@ -7,7 +7,8 @@ export type WhatsNewImage =
   | 'v263-hero' | 'v263-ask' | 'v263-transcribe' | 'v263-playback' | 'v263-config' | 'v263-update'
   | 'v264-hero' | 'v264-palette' | 'v264-tasks' | 'v264-daily' | 'v264-export' | 'v264-transcribe' | 'v264-asrconfig'
   | 'v265-image' | 'v265-hero' | 'v265-resources' | 'v265-fold' | 'v265-syscap' | 'v265-wechat' | 'v265-daily'
-  | 'v266-autocontinue' | 'v266-accepted' | 'v266-settings' | 'v266-start';
+  | 'v266-autocontinue' | 'v266-accepted' | 'v266-settings' | 'v266-start'
+  | 'v267-drop' | 'v267-inline' | 'v267-library' | 'v267-storage';
 
 export interface WhatsNewPage {
   key: string;
@@ -33,6 +34,37 @@ export interface WhatsNewEntry {
 
 /** 每个大版本一条；新版本加在最前面 */
 export const WHATS_NEW: WhatsNewEntry[] = [
+  {
+    version: '26.7',
+    title: '东西放哪，你说了算',
+    releaseUrl: 'https://github.com/imoling/iml-markdown-editor/releases/tag/v26.7.0',
+    pages: [
+      {
+        key: 'drop', kicker: '新特性', title: '拖进来就打开', hint: '拖到窗口任何位置',
+        desc: '把笔记拖进窗口，松手就开成标签页；拖的是文件夹，就是换一个笔记库。落在侧边栏、正文还是状态栏上都一样。',
+        bullets: ['库里的文件夹：在文件树里展开到它', '库外的文件夹先问一句再换：日记、快速捕获和搜索都会跟着换过去', '图片拖到正文下面的空白处，接到正文末尾'],
+        image: 'v267-drop',
+      },
+      {
+        key: 'inline', kicker: '图片', title: '图片写进笔记里，整篇一个文件', hint: '设置 → 粘贴与输入 → 图片存放位置',
+        desc: '选「笔记里」之后，粘贴、拖入、AI 配图的图片压缩后直接写进正文，不再另存到笔记旁的文件夹。发给别人、放进同步盘，带走一个文件就够。',
+        bullets: ['代价是文件大三分之一左右；这种方式一律压缩', '源码模式里那一长串折成一个小标签，查找也不会搜到它里面去', '带图的笔记照样搜得到，照样有版本历史'],
+        image: 'v267-inline',
+      },
+      {
+        key: 'library', kicker: '笔记库', title: '换笔记库，随时换得回来', hint: '点库名后面的小按钮 · ⇧⌘O',
+        desc: '侧边栏库名后面多了一个小按钮，点一下列出最近用过的笔记库，再点就换过去。不用每次都在文件选择框里重新找一遍目录。',
+        bullets: ['「文件」菜单里加了「切换笔记库…」', '名单最多记 8 个；文件夹已经不在了的，点它会说一声并从名单里去掉', 'macOS 的菜单栏「文件 → 最近的笔记库」里也有一份'],
+        image: 'v267-library',
+      },
+      {
+        key: 'storage', kicker: '本机模型', title: '模型放到别的盘', hint: '智能 → 本机资源…',
+        desc: '对话、转写、生图的模型加起来十几 GB，原来只能放在系统盘上。现在可以换一个目录，已下载的会自动搬过去。',
+        bullets: ['搬的过程中出了错会自己撤回，原来的位置照样能用', '有模型正在下载或正在用时不搬，等它完成再换', '放在移动硬盘上、盘没接上时应用照常能开，只是本机模型用不了'],
+        image: 'v267-storage',
+      },
+    ],
+  },
   {
     version: '26.6',
     title: '打字停一下，它接着写',

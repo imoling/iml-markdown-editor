@@ -1,4 +1,4 @@
-# iML Markdown Editor · [![Release v26.6.0](https://img.shields.io/badge/Release-v26.6.0-indigo?style=for-the-badge&logo=github)](https://github.com/imoling/iml-markdown-editor/releases)
+# iML Markdown Editor · [![Release v26.7.0](https://img.shields.io/badge/Release-v26.7.0-indigo?style=for-the-badge&logo=github)](https://github.com/imoling/iml-markdown-editor/releases)
 
 **[中文](README.md)** · English
 
@@ -27,6 +27,8 @@ Most "AI notes" apps ship your text to somebody's server. This one downloads the
 | Image generation | **Your machine** | stable-diffusion.cpp — Z-Image Turbo or Qwen-Image 2.1 |
 
 Models are downloaded on demand, never bundled. The installer stays at 80–90 MB.
+They add up to well over 10 GB, so you choose where they live: *Intelligence → Local resources → Model storage*
+moves what is already downloaded to another folder or disk, and rolls back if anything fails halfway.
 
 ### A memory scheduler, because a laptop can't run all of them at once
 
@@ -82,6 +84,10 @@ what; click any line to jump the recording to that moment. Recording and voicepr
 Full-text and semantic search, quick open (`⌘T`, pinyin initials work), tag rename/merge, file tree sorting,
 version history, image cleanup, and a global hotkey that appends a line to today's note from any other app.
 
+Drop a `.md` file anywhere on the window to open it; drop a folder to switch library (it asks first, because
+daily notes, quick capture and search all follow the library). Recent libraries are one click away from the sidebar.
+Images can live next to the note or **inside it** as compressed data URLs — one file, about a third larger.
+
 ![Press the global hotkey in any app, type one line, and it lands in today note](https://cdn.jsdelivr.net/gh/imoling/iml-markdown-editor@main/screenshots/demo-capture.gif)
 
 ### Export
@@ -95,10 +101,10 @@ with inline styles.
 
 | Platform | Installer |
 |---|---|
-| macOS Apple Silicon | `iML.Markdown.Editor-26.6.0-arm64.dmg` |
-| macOS Intel | `iML.Markdown.Editor-26.6.0-x64.dmg` |
-| Windows x64 | `iML.Markdown.Editor-Setup-26.6.0-x64.exe` |
-| Windows on ARM | `iML.Markdown.Editor-Setup-26.6.0-arm64.exe` |
+| macOS Apple Silicon | `iML.Markdown.Editor-26.7.0-arm64.dmg` |
+| macOS Intel | `iML.Markdown.Editor-26.7.0-x64.dmg` |
+| Windows x64 | `iML.Markdown.Editor-Setup-26.7.0-x64.exe` |
+| Windows on ARM | `iML.Markdown.Editor-Setup-26.7.0-arm64.exe` |
 
 → **[Latest release](https://github.com/imoling/iml-markdown-editor/releases/latest)**
 
