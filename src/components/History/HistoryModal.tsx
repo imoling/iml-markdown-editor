@@ -3,6 +3,8 @@ import { X, History, RotateCcw, Copy } from 'lucide-react';
 import { useAppStore } from '../../stores/appStore';
 import type { HistoryEntry } from '../../types/window';
 import { diffLines, diffStats, collapseContext } from '../../utils/lineDiff';
+import { abbreviateDataUrls } from '../../../electron/shared/dataUrl';
+import { formatBytes } from '../../utils/pasteImage';
 
 interface Props {
   onClose: () => void;
@@ -22,6 +24,9 @@ function formatTime(time: number): string {
   const clock = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
   return sameDay ? `今天 ${clock}` : `${d.getMonth() + 1}月${d.getDate()}日 ${clock}`;
 }
+
+/** 写进笔记里的图片：那一长串只显示大小，和源码模式里折起来的样子一致 */
+const shorten = (line: string) => abbreviateDataUrls(line, (bytes) => `… ${formatBytes(bytes)} …`);
 
 /** 版本历史：左边是这篇笔记保存过的版本，右边是所选版本与当前内容的差异；可以恢复 */
 export const HistoryModal: React.FC<Props> = ({ onClose }) => {
@@ -124,7 +129,7 @@ export const HistoryModal: React.FC<Props> = ({ onClose }) => {
                 <pre className="diff-view">
                   {rows.map((row, i) => row.type === 'gap'
                     ? <div key={i} className="diff-line diff-line--gap">⋯ {row.count} 行未改动</div>
-                    : <div key={i} className={`diff-line diff-line--${row.type}`}><span className="diff-line__sign">{row.type === 'add' ? '+' : row.type === 'del' ? '−' : ' '}</span>{row.text || ' '}</div>)}
+                    : <div key={i} className={`diff-line diff-line--${row.type}`}><span className="diff-line__sign">{row.type === 'add' ? '+' : row.type === 'del' ? '−' : ' '}</span>{shorten(row.text) || ' '}</div>)}
                 </pre>
               </>
             )}

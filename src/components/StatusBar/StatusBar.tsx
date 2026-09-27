@@ -4,14 +4,17 @@ import { Minus, Plus, Loader2, ChevronUp } from 'lucide-react';
 import { describeAiDestination } from '../../utils/aiService';
 import { useTranscribeStore } from '../../stores/transcribeStore';
 import { formatClock } from '../../utils/transcript';
+import { stripDataUrls } from '../../../electron/shared/dataUrl';
 
 const ZOOM_OPTIONS = [300, 200, 150, 125, 100, 75, 50, 25];
 const CJK_RE = /[一-龥぀-ヿ＀-￯ᄀ-ᇿ㄰-㆏ꓐ-꓿가-힯]/g;
 
 /** 中西文混排的字数：CJK 按字计，其余按空白分词 */
 function countWords(content: string) {
-  const cjkCount = content.match(CJK_RE)?.length ?? 0;
-  const nonCjk = content.replace(CJK_RE, ' ').trim();
+  // 写进笔记里的图片（一长串 base64）不算字
+  const text = stripDataUrls(content);
+  const cjkCount = text.match(CJK_RE)?.length ?? 0;
+  const nonCjk = text.replace(CJK_RE, ' ').trim();
   const westernWords = nonCjk ? nonCjk.split(/\s+/).length : 0;
   return { words: cjkCount + westernWords, lines: content.split('\n').length };
 }

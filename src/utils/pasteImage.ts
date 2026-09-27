@@ -57,8 +57,39 @@ export async function prepareImage(file: File, compress: boolean): Promise<Prepa
   }
 }
 
-/** 粘贴 / 拖入的图片：按设置压缩 → 存到笔记旁的 assets/ → 返回 Markdown 里用的相对路径 */
+const MIME_BY_EXT: Record<string, string> = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', avif: 'image/avif', bmp: 'image/bmp', svg: 'image/svg+xml' };
+
+function toDataUrl(buffer: ArrayBuffer, type: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(new Blob([buffer], { type }));
+  });
+}
+
+/**
+ * 图片写进笔记里（设置里选了「笔记里」）：返回 data: 地址，整篇笔记只有一个文件。
+ * 不看「粘贴图片时压缩」的开关，一律压——不压的话一张截图就是几 MB 的文字。笔记没保存过、没有笔记库也能插
+ */
+async function inlineImageFile(file: File): Promise<string | null> {
+  const { notify } = useAppStore.getState();
+  try {
+    const prepared = await prepareImage(file, true);
+    const type = prepared.compressed ? 'image/webp' : file.type || MIME_BY_EXT[(prepared.name.split('.').pop() || '').toLowerCase()] || 'image/png';
+    const url = await toDataUrl(prepared.buffer, type);
+    notify(prepared.compressed ? `图片已压缩 ${formatBytes(prepared.originalBytes)} → ${formatBytes(prepared.bytes)}，写进了笔记` : `图片已写进笔记：${formatBytes(prepared.bytes)}`);
+    return url;
+  } catch (err) {
+    console.warn('[pasteImage] inline failed:', err);
+    notify('图片插入失败：读不出这张图');
+    return null;
+  }
+}
+
+/** 粘贴 / 拖入的图片：按设置压缩 → 存到笔记旁的 assets/（或写进笔记里）→ 返回 Markdown 里用的地址 */
 export async function storeImageFile(file: File, tabId: string | null): Promise<string | null> {
+  if (useAppStore.getState().imageStorage === 'inline') return inlineImageFile(file);
   const owner = imageOwnerPath(tabId);
   if (!owner) return null;
   const { imageCompression, notify } = useAppStore.getState();
@@ -73,7 +104,7 @@ export async function storeImageFile(file: File, tabId: string | null): Promise<
 }
 
 /**
- * data URL（本地上传 / AI 生成的图片）→ 存成笔记旁的文件，返回相对路径。
+ * data URL（本地上传 / AI 生成的图片）→ 存成笔记旁的文件，返回相对路径；选了写进笔记里的，压缩后仍然是 data URL。
  * 存不了（比如还没有笔记库目录）就把 data URL 原样还回去，插入照常进行。
  */
 export async function persistDataUrl(dataUrl: string, tabId: string | null, nameHint = 'image'): Promise<string> {

@@ -15,6 +15,8 @@ import { SettingsModal } from './components/Settings/SettingsModal';
 import { WhatsNewModal } from './components/WhatsNew/WhatsNewModal';
 import { latestWhatsNew, shouldShowWhatsNew } from './data/whatsNew';
 import { extractHeadings } from './utils/outline';
+import { installFileDrop } from './utils/dropFiles';
+import { describeLibrary } from '../electron/shared/recentLibraries';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { exportActiveTabToPdf, exportActiveTabToHtml, exportActiveTabToDocx, exportActiveTabToImage } from './utils/exportPdf';
 import { HistoryModal } from './components/History/HistoryModal';
@@ -107,6 +109,7 @@ const App: React.FC = () => {
   // 转写的状态变了（停了 / 开始了）提醒也要跟着变
   const transcribeStatus = useTranscribeStore((st) => st.status);
   const closingTab = tabToClose ? tabs.find((t) => t.id === tabToClose) : undefined;
+  const libraryToConfirm = useAppStore((st) => st.libraryToConfirm);
   const closeWarning = closingTab && closeGuardPassed !== tabToClose && transcribeStatus ? closeGuard?.(closingTab) ?? null : null;
 
   const handleConfirmSave = async () => {
@@ -335,6 +338,9 @@ const App: React.FC = () => {
     return () => window.removeEventListener('keydown', onKey);
   }, [dialog, closeDialog]);
 
+  // 拖进窗口的文件：笔记打开成标签页，文件夹打开成笔记库（图片由编辑器自己接）
+  useEffect(() => installFileDrop(), []);
+
   // 监听主进程发来的 open-file（macOS 双击或"打开方式"）
   useEffect(() => {
     window.api.events.on('open-file', () => drainPendingOpenFiles());
@@ -358,6 +364,8 @@ const App: React.FC = () => {
     });
     window.api.events.on('menu:new-file', () => createNewFile());
     window.api.events.on('menu:open-file', () => openFile());
+    window.api.events.on('menu:switch-library', () => openDirectory());
+    window.api.events.on('menu:switch-library-to', (libraryPath: string) => { void useAppStore.getState().switchLibrary(libraryPath); });
     window.api.events.on('menu:save', () => saveActiveFile());
     window.api.events.on('menu:export', (kind: 'pdf' | 'html' | 'docx' | 'image') => (kind === 'html' ? exportActiveTabToHtml() : kind === 'docx' ? exportActiveTabToDocx() : kind === 'image' ? exportActiveTabToImage() : exportActiveTabToPdf()));
     // macOS 上 ⌘W / ⌘⇧T 由原生菜单拦下（键不会再到达渲染进程），走这条；Windows 没有原生菜单，走上面的 keydown
@@ -493,6 +501,15 @@ const App: React.FC = () => {
           confirmLabel={closeWarning.confirmLabel}
           onConfirm={() => useAppStore.getState().passCloseGuard(tabToClose)}
           onCancel={() => useAppStore.getState().cancelCloseQueue()}
+        />
+      )}
+      {libraryToConfirm && (
+        <ConfirmDialog
+          title={`把笔记库切换到「${describeLibrary(libraryToConfirm).name}」？`}
+          message="日记、快速捕获和搜索都会换到这里"
+          confirmLabel="切换"
+          onConfirm={() => { void useAppStore.getState().switchLibrary(libraryToConfirm); }}
+          onCancel={() => useAppStore.setState({ libraryToConfirm: null })}
         />
       )}
       {tabToClose && !closeWarning && (

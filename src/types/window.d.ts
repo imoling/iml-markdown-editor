@@ -236,6 +236,8 @@ declare global {
         openImageConfig: () => void;
         openSettings: () => void;
         consumePendingOpenFiles: () => Promise<string[]>;
+        /** 拖进窗口的文件在磁盘上的路径（页面自己拿不到），连同它是不是文件夹；不在磁盘上的不给 */
+        droppedPaths: (files: File[]) => Promise<{ path: string; isDirectory: boolean }[]>;
         clearSession: () => void;
         /** 本机装了哪些同步盘，以及把笔记库放进去的话会是哪个目录（只检测，不建目录） */
         consumePendingUrls: () => Promise<import('../../electron/shared/appUrl').AppUrlAction[]>;

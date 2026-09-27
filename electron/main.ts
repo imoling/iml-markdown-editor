@@ -15,6 +15,7 @@ import { describeRelease } from './update';
 import { NoteHistory } from './history';
 import { setupQuickCapture } from './capture';
 import { syncFolderCandidates, labelCloudStorageDir, SYNC_LIBRARY_NAME } from './shared/syncFolders';
+import { describeLibrary, normalizeRecentLibraries, touchRecentLibraries } from './shared/recentLibraries';
 import { parseAppUrl, appUrlFromArgv, APP_URL_SCHEME, AppUrlAction } from './shared/appUrl';
 import { registerAssetScheme, handleAssetProtocol, findOrphanImages, filterTrashable, fetchPageTitle } from './assets';
 import { AI_DISABLED } from './shared/uiText';
@@ -196,6 +197,7 @@ function getAppSettings() {
     }
   }
 
+  settings.recentLibraries = normalizeRecentLibraries(settings.recentLibraries, settings.defaultLibraryPath);
   return settings;
 }
 
@@ -214,6 +216,10 @@ function saveAppSettings(settings: any) {
     let existing: any = {};
     try { existing = JSON.parse(fs.readFileSync(settingsPath, 'utf8')) || {}; } catch { /* 首次保存 */ }
     const merged = { ...existing, ...(settings || {}) };
+    // 换了笔记库：不管从哪个入口换的，都记进「最近的笔记库」，换之前的那个也在里面
+    if (typeof settings?.defaultLibraryPath === 'string' && settings.defaultLibraryPath) {
+      merged.recentLibraries = touchRecentLibraries(merged.recentLibraries, getAppSettings().defaultLibraryPath, settings.defaultLibraryPath);
+    }
     if (settings?.imageGenConfig) merged.imageGenConfig = encryptSecrets(settings.imageGenConfig, ['apiKey']);
     fs.writeFileSync(settingsPath, JSON.stringify(merged, null, 2), 'utf8');
     return { success: true };
@@ -297,6 +303,15 @@ ipcMain.handle('app:consumePendingOpenFiles', () => {
   const files = [...pendingOpenFiles];
   pendingOpenFiles.length = 0;
   return files;
+});
+// 拖进窗口的文件：是文档还是文件夹，界面分不出来
+ipcMain.handle('app:describePaths', (_event, paths: unknown) => {
+  const out: { path: string; isDirectory: boolean }[] = [];
+  for (const p of Array.isArray(paths) ? paths : []) {
+    if (typeof p !== 'string' || !p) continue;
+    try { out.push({ path: p, isDirectory: fs.statSync(p).isDirectory() }); } catch { /* 已经不在了 */ }
+  }
+  return out;
 });
 
 /** 按协议拼请求头；本地服务（Ollama / LM Studio / llama.cpp）无需 Key，留空时不发送 Authorization */
@@ -438,6 +453,15 @@ function openDialogInMain(id: 'about' | 'shortcuts' | 'ai-config' | 'image-confi
   mainWindow.webContents.send('dialog:open', id);
 }
 
+/** 系统菜单栏「文件 → 最近的笔记库」：当前的打着勾，点别的就换过去 */
+function recentLibraryItems(): Electron.MenuItemConstructorOptions[] {
+  // 名单的第一个永远是当前的笔记库（见 normalizeRecentLibraries）
+  return (getAppSettings().recentLibraries as string[]).map((libraryPath, index) => {
+    const { name, where } = describeLibrary(libraryPath);
+    return { label: name, sublabel: where, type: 'radio', checked: index === 0, click: () => mainWindow?.webContents.send('menu:switch-library-to', libraryPath) };
+  });
+}
+
 function setupAppMenu() {
   if (process.platform !== 'darwin') {
     Menu.setApplicationMenu(null);
@@ -473,6 +497,12 @@ function setupAppMenu() {
           accelerator: 'Cmd+O',
           click: () => mainWindow?.webContents.send('menu:open-file'),
         },
+        {
+          label: '切换笔记库…',
+          accelerator: 'Cmd+Shift+O',
+          click: () => mainWindow?.webContents.send('menu:switch-library'),
+        },
+        { label: '最近的笔记库', submenu: recentLibraryItems() },
         {
           label: '快速打开笔记…',
           accelerator: 'Cmd+T',
@@ -882,6 +912,8 @@ app.whenReady().then(() => {
   ipcMain.handle('app:saveSettings', (_event, settings) => {
     const result = saveAppSettings(settings);
     if (result.success) applySpellcheck(!!getAppSettings().spellcheck);
+    // 「最近的笔记库」在系统菜单栏里也有一份
+    if (result.success && settings && ('defaultLibraryPath' in settings || 'recentLibraries' in settings)) setupAppMenu();
     // 快速捕获的开关或快捷键变了：重新注册全局快捷键
     if (result.success && settings && 'quickCapture' in settings) quickCapture?.apply();
     // AI 总开关：关掉就把嵌入服务停了；重新打开则补上期间落下的索引

@@ -10,8 +10,9 @@ import { TasksPanel } from './TasksPanel';
 import { sortFileNodes, FILE_SORT_LABELS, FileSortMode } from '../../utils/fileSort';
 import {
   ChevronDown, ChevronRight, FolderOpen, FileText, FileCode, FolderClosed,
-  List, RotateCw, Star, BookOpen, Settings, FilePlus, FolderPlus, CalendarDays, LayoutTemplate, FolderOpen as FolderOpenIcon, Search, Hash, MessageCircleQuestion, Mic, Link2, ListChecks, ArrowUpDown, Check,
+  List, RotateCw, Star, BookOpen, Settings, FilePlus, FolderPlus, CalendarDays, LayoutTemplate, FolderOpen as FolderOpenIcon, Search, Hash, MessageCircleQuestion, Mic, Link2, ListChecks, ArrowUpDown, Check, ChevronsUpDown,
 } from 'lucide-react';
+import { describeLibrary } from '../../../electron/shared/recentLibraries';
 import type { BacklinkResult, MentionResult, MentionSnippet } from '../../types/window';
 
 const isMac = window.api.app.platform === 'darwin';
@@ -331,6 +332,44 @@ const SortMenu: React.FC<{ current: FileSortMode; onPick: (mode: FileSortMode) =
 };
 
 /** 「从模板新建」下拉：列出笔记库/模板 下的文件，没有时提供一键创建示例模板 */
+/** 点库名弹出来的：最近用过的笔记库（当前的打着勾），最后一项去选别的文件夹 */
+const LibraryMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+  const recentLibraries = useAppStore((st) => st.recentLibraries);
+  const current = useAppStore((st) => st.workspacePath);
+
+  React.useEffect(() => {
+    const close = () => onClose();
+    document.addEventListener('click', close);
+    return () => document.removeEventListener('click', close);
+  }, []);
+
+  return (
+    <div className="popover-menu library-menu" onClick={(e) => e.stopPropagation()}>
+      <div className="popover-menu__label">最近的笔记库</div>
+      {recentLibraries.map((libraryPath) => {
+        const { name, where } = describeLibrary(libraryPath);
+        const active = libraryPath === current;
+        return (
+          <button key={libraryPath} className={`popover-menu__item library-menu__item ${active ? 'library-menu__item--current' : ''}`} title={libraryPath} onClick={() => { onClose(); void useAppStore.getState().switchLibrary(libraryPath); }}>
+            <BookOpen size={13} />
+            <span className="library-menu__text">
+              <span className="library-menu__name truncate">{name}</span>
+              {/* 位置太长时省掉的是前半截：认一个文件夹靠的是离它最近的那几级 */}
+              <span className="library-menu__where"><bdi>{where}</bdi></span>
+            </span>
+            {active && <Check size={13} />}
+          </button>
+        );
+      })}
+      <div className="context-menu__divider" />
+      <button className="popover-menu__item library-menu__item" onClick={() => { onClose(); void useAppStore.getState().openDirectory(); }}>
+        <FolderOpenIcon size={13} />
+        <span className="library-menu__name">切换笔记库…</span>
+      </button>
+    </div>
+  );
+};
+
 const TemplateMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const { listTemplates, createNoteFromTemplate, createSampleTemplates, workspacePath } = useAppStore();
   const [templates, setTemplates] = React.useState<{ name: string; path: string }[] | null>(null);
@@ -380,6 +419,7 @@ export const Sidebar: React.FC = () => {
   } = useAppStore();
   const [showTemplates, setShowTemplates] = React.useState(false);
   const [showSort, setShowSort] = React.useState(false);
+  const [showLibraries, setShowLibraries] = React.useState(false);
   const fileSort = useAppStore((st) => st.fileSort);
   const setFileSort = useAppStore((st) => st.setFileSort);
 
@@ -471,8 +511,11 @@ export const Sidebar: React.FC = () => {
             )}
 
             <div className="tree-item library-header" title={workspacePath} onClick={() => setSelectedNodePath(null)} onContextMenu={(e) => { e.stopPropagation(); openRootMenu(e); }}>
-              <BookOpen size={14} color="var(--color-brand-indigo)" />
-              <span className="truncate flex-1">{workspaceName}</span>
+              <BookOpen size={14} color="var(--color-brand-indigo)" className="library-header__icon" />
+              <span className="truncate library-header__name">{workspaceName}</span>
+              <button onClick={(e) => { e.stopPropagation(); setShowLibraries((v) => !v); }} className="icon-btn hover-bg library-header__switch" title="切换笔记库"><ChevronsUpDown size={12} /></button>
+              {/* 列表挂在整行上：宽度跟着侧边栏走，不会伸到外面被裁掉 */}
+              {showLibraries && <LibraryMenu onClose={() => setShowLibraries(false)} />}
               <button onClick={(e) => { e.stopPropagation(); createNoteIn(getNewNoteDir()); }} className="icon-btn icon-btn--sm hover-bg" title="新建笔记（在选中的文件夹里）"><FilePlus size={13} /></button>
               <div className="menu-anchor">
                 <button onClick={(e) => { e.stopPropagation(); setShowTemplates((v) => !v); }} className="icon-btn icon-btn--sm hover-bg" title="从模板新建"><LayoutTemplate size={13} /></button>

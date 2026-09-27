@@ -1,11 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { X, Moon, Sun, Monitor, Palette, Power, Save, Trash2, AlertTriangle, FolderOpen, Coffee, Type, ImageDown, Link2, SpellCheck, ShieldCheck, ImageOff, Paintbrush, Keyboard } from 'lucide-react';
+import { X, Moon, Sun, Monitor, Palette, Power, Save, Trash2, AlertTriangle, FolderOpen, Coffee, Type, ImageDown, FileImage, Link2, SpellCheck, ShieldCheck, ImageOff, Paintbrush, Keyboard } from 'lucide-react';
 import { QuickCaptureRow } from './QuickCaptureRow';
 import { libraryToReturnTo } from '../../../electron/shared/syncFolders';
 import { DEFAULT_CAPTURE_SHORTCUT } from '../../../electron/shared/capture';
-import { useAppStore, THEME_PRESETS, EDITOR_FONTS, PAGE_WIDTHS, DEFAULT_EDITOR_PREFS, normalizeEditorPrefs, applyEditorPrefs, type EditorPrefs } from '../../stores/appStore';
+import { useAppStore, THEME_PRESETS, EDITOR_FONTS, PAGE_WIDTHS, DEFAULT_EDITOR_PREFS, normalizeEditorPrefs, applyEditorPrefs, normalizeImageStorage, type EditorPrefs, type ImageStorage } from '../../stores/appStore';
 
 type AppearanceMode = 'light' | 'dark' | 'system' | 'eye-protection';
+
+const IMAGE_STORAGES: { id: ImageStorage; label: string }[] = [
+  { id: 'assets', label: '笔记旁的文件夹' },
+  { id: 'inline', label: '笔记里' },
+];
 
 const APPEARANCE_OPTIONS: { id: AppearanceMode; name: string; icon: React.ComponentType<{ size?: number }> }[] = [
   { id: 'system', name: '系统', icon: Monitor },
@@ -36,6 +41,7 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
     themeId: 'indigo',
     editorPrefs: DEFAULT_EDITOR_PREFS as EditorPrefs,
     imageCompression: true,
+    imageStorage: 'assets' as ImageStorage,
     fetchLinkTitle: true,
     linkPreview: true,
     userCss: true,
@@ -59,6 +65,7 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
         themeId: settings.themeId || 'indigo',
         editorPrefs: normalizeEditorPrefs(settings.editorPrefs),
         imageCompression: settings.imageCompression ?? true,
+        imageStorage: normalizeImageStorage(settings.imageStorage),
         fetchLinkTitle: settings.fetchLinkTitle ?? true,
         linkPreview: settings.linkPreview ?? true,
         userCss: settings.userCss ?? true,
@@ -238,6 +245,21 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
               <h3 className="settings-section-title">粘贴与输入</h3>
               <div className="settings-card">
                 {toggleRow('imageCompression', <ImageDown size={18} color="var(--text-muted)" />, '粘贴图片时压缩', '大图转成 WebP，通常小一半；动图和矢量图不动')}
+                <div className="settings-divider" />
+                <div className="settings-row">
+                  <div className="settings-row__label">
+                    <FileImage size={18} color="var(--text-muted)" />
+                    <div>
+                      <div className="settings-row__title">图片存放位置</div>
+                      <div className="settings-row__desc">写进笔记里只有一个文件，但大三分之一；一律压缩</div>
+                    </div>
+                  </div>
+                  <div className="seg-switch">
+                    {IMAGE_STORAGES.map(({ id, label }) => (
+                      <button key={id} onClick={() => setLocal((s) => ({ ...s, imageStorage: id }))} className={`seg-switch__btn ${local.imageStorage === id ? 'seg-switch__btn--active' : ''}`}>{label}</button>
+                    ))}
+                  </div>
+                </div>
                 <div className="settings-divider" />
                 {toggleRow('fetchLinkTitle', <Link2 size={18} color="var(--text-muted)" />, '粘贴网址时取网页标题', '单独粘贴一个网址时，取回标题变成 [标题](网址)')}
                 <div className="settings-divider" />

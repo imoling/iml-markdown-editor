@@ -102,6 +102,27 @@ describe('SearchIndex', () => {
     expect(index.unlinkedMentions('/不在库里.md')).toEqual([]);
   });
 
+  it('图片写进了笔记里的：再大也进索引，那一长串 base64 搜不到、不算字数；未链接提及给的仍是原文里的位置', async () => {
+    const b64 = 'QUJD'.repeat(700_000); // 2.8 MB，整篇超过了普通笔记的大小上限
+    const target = write('inline/苹果派.md', '# 苹果派\n');
+    const note = write('inline/带图.md', `# 带图\n\n![截图](data:image/webp;base64,${b64})\n\n图后面提到了苹果派。\n\n- [ ] 图后面的待办`);
+    const index = new SearchIndex();
+    await index.build(root);
+    const listed = index.listNotes().find((n) => n.path === note)!;
+    expect(listed.title).toBe('带图');
+    expect(listed.chars).toBeLessThan(100);
+    expect(index.search('QUJDQUJD')).toEqual([]);
+    expect(index.search('图后面提到了').map((r) => r.path)).toEqual([note]);
+    expect(index.listTasks().find((t) => t.path === note)!.tasks.map((t) => t.line)).toEqual([6]);
+    const hit = index.unlinkedMentions(target).find((m) => m.path === note)!.snippets[0];
+    expect(fs.readFileSync(note, 'utf8').slice(hit.offset, hit.offset + hit.length)).toBe('苹果派');
+    expect(hit.offset).toBeGreaterThan(b64.length);
+    // 没有图、单纯就是太大的文件照旧不收
+    const huge = write('inline/太大.md', `# 太大\n\n${'字'.repeat(800_000)}`);
+    await index.refresh([huge]);
+    expect(index.listNotes().some((n) => n.path === huge)).toBe(false);
+  });
+
   it('未链接提及：一个字的名字不找；长名字里套着的短名字不重复报', async () => {
     const single = write('mention2/茶.md', '# 茶\n');
     const nested = write('mention2/note.md', '---\naliases: [红茶, 红茶拿铁]\n---\n\n# note\n');

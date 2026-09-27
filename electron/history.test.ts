@@ -63,6 +63,43 @@ describe('NoteHistory', () => {
     expect(await history.read(note, list[1].id)).toBe('一年前写的');
   });
 
+  it('图片写进了笔记里的：再大也留版本，读回来一字不差；同一张图只存一份，用不到了就删', async () => {
+    const shot = (seed: string) => `data:image/webp;base64,${seed.repeat(700_000)}`; // 一张 2.8 MB
+    const v1 = `# 带图\n\n![甲](${shot('QUJD')})\n\n第一版`;
+    const v2 = `# 带图\n\n![甲](${shot('QUJD')})\n\n第二版，多了一张：![乙](${shot('REVG')}) 图后面还有字`;
+    const t0 = Date.now() - 12 * COALESCE_MS;
+    fs.writeFileSync(note, v1);
+    fs.utimesSync(note, t0 / 1000, t0 / 1000);
+    await history.beforeOverwrite(note, v2);
+    await history.record(note, v2, 'save', t0 + 2 * COALESCE_MS);
+    const list = await history.list(note);
+    expect(list.map((e) => e.reason)).toEqual(['save', 'before-save']);
+    expect(await history.read(note, list[0].id)).toBe(v2);
+    expect(await history.read(note, list[1].id)).toBe(v1);
+    expect(list[0].size).toBe(Buffer.byteLength(v2));
+
+    const store = path.join(dir, 'store', fs.readdirSync(path.join(dir, 'store'))[0]);
+    const blobs = () => fs.readdirSync(path.join(store, 'blobs'));
+    expect(blobs()).toHaveLength(2);
+    for (const e of list) expect(fs.statSync(path.join(store, `${e.id}.md`)).size).toBeLessThan(200);
+
+    // 紧接着又存了一版（时间窗内，顶掉上一版），把「乙」删了：那张图没有版本在用了
+    const v3 = v1.replace('第一版', '第三版');
+    await history.record(note, v3, 'save', t0 + 2 * COALESCE_MS + 1000);
+    expect((await history.list(note)).map((e) => e.reason)).toEqual(['save', 'before-save']);
+    expect(blobs()).toHaveLength(1);
+    expect(await history.read(note, (await history.list(note))[0].id)).toBe(v3);
+
+    // 图片文件丢了：不给一份缺图的内容
+    fs.rmSync(path.join(store, 'blobs', blobs()[0]));
+    expect(await history.read(note, (await history.list(note))[0].id)).toBeNull();
+  });
+
+  it('没有图、单纯就是太大的笔记照旧不留版本', async () => {
+    expect(await history.record(note, '字'.repeat(800_000), 'save')).toBeNull();
+    expect(await history.record(note.replace(/\.md$/, '.txt'), `![图](data:image/png;base64,${'QUJD'.repeat(100)}) ${'字'.repeat(800_000)}`, 'save')).toBeNull();
+  });
+
   it('空内容、非笔记文件、非法 id 都不处理', async () => {
     expect(await history.record(note, '', 'save')).toBeNull();
     expect(await history.record(path.join(dir, 'a.png'), 'x', 'save')).toBeNull();

@@ -481,6 +481,15 @@
 .popover-menu__label { font-size: 10px; color: var(--text-muted); padding: 4px 10px 2px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
 .template-menu { top: 100%; left: auto; right: 0; min-width: 180px; margin-top: 4px; }
 .template-menu .popover-menu__item { gap: 6px; justify-content: flex-start; }
+/* 点库名后面的小按钮弹出来的「最近的笔记库」。挂在库名那一整行上：宽度跟着侧边栏走，不会伸到外面被裁掉 */
+.library-menu { top: 100%; left: 0; right: 0; margin-top: 2px; font-weight: 400; cursor: default; }
+.library-menu .popover-menu__item { gap: 8px; justify-content: flex-start; font-size: 12px; padding: 6px 10px; }
+.library-menu .popover-menu__item > svg { flex-shrink: 0; }
+.library-menu__text { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.library-menu__name { min-width: 0; }
+/* 位置太长时省掉的是前半截（direction: rtl 让省略号落在左边，<bdi> 保住里面的字序） */
+.library-menu__where { direction: rtl; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-muted); font-size: 10.5px; font-weight: 400; }
+.library-menu .library-menu__item--current { background-color: color-mix(in srgb, var(--color-brand-indigo) 10%, transparent); color: var(--color-brand-indigo); font-weight: 600; }
 .sort-menu { min-width: 190px; }
 .sort-menu__check { display: inline-flex; width: 14px; flex-shrink: 0; color: var(--color-brand-indigo); }
 

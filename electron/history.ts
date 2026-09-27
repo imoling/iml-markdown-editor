@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
+import { findDataUrlRanges } from './shared/dataUrl';
 
 /**
  * 笔记的本地版本历史。
@@ -18,6 +19,8 @@ export interface HistoryEntry {
   size: number;
   hash: string;
   reason: HistoryReason;
+  /** 这个版本里写进笔记的图片：at 是它在快照正文里的位置。图片另外存，见 pack */
+  blobs?: { at: number; hash: string }[];
 }
 
 interface HistoryIndex {
@@ -27,6 +30,9 @@ interface HistoryIndex {
 
 const NOTE_RE = /\.(md|markdown|mdown|mkd|txt)$/i;
 const MAX_SIZE = 2 * 1024 * 1024;
+/** 图片写进了笔记里的，整篇可以很大：图片另外存，正文按上面那条量 */
+const MAX_RAW_SIZE = 64 * 1024 * 1024;
+const BLOB_DIR = 'blobs';
 /** 连续保存（自动保存很密）合并成一个版本的时间窗 */
 export const COALESCE_MS = 5 * 60 * 1000;
 const DAY = 24 * 60 * 60 * 1000;
@@ -34,6 +40,23 @@ const KEEP_DAYS = 60;
 const MAX_ENTRIES = 120;
 
 const sha = (s: string) => crypto.createHash('sha1').update(s).digest('hex');
+
+/**
+ * 写进笔记里的图片（一长串 base64）从正文里拿出来另外存，同一张只存一份：
+ * 带图的笔记一篇几 MB，每个版本都整篇存的话，改一个字就多占几 MB。
+ */
+function pack(content: string): { text: string; blobs: { at: number; hash: string; data: string }[] } {
+  const blobs: { at: number; hash: string; data: string }[] = [];
+  let text = '';
+  let last = 0;
+  for (const r of findDataUrlRanges(content)) {
+    text += content.slice(last, r.from);
+    const data = content.slice(r.from, r.to);
+    blobs.push({ at: text.length, hash: sha(data), data });
+    last = r.to;
+  }
+  return { text: text + content.slice(last), blobs };
+}
 
 /** 保留策略：24 小时内全留；更早的每天留最后一个；超过 60 天或总数超限的丢掉。entries 按时间升序 */
 export function pruneEntries(entries: HistoryEntry[], now: number): { keep: HistoryEntry[]; drop: HistoryEntry[] } {
@@ -75,7 +98,9 @@ export class NoteHistory {
   }
 
   static eligible(filePath: string, content: string): boolean {
-    return NOTE_RE.test(filePath) && content.length > 0 && Buffer.byteLength(content, 'utf8') <= MAX_SIZE;
+    if (!NOTE_RE.test(filePath) || content.length === 0) return false;
+    const bytes = Buffer.byteLength(content, 'utf8');
+    return bytes <= MAX_SIZE || (bytes <= MAX_RAW_SIZE && Buffer.byteLength(pack(content).text, 'utf8') <= MAX_SIZE);
   }
 
   /** 新的在前 */
@@ -86,7 +111,19 @@ export class NoteHistory {
   async read(filePath: string, id: string): Promise<string | null> {
     if (!/^[\w-]+$/.test(id)) return null;
     try {
-      return await fs.promises.readFile(path.join(this.dirFor(filePath), `${id}.md`), 'utf8');
+      const dir = this.dirFor(filePath);
+      const text = await fs.promises.readFile(path.join(dir, `${id}.md`), 'utf8');
+      const blobs = (await this.readIndex(filePath)).entries.find((e) => e.id === id)?.blobs;
+      if (!blobs?.length) return text;
+      // 图片放回原位。少了哪一张就整个不给：给一份缺图的，恢复时图就悄悄没了
+      let out = '';
+      let last = 0;
+      for (const blob of blobs) {
+        if (!/^[0-9a-f]{40}$/.test(blob.hash)) return null;
+        out += text.slice(last, blob.at) + await fs.promises.readFile(path.join(dir, BLOB_DIR, `${blob.hash}.b64`), 'utf8');
+        last = blob.at;
+      }
+      return out + text.slice(last);
     } catch {
       return null;
     }
@@ -108,13 +145,31 @@ export class NoteHistory {
       await fs.promises.rm(path.join(dir, `${last.id}.md`), { force: true });
     }
     const entry: HistoryEntry = { id: `${Math.round(time)}-${hash.slice(0, 8)}`, time, recordedAt: Date.now(), size: Buffer.byteLength(content, 'utf8'), hash, reason };
-    await fs.promises.writeFile(path.join(dir, `${entry.id}.md`), content, 'utf8');
+    const packed = pack(content);
+    if (packed.blobs.length) {
+      await fs.promises.mkdir(path.join(dir, BLOB_DIR), { recursive: true });
+      for (const blob of packed.blobs) {
+        const file = path.join(dir, BLOB_DIR, `${blob.hash}.b64`);
+        if (!fs.existsSync(file)) await fs.promises.writeFile(file, blob.data, 'utf8');
+      }
+      entry.blobs = packed.blobs.map(({ at, hash: h }) => ({ at, hash: h }));
+    }
+    await fs.promises.writeFile(path.join(dir, `${entry.id}.md`), packed.text, 'utf8');
     entries.push(entry);
 
     const { keep, drop } = pruneEntries(entries, Date.now());
     for (const d of drop) await fs.promises.rm(path.join(dir, `${d.id}.md`), { force: true });
     await this.writeIndex(filePath, { path: filePath, entries: keep });
+    await this.pruneBlobs(dir, keep);
     return entry;
+  }
+
+  /** 留下来的版本都用不到的图片，删掉 */
+  private async pruneBlobs(dir: string, keep: HistoryEntry[]) {
+    let names: string[];
+    try { names = await fs.promises.readdir(path.join(dir, BLOB_DIR)); } catch { return; }
+    const used = new Set(keep.flatMap((e) => (e.blobs || []).map((b) => `${b.hash}.b64`)));
+    for (const name of names) if (!used.has(name)) await fs.promises.rm(path.join(dir, BLOB_DIR, name), { force: true });
   }
 
   /**
@@ -125,7 +180,7 @@ export class NoteHistory {
     if (!NOTE_RE.test(filePath)) return;
     let stat: fs.Stats;
     try { stat = await fs.promises.stat(filePath); } catch { return; }
-    if (!stat.isFile() || stat.size > MAX_SIZE || stat.size === 0) return;
+    if (!stat.isFile() || stat.size > MAX_RAW_SIZE || stat.size === 0) return;
     const old = await fs.promises.readFile(filePath, 'utf8');
     if (old === newContent) return;
     await this.record(filePath, old, 'before-save', Math.min(stat.mtimeMs, Date.now() - 1));

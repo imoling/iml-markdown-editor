@@ -3,7 +3,7 @@ import CodeMirror, { ReactCodeMirrorRef } from '@uiw/react-codemirror';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { languages } from '@codemirror/language-data';
 import { EditorView, keymap } from '@codemirror/view';
-import { Prec, Extension } from '@codemirror/state';
+import { Prec, Extension, EditorState } from '@codemirror/state';
 import { autocompletion, CompletionContext, CompletionResult } from '@codemirror/autocomplete';
 import {
   search,
@@ -26,6 +26,7 @@ import { wikiHeadingCandidates, toNameCandidates } from '../../utils/wikiComplet
 import { readNoteForLink } from '../../utils/noteReader';
 import { fillEmbeds } from '../../utils/noteEmbed';
 import { loadMermaid } from '../../utils/mermaidLoader';
+import { dataUrlFold, inDataUrlFold } from './dataUrlFold';
 import '../styles/editor.css';
 
 export const MarkdownEditor: React.FC = () => {
@@ -55,6 +56,15 @@ export const MarkdownEditor: React.FC = () => {
         const insert = `${cmView.state.doc.sliceString(Math.max(0, end - 1), end) === '\n' ? '' : '\n'}\n- `;
         cmView.dispatch({ changes: { from: end, insert }, selection: { anchor: end + insert.length } });
         cmView.focus();
+      },
+      // 图片拖到了预览那一侧或编辑器外面的空白处（见 utils/dropFiles.ts）
+      appendImage: (file) => {
+        void storeImageFile(file, useAppStore.getState().activeTabId).then((stored) => {
+          if (!stored) return;
+          const end = cmView.state.doc.length;
+          const insert = `${end === 0 || cmView.state.doc.sliceString(end - 1, end) === '\n' ? '' : '\n'}\n![${file.name.replace(/\.[^.]+$/, '')}](${stored})\n`;
+          cmView.dispatch({ changes: { from: end, insert }, effects: EditorView.scrollIntoView(end + insert.length) });
+        });
       },
     });
     return () => registerEditorActions(null);
@@ -123,11 +133,14 @@ export const MarkdownEditor: React.FC = () => {
   // 匹配范围缓存：只在文档或查找条件变化时重扫，光标移动时只在缓存里定位
   const matchesRef = useRef<{ from: number; to: number }[]>([]);
 
+  // 写进笔记里的图片折起来了，查找不进去：那里面碰巧有的字母数字不是正文
+  const outsideFold = (_match: string, state: EditorState, from: number, to: number) => !inDataUrlFold(state, from, to);
+
   const recomputeMatches = (view: EditorView) => {
     const { query, caseSensitive } = useAppStore.getState().search;
     const ranges: { from: number; to: number }[] = [];
     if (query) {
-      const cursor = new SearchQuery({ search: query, caseSensitive, literal: true }).getCursor(view.state.doc);
+      const cursor = new SearchQuery({ search: query, caseSensitive, literal: true, test: outsideFold }).getCursor(view.state);
       for (let r = cursor.next(); !r.done; r = cursor.next()) ranges.push({ from: r.value.from, to: r.value.to });
     }
     matchesRef.current = ranges;
@@ -142,7 +155,7 @@ export const MarkdownEditor: React.FC = () => {
   const pushQuery = (view: EditorView) => {
     const { query, caseSensitive, replacement } = useAppStore.getState().search;
     view.dispatch({
-      effects: setSearchQuery.of(new SearchQuery({ search: query, caseSensitive, replace: replacement, literal: true })),
+      effects: setSearchQuery.of(new SearchQuery({ search: query, caseSensitive, replace: replacement, literal: true, test: outsideFold })),
     });
   };
 
@@ -224,6 +237,8 @@ export const MarkdownEditor: React.FC = () => {
       ...(vimExt ? [vimExt] : []),
       markdown({ base: markdownLanguage, codeLanguages: languages }),
       search(),
+      // 写进笔记里的图片（一长串 base64）折成一个小标签
+      dataUrlFold,
       // ⌘D：选中下一处相同的文字（多光标一起改）。自带的搜索快捷键整体关掉了（查找由应用的面板接管），这一个单独接回来
       Prec.high(keymap.of([{ key: 'Mod-d', run: selectNextOccurrence, preventDefault: true }])),
       autocompletion({ override: [wikiCompletion], activateOnTyping: true }),
@@ -248,7 +263,8 @@ export const MarkdownEditor: React.FC = () => {
             });
             return true;
           }
-          return false;
+          // 别的文件（.md、文件夹）不往正文里塞内容——CodeMirror 默认会把文本文件的内容插进来；由 window 上的处理打开它们（utils/dropFiles.ts）
+          return !!file;
         },
         paste(event, view) {
           const clipboard = event.clipboardData;

@@ -4,6 +4,7 @@ import { splitFrontmatter, extractTags, tagMatches, frontmatterAliases } from '.
 import { LinkableNote, matchesNoteName, noteNames, parseWikiTarget } from './shared/wikiLink';
 import { extractTasks, NoteTask } from './shared/tasks';
 import { TEMPLATE_DIR } from './shared/noteTemplates';
+import { foldDataUrls, originalOffset, type DataUrlCut } from './shared/dataUrl';
 
 /**
  * 笔记库全文索引（纯 JS，常驻主进程内存）。
@@ -12,6 +13,7 @@ import { TEMPLATE_DIR } from './shared/noteTemplates';
 export interface IndexedNote {
   path: string;
   title: string;
+  /** 原文；写进笔记里的图片那一长串 base64 已经去掉（见 cuts） */
   content: string;
   /** 小写副本，用于不区分大小写匹配 */
   lower: string;
@@ -22,6 +24,8 @@ export interface IndexedNote {
   aliases: string[];
   /** 这篇里的待办（`- [ ] …`），已完成的也在 */
   tasks: NoteTask[];
+  /** content 里去掉了哪几段：要拿下标去改文件的地方（未链接提及）靠它换算回原文的位置 */
+  cuts: DataUrlCut[];
 }
 
 export interface SearchSnippet {
@@ -48,6 +52,8 @@ const NOTE_RE = /\.(md|markdown|mdown|mkd|txt)$/i;
 /** `![[文件名]]` 能嵌入的附件：图片、音频、视频（与 iml-asset:// 放行的范围一致），以及 PDF（显示成文件卡片，用系统应用打开） */
 const ATTACHMENT_RE = /\.(png|jpe?g|gif|webp|svg|bmp|avif|ico|tiff?|webm|m4a|mp3|wav|ogg|oga|opus|aac|flac|mp4|m4v|mov|ogv|pdf)$/i;
 const MAX_FILE_SIZE = 2 * 1024 * 1024;
+/** 图片写进了笔记里的，文件可以很大：读进来把图片去掉再按上面那条量 */
+const MAX_READ_SIZE = 64 * 1024 * 1024;
 const SNIPPET_RADIUS = 48;
 const MAX_SNIPPETS = 3;
 const MAX_MENTION_NOTES = 50;
@@ -133,8 +139,9 @@ export class SearchIndex {
   async addFile(filePath: string): Promise<void> {
     try {
       const stat = await fs.promises.stat(filePath);
-      if (!stat.isFile() || stat.size > MAX_FILE_SIZE) return;
-      const content = await fs.promises.readFile(filePath, 'utf8');
+      if (!stat.isFile() || stat.size > MAX_READ_SIZE) return;
+      const { text: content, cuts } = foldDataUrls(await fs.promises.readFile(filePath, 'utf8'));
+      if (stat.size > MAX_FILE_SIZE && Buffer.byteLength(content, 'utf8') > MAX_FILE_SIZE) return;
       this.notes.set(filePath, {
         path: filePath,
         title: SearchIndex.titleOf(filePath, content),
@@ -144,6 +151,7 @@ export class SearchIndex {
         tags: extractTags(content),
         aliases: frontmatterAliases(splitFrontmatter(content).yaml),
         tasks: extractTasks(content),
+        cuts,
       });
     } catch {
       this.notes.delete(filePath);
@@ -355,7 +363,7 @@ export class SearchIndex {
           // 长名字先找；短名字落在已命中的长名字里面就不重复报（「苹果」之于「苹果笔记」）
           if (wholeWord && !taken.some(([a, b]) => idx < b && to > a)) {
             taken.push([idx, to]);
-            snippets.push({ ...snippetAt(note.content, idx, to), offset: idx, length: name.length });
+            snippets.push({ ...snippetAt(note.content, idx, to), offset: originalOffset(note.cuts, idx), length: name.length });
           }
           idx = prose.indexOf(name, to);
         }

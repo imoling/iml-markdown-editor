@@ -9,6 +9,7 @@ import { useAI } from '../../hooks/useAI';
 import { markdownToHtml, htmlToMarkdown } from '../../utils/markdown';
 import { serializeDoc } from '../../utils/incrementalMarkdown';
 import { persistDataUrl } from '../../utils/pasteImage';
+import { stripDataUrls } from '../../../electron/shared/dataUrl';
 
 export type PaletteMode = 'text' | 'mermaid' | 'svg' | 'image';
 
@@ -480,13 +481,14 @@ ${textAfter || '（文档末尾，无后文）'}
     const beforeFragment = editor.state.doc.slice(0, Math.min(from, docSize)).content;
     const beforeDiv = document.createElement('div');
     beforeDiv.appendChild(serializer.serializeFragment(beforeFragment));
-    const mdBefore = htmlToMarkdown(beforeDiv.innerHTML);
+    // 写进笔记里的图片（一长串 base64）不给模型：不去掉的话「前文最后 2000 字」可能整段都是它
+    const mdBefore = stripDataUrls(htmlToMarkdown(beforeDiv.innerHTML));
     
     // 后文：doc.slice(from, end) → HTML → Markdown
     const afterFragment = editor.state.doc.slice(Math.min(from, docSize), docSize).content;
     const afterDiv = document.createElement('div');
     afterDiv.appendChild(serializer.serializeFragment(afterFragment));
-    const mdAfter = htmlToMarkdown(afterDiv.innerHTML);
+    const mdAfter = stripDataUrls(htmlToMarkdown(afterDiv.innerHTML));
     
     setPaletteContext({
       before: mdBefore.slice(-2000), // 前文最后 2000 字

@@ -522,7 +522,14 @@
 .outline-item { color: var(--text-secondary); font-size: 12px; }
 .outline-item--h1 { color: var(--text-primary); font-size: 13px; font-weight: 600; }
 .sidebar-section-title { font-size: 11px; font-weight: 600; color: var(--text-muted); padding-left: 12px; margin-bottom: 4px; opacity: 0.7; }
-.library-header { font-weight: 600; color: var(--text-primary); padding-left: 8px; gap: 4px; }
+.library-header { position: relative; font-weight: 600; color: var(--text-primary); padding-left: 8px; gap: 2px; }
+/* 库名后面紧跟着「切换笔记库」的小按钮，再往右才是那一排操作。这一行在默认宽度下很挤：
+   间距收到 2px、小按钮做窄，换来的是库名和加按钮之前差不多长才会被截断 */
+.library-header__icon { flex-shrink: 0; margin-right: 2px; }
+.library-header__name { flex: 0 1 auto; min-width: 0; }
+/* 两个类名：ui.css 在这份后面加载，单个类名压不过那边的 .icon-btn */
+.library-header .library-header__switch { flex-shrink: 0; padding: 2px 1px; margin-right: auto; opacity: 0.55; }
+.library-header .library-header__switch:hover { opacity: 1; }
 .empty-state__icon { margin-bottom: 10px; opacity: 0.5; }
 
 /* ── 启动页 ── */

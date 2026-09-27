@@ -1131,3 +1131,6 @@ span > .source-node__input { display: inline-block; width: auto; min-width: 160p
   color: var(--text-muted);
   font-family: var(--font-body);
 }
+
+/* ── 源码模式：写进笔记里的图片，那一长串折成一个小标签（见 Editor/dataUrlFold.ts）── */
+.cm-data-url-fold { padding: 0 5px; border-radius: 4px; background-color: var(--bg-hover-editor); color: var(--text-muted); font-size: 0.85em; white-space: nowrap; }

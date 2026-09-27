@@ -86,6 +86,7 @@ export function createMockApi(initialFiles: Record<string, string> = {}) {
       saveSettings: vi.fn(async () => ({ success: true })),
       openImageConfig: vi.fn(), openSettings: vi.fn(), previewSettings: vi.fn(), revertSettings: vi.fn(),
       consumePendingOpenFiles: vi.fn(async () => []),
+      droppedPaths: vi.fn(async (_files: File[]) => [] as { path: string; isDirectory: boolean }[]),
       clearSession: vi.fn(),
       detectSyncFolders: vi.fn(async () => []),
       homeLibraryPath: vi.fn(async () => ({ path: '/home/Documents/iML Notes', exists: true })),

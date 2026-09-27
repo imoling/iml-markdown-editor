@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron';
+import { contextBridge, ipcRenderer, webUtils } from 'electron';
 
 // 版本号由主进程从 package.json 读取，避免多处硬编码
 const appVersion: string = ipcRenderer.sendSync('app:version');
@@ -214,6 +214,9 @@ contextBridge.exposeInMainWorld('api', {
     openImageConfig: () => ipcRenderer.send('open:image-config'),
     openSettings: () => ipcRenderer.send('open:settings'),
     consumePendingOpenFiles: (): Promise<string[]> => ipcRenderer.invoke('app:consumePendingOpenFiles'),
+    /** 拖进窗口的文件在磁盘上的路径（页面自己拿不到），连同它是不是文件夹；不在磁盘上的不给 */
+    droppedPaths: (files: File[]): Promise<{ path: string; isDirectory: boolean }[]> =>
+      ipcRenderer.invoke('app:describePaths', files.map((f) => { try { return webUtils.getPathForFile(f); } catch { return ''; } }).filter(Boolean)),
     clearSession: () => ipcRenderer.send('app:clearSession'),
     detectSyncFolders: () => ipcRenderer.invoke('app:detectSyncFolders'),
     homeLibraryPath: (): Promise<{ path: string; exists: boolean }> => ipcRenderer.invoke('app:homeLibraryPath'),

@@ -7,6 +7,7 @@ import { deriveNoteTitle } from '../utils/noteTitle';
 import { useAskStore } from './askStore';
 import { extractHeadings } from '../utils/outline';
 import { resolveWikiTarget, findHeadingIndex, linkifyMention, noteBaseName } from '../../electron/shared/wikiLink';
+import { describeLibrary, normalizeRecentLibraries, touchRecentLibraries } from '../../electron/shared/recentLibraries';
 import { toggleTaskLine } from '../../electron/shared/tasks';
 import { appendCapture } from '../../electron/shared/capture';
 import type { AppUrlAction } from '../../electron/shared/appUrl';
@@ -115,6 +116,9 @@ export const THEME_PRESETS: ThemeConfig[] = [
     shadow: 'rgba(51, 65, 85, 0.2)',
   }
 ];
+
+export type ImageStorage = 'assets' | 'inline';
+export const normalizeImageStorage = (value: unknown): ImageStorage => (value === 'inline' ? 'inline' : 'assets');
 
 export interface NavigationRequest {
   heading?: HeadingNode;
@@ -226,7 +230,7 @@ export interface AppState {
   editorFlush: (() => void) | null;
   /** 当前编辑器提供的两个动作：往光标处插一段文字（返回是否插成功）、在文末另起一个空的列表项并把光标放进去。侧边栏功能（转写）要用 */
   /** runSlash：按 id 执行一条斜杠菜单里的命令（命令面板的「插入…」靠它）；只有富文本编辑器提供 */
-  editorActions: { insertText: (text: string) => boolean; startList: () => void; runSlash?: (id: string) => boolean; fold?: (what: 'section' | 'all', open: boolean) => boolean } | null;
+  editorActions: { insertText: (text: string) => boolean; startList: () => void; runSlash?: (id: string) => boolean; fold?: (what: 'section' | 'all', open: boolean) => boolean; /** 图片拖到了正文周围的空白处：接到正文末尾 */ appendImage?: (file: File) => void } | null;
   /** 编辑器里当前选中的文字；没有选区时是空串。状态栏据此显示「选中 N 字」 */
   selectionText: string;
   setSelectionText: (text: string) => void;
@@ -274,10 +278,16 @@ export interface AppState {
   startupBehavior: 'restore' | 'dashboard';
   autoSave: boolean;
   defaultLibraryPath: string;
+  /** 最近用过的笔记库，当前的排第一（主进程存设置时维护，见 electron/shared/recentLibraries.ts） */
+  recentLibraries: string[];
+  /** 拖进来的库外文件夹：换库之前先问一句（后果是全局的，见 switchLibrary） */
+  libraryToConfirm: string | null;
   starredFiles: string[];
   imageGenConfig: ImageGenConfig;
   /** 粘贴 / 拖入的图片压缩成 WebP 再存盘 */
   imageCompression: boolean;
+  /** 图片存在哪：笔记旁的 assets/，还是写进笔记里（整篇只有一个文件，好带走） */
+  imageStorage: ImageStorage;
   /** 粘贴网址时自动取网页标题 */
   fetchLinkTitle: boolean;
   /** 鼠标停在 [[链接]] 上弹出预览卡片 */
@@ -428,6 +438,8 @@ export interface AppState {
   openFileByPath: (filePath: string) => Promise<void>;
   openFile: () => Promise<void>;
   openDirectory: () => Promise<void>;
+  /** 换到另一个笔记库：日记、快速捕获、搜索都跟着换。目录不在了就说一声，并从「最近的笔记库」里拿掉 */
+  switchLibrary: (libraryPath: string) => Promise<boolean>;
   tabToClose: string | null;
   setTabToClose: (id: string | null) => void;
   saveActiveFile: (saveAs?: boolean, isAutoSave?: boolean) => Promise<boolean>;
@@ -539,9 +551,12 @@ export const useAppStore = create<AppState>((set, get) => ({
   startupBehavior: 'restore',
   autoSave: true,
   defaultLibraryPath: '',
+  recentLibraries: [],
+  libraryToConfirm: null,
   starredFiles: [],
   imageGenConfig: DEFAULT_IMAGE_GEN_CONFIG,
   imageCompression: true,
+  imageStorage: 'assets',
   fetchLinkTitle: true,
   linkPreview: true,
   userCss: true,
@@ -1204,9 +1219,25 @@ export const useAppStore = create<AppState>((set, get) => ({
   // 切换笔记库：选一个目录作为新的树根并持久化到设置
   openDirectory: async () => {
     const result = await window.api.dialog.open({ properties: ['openDirectory'] });
-    if (result && result.length > 0) {
-      get().setDefaultLibraryPath(result[0]);
+    if (result && result.length > 0) await get().switchLibrary(result[0]);
+  },
+
+  switchLibrary: async (libraryPath) => {
+    const [target] = normalizeRecentLibraries([], libraryPath);
+    if (!target) return false;
+    set({ libraryToConfirm: null });
+    if (target === get().workspacePath) return true;
+    const { name } = describeLibrary(target);
+    if (!(await readLibraryDir(target))) {
+      const recentLibraries = get().recentLibraries.filter((p) => p !== target);
+      set({ recentLibraries });
+      await window.api.app.saveSettings({ recentLibraries });
+      get().notify(`切换失败：找不到「${name}」，已从最近的笔记库里去掉`, 8000);
+      return false;
     }
+    get().setDefaultLibraryPath(target);
+    get().notify(`已切换到笔记库：${name}`);
+    return true;
   },
 
   saveActiveFile: async (saveAs = false, isAutoSave = false) => {
@@ -1309,7 +1340,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   setDefaultLibraryPath: (path: string) => {
-    set({ defaultLibraryPath: path });
+    // 名单由主进程存设置时维护；这里先照同样的规矩改一遍，界面不用等那一来一回
+    set({ defaultLibraryPath: path, recentLibraries: touchRecentLibraries(get().recentLibraries, get().defaultLibraryPath, path) });
     get().saveSettings();
     get().loadLibrary(path);
   },
@@ -1411,8 +1443,10 @@ export const useAppStore = create<AppState>((set, get) => ({
           startupBehavior: settings.startupBehavior || 'restore',
           autoSave: settings.autoSave ?? true,
           defaultLibraryPath: settings.defaultLibraryPath || '',
+          recentLibraries: normalizeRecentLibraries(settings.recentLibraries, settings.defaultLibraryPath),
           imageGenConfig: settings.imageGenConfig || DEFAULT_IMAGE_GEN_CONFIG,
           imageCompression: settings.imageCompression ?? true,
+          imageStorage: normalizeImageStorage(settings.imageStorage),
           fetchLinkTitle: settings.fetchLinkTitle ?? true,
           linkPreview: settings.linkPreview ?? true,
           userCss: settings.userCss ?? true,
@@ -1436,10 +1470,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   saveSettings: async () => {
-    const { appearanceMode, startupBehavior, autoSave, defaultLibraryPath, imageGenConfig, theme, imageCompression, fetchLinkTitle, linkPreview, userCss, vimMode, spellcheck, aiEnabled, editorPrefs } = get();
+    const { appearanceMode, startupBehavior, autoSave, defaultLibraryPath, imageGenConfig, theme, imageCompression, imageStorage, fetchLinkTitle, linkPreview, userCss, vimMode, spellcheck, aiEnabled, editorPrefs } = get();
     await window.api.app.saveSettings({
       appearanceMode, startupBehavior, autoSave, defaultLibraryPath, imageGenConfig,
-      imageCompression, fetchLinkTitle, linkPreview, userCss, vimMode, spellcheck, aiEnabled, editorPrefs,
+      imageCompression, imageStorage, fetchLinkTitle, linkPreview, userCss, vimMode, spellcheck, aiEnabled, editorPrefs,
       themeId: theme?.id,
     });
   },

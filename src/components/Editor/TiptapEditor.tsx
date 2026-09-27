@@ -163,6 +163,15 @@ export const TiptapEditor: React.FC = () => {
         if (!ed || ed.isDestroyed) return;
         ed.chain().insertContentAt(ed.state.doc.content.size, { type: 'bulletList', content: [{ type: 'listItem', content: [{ type: 'paragraph' }] }] }).focus('end').run();
       },
+      // 笔记短的时候正文只占页面上面一小块，图片多半是拖到下面的空白处松手的（见 utils/dropFiles.ts）
+      appendImage: (file) => {
+        void storeImageFile(file, activeTabIdRef.current).then((stored) => {
+          const ed = editorRef.current as Editor | null;
+          if (!stored || !ed || ed.isDestroyed) return;
+          const node = ed.state.schema.nodes.image.create({ src: stored, alt: file.name.replace(/\.[^.]+$/, '') });
+          ed.view.dispatch(ed.state.tr.insert(ed.state.doc.content.size, node).scrollIntoView());
+        });
+      },
     });
     return () => registerEditorActions(null);
   }, []);
@@ -292,6 +301,8 @@ export const TiptapEditor: React.FC = () => {
              });
              return true;
           }
+          // 别的文件（.md、文件夹）不往正文里塞内容；由 window 上的处理打开它们（utils/dropFiles.ts）
+          return true;
         }
         return false;
       },
