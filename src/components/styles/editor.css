@@ -178,7 +178,8 @@
 .tiptap-prosemirror table {
   border-collapse: separate;
   border-spacing: 0;
-  table-layout: fixed;
+  /* 列宽按内容分：内容多的列自然宽。拖出来的宽度只在这次编辑里有效，GFM 表格存不下列宽（#7） */
+  table-layout: auto;
   width: 100%;
   margin: 1.5rem 0;
   overflow: hidden;
@@ -515,6 +516,11 @@ ul[data-type="taskList"] li[data-checked="true"] > div {
   margin: 1rem 0;
   display: block;
 }
+/* 图片节点（NoteImage）：外层只包住图，选中框才不会拉到整行；图下的图片描述由设置「图下显示图片描述」控制（#6） */
+.tiptap-prosemirror .note-image { display: block; width: fit-content; max-width: 100%; margin: 1rem 0; }
+.tiptap-prosemirror .note-image img { margin: 0; }
+.tiptap-prosemirror .note-image__caption { display: none; margin-top: 6px; font-size: 13px; line-height: 1.5; color: var(--text-muted); text-align: center; }
+.tiptap-prosemirror--captions .note-image__caption:not(:empty) { display: block; }
 
 
 .bubble-menu button:hover,
@@ -611,8 +617,10 @@ ul[data-type="taskList"] li[data-checked="true"] > div {
   min-height: 100px;
 }
 
+/* Mermaid 画出来的 svg 自带 width="100%" 和 style="max-width: 真实宽度"：别用 !important 盖掉它的 max-width，
+   否则两个节点的小图也会被拉到和卡片一样宽（#8）。这里只兜底：不超出容器，高度跟着宽度走 */
 .mermaid-container svg, .md-editor-preview-container svg {
-  max-width: 100% !important;
+  max-width: 100%;
   max-height: 80vh !important;
   height: auto !important;
   display: block;
@@ -620,7 +628,17 @@ ul[data-type="taskList"] li[data-checked="true"] > div {
   object-fit: contain;
 }
 
-.mermaid-preview-container svg, .svg-preview-container svg {
+.mermaid-preview-container svg {
+  max-width: 100%;
+  max-height: 100%;
+  height: auto !important;
+  display: block;
+  margin: 0 auto;
+  /* 它是画布（flex）里的一项：放大后不许被挤回容器宽，超出的部分靠滚动条 */
+  flex-shrink: 0;
+}
+
+.svg-preview-container svg {
   max-width: 100% !important;
   max-height: 100% !important;
   width: auto !important;
@@ -806,7 +824,21 @@ ul[data-type="taskList"] li[data-checked="true"] > div {
 }
 .block-card__preview--center { flex-direction: row; justify-content: center; }
 .block-card__preview--resizing { max-height: none; transition: none; }
-.block-card__canvas { margin: auto; display: flex; justify-content: center; align-items: center; width: 100%; height: 100%; cursor: pointer; }
+/* safe center：放大后比预览区大的图从左上角起排，滚动条能滚到头；放不满时照常居中 */
+.block-card__canvas { margin: auto; display: flex; justify-content: safe center; align-items: safe center; width: 100%; height: 100%; cursor: pointer; }
+/* 预览区右上角的缩放按钮：鼠标移上去才出现（#8） */
+.block-card__zoom {
+  position: absolute; top: 8px; right: 8px; z-index: 5; display: flex; gap: 2px; padding: 2px; border-radius: 8px;
+  background-color: var(--bg-elevated); border: 1px solid var(--border-subtle); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  opacity: 0; transition: opacity 0.15s ease;
+}
+.block-card__preview-wrap:hover .block-card__zoom, .block-card__zoom:focus-within { opacity: 1; }
+.block-card__zoom-btn {
+  display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; padding: 0;
+  border: none; border-radius: 6px; background: transparent; color: var(--text-muted); cursor: pointer;
+}
+.block-card__zoom-btn:hover { background-color: var(--bg-hover-editor); color: var(--text-primary); }
+.block-card__zoom-btn:disabled { opacity: 0.35; cursor: default; }
 .block-card__placeholder { color: var(--text-muted); font-size: 12px; opacity: 0.6; }
 .block-card__resize { position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%); width: 40px; height: 8px; cursor: ns-resize; display: flex; align-items: center; justify-content: center; z-index: 20; }
 .block-card__resize-bar { width: 24px; height: 3px; border-radius: 2px; background-color: var(--border-strong); opacity: 0.4; transition: all 0.2s; }

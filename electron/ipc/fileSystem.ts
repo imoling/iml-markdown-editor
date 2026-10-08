@@ -410,6 +410,11 @@ export function setupFileSystemIPC(deps: FileSystemDeps = {}) {
   ipcMain.handle('export:open', (_event, target: string) => openExported(target, 'open'));
   // 富文本进剪贴板（复制为公众号格式）：主进程写，不挑窗口焦点
   ipcMain.handle('clipboard:writeHtml', (_event, html: string, text: string) => { clipboard.write({ html: String(html || ''), text: String(text || '') }); return true; });
+  // 「插入图片」里的「从剪贴板读取」：剪贴板里是图片就给 PNG 字节，不是给 null
+  ipcMain.handle('clipboard:readImage', () => {
+    const img = clipboard.readImage();
+    return img.isEmpty() ? null : img.toPNG();
+  });
   ipcMain.handle('export:reveal', (_event, target: string) => openExported(target, 'reveal'));
 
   // Read directory

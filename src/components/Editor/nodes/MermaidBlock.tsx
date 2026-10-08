@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { NodeViewWrapper, NodeViewProps } from '@tiptap/react';
 import { loadMermaid } from '../../../utils/mermaidLoader';
-import { Terminal, Eye } from 'lucide-react';
+import { Terminal, Eye, ZoomIn, ZoomOut, Scan } from 'lucide-react';
 import CodeMirror, { ReactCodeMirrorRef } from '@uiw/react-codemirror';
 import { EditorView } from '@codemirror/view';
 import { BlockCard, ResizeHandle, useResizableHeight } from './BlockCard';
+import { clampZoom, ZOOM_MAX, ZOOM_MIN } from '../../../utils/diagramMeta';
 
 const MERMAID_BASE = {
   startOnLoad: false,
@@ -32,10 +33,36 @@ export const MermaidBlock: React.FC<NodeViewProps> = ({ node, updateAttributes, 
   const [isRendering, setIsRendering] = useState(false);
   const [viewMode, setViewMode] = useState<'preview' | 'code'>('preview');
   const [isEditing, setIsEditing] = useState(false);
+  /** 预览的缩放倍数：1 是 Mermaid 自己定的自然大小。和拖出来的高度一样存在节点属性里，保存时写进代码第一行的注释 */
+  const zoom: number = node.attrs.zoom || 1;
+  const setZoom = (next: number) => updateAttributes({ zoom: clampZoom(next) });
   const renderCount = useRef(0);
   const previewRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<ReactCodeMirrorRef>(null);
   const { isResizing, currentHeight, onMouseDown } = useResizableHeight(node.attrs.height, previewRef, (height) => updateAttributes({ height }));
+
+  // React 比的是这个对象的身份：每次渲染都给新对象的话，任何一次无关的重渲染都会重设 innerHTML，图会闪
+  const markup = useMemo(() => ({ __html: svg || '<div class="block-card__placeholder">等待输入内容…</div>' }), [svg]);
+
+  // 缩放（#8）：改 svg 的宽度，高度跟着比例走，放大后比预览区宽的部分靠预览区的滚动条看。
+  // 回到 1 就还原成 Mermaid 写在行内的自然宽度（max-width），让它自己决定多大
+  useEffect(() => {
+    const el = previewRef.current?.querySelector('svg');
+    if (!el) return;
+    if (zoom === 1) {
+      el.style.removeProperty('width');
+      el.style.removeProperty('max-height');
+      if (el.dataset.naturalWidth) el.style.maxWidth = `${el.dataset.naturalWidth}px`;
+      return;
+    }
+    const natural = parseFloat(el.dataset.naturalWidth || '') || parseFloat(el.style.maxWidth) || el.getBoundingClientRect().width;
+    if (!natural) return;
+    el.dataset.naturalWidth = String(natural);
+    // 拖过高度的卡片样式表里有 max-height: 100%，不解开的话放大会被卡片高度顶住
+    el.style.maxWidth = 'none';
+    el.style.maxHeight = 'none';
+    el.style.width = `${Math.round(natural * zoom)}px`;
+  }, [svg, zoom]);
 
   useEffect(() => {
     if (node.attrs.code !== code) setCode(node.attrs.code);
@@ -78,7 +105,8 @@ export const MermaidBlock: React.FC<NodeViewProps> = ({ node, updateAttributes, 
       if (ERROR_MARKERS.some((marker) => renderedSvg.includes(marker))) {
         setError(isEOF(renderedSvg) ? null : '图表构建中…');
       } else {
-        setSvg(renderedSvg.replace(/<svg/, '<svg style="height: 100%; width: 100%; display: block; margin: auto;"'));
+        // 原样放进去：Mermaid 在 svg 上写了 width="100%" 和 style="max-width: 真实宽度"，再塞一个 style 进去会把它的 max-width 顶掉，小图就被拉满了（#8）
+        setSvg(renderedSvg);
         setError(null);
       }
     } catch (err) {
@@ -209,9 +237,16 @@ export const MermaidBlock: React.FC<NodeViewProps> = ({ node, updateAttributes, 
                 onDoubleClick={handlePreviewDoubleClick}
                 className="block-card__canvas"
                 title="双击节点以定位源码"
-                dangerouslySetInnerHTML={{ __html: svg || '<div class="block-card__placeholder">等待输入内容…</div>' }}
+                dangerouslySetInnerHTML={markup}
               />
             </div>
+            {svg && (
+              <div className="block-card__zoom" contentEditable={false}>
+                <button type="button" className="block-card__zoom-btn" title="放大" onMouseDown={(e) => e.preventDefault()} onClick={(e) => { e.stopPropagation(); setZoom(Math.min(ZOOM_MAX, zoom * 1.25)); }}><ZoomIn size={14} /></button>
+                <button type="button" className="block-card__zoom-btn" title="缩小" onMouseDown={(e) => e.preventDefault()} onClick={(e) => { e.stopPropagation(); setZoom(Math.max(ZOOM_MIN, zoom / 1.25)); }}><ZoomOut size={14} /></button>
+                <button type="button" className="block-card__zoom-btn" title="原始大小" disabled={zoom === 1} onMouseDown={(e) => e.preventDefault()} onClick={(e) => { e.stopPropagation(); setZoom(1); }}><Scan size={14} /></button>
+              </div>
+            )}
             <ResizeHandle resizing={isResizing} onMouseDown={onMouseDown} />
           </div>
         )}

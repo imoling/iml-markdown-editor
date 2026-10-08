@@ -3,6 +3,7 @@ import TurndownService from 'turndown';
 import { loadMermaid } from './mermaidLoader';
 // @ts-ignore
 import { tables } from 'turndown-plugin-gfm';
+import { splitDiagramMeta, joinDiagramMeta } from './diagramMeta';
 import { lowlight as localLowlight } from './highlight';
 import { sanitizeHtml } from './sanitize';
 import { escapeMarkdown, MID_LINE_MARK, LINE_START_SENSITIVE } from './markdownEscape';
@@ -482,8 +483,13 @@ turndownService.addRule('diagram', {
     if (!code.trim() && el.textContent?.includes('graph')) {
       code = el.textContent;
     }
-    
-    return '\n\n```mermaid\n' + code.trim() + '\n```\n\n';
+
+    // 卡片高度与缩放写回代码第一行的 %% iml: 注释（见 diagramMeta.ts）：节点属性优先，没有属性就沿用代码里原有的那一行
+    const parsed = splitDiagramMeta(code.trim());
+    const ownZoom = parseFloat(el.getAttribute('data-zoom') || '');
+    const ownHeight = el.getAttribute('data-height');
+    const meta = { zoom: ownZoom > 0 ? ownZoom : parsed.meta.zoom, height: ownHeight || parsed.meta.height };
+    return '\n\n```mermaid\n' + joinDiagramMeta(parsed.code.trim(), meta) + '\n```\n\n';
   }
 });
 

@@ -34,7 +34,8 @@ describe('切换标签页时换文档', () => {
     loadDocFresh(editor, markdownToHtml(B));
     registerSource(editor, B);
     expect(editor.getHTML()).toContain('data-wiki-embed');
-    editor.commands.insertContentAt(editor.state.doc.content.size, { type: 'paragraph', content: [{ type: 'text', text: '新加的一段' }] });
+    // 乙以嵌入收尾，载入后文末补了一个空段落（TrailingNode）：在那里打字，就是乙后面新加的一段
+    editor.commands.insertContentAt(editor.state.doc.content.size - 1, '新加的一段');
     expect(serializeDoc(editor).markdown).toBe(`${B}\n\n新加的一段`);
     editor.commands.undo();
     expect(serializeDoc(editor).markdown).toBe(B);

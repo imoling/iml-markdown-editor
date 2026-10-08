@@ -15,6 +15,25 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'ai', label: 'AI 生成' },
 ];
 
+/** 系统剪贴板里的图片：先问壳（两边的壳都读得到），没有壳的接口再试浏览器的剪贴板 API */
+async function readClipboardImage(): Promise<File | null> {
+  const bytes = await window.api.clipboard?.readImage?.();
+  if (bytes) return new File([new Uint8Array(bytes)], 'clipboard.png', { type: 'image/png' });
+  if (window.api.clipboard) return null;
+  try {
+    for (const item of await navigator.clipboard.read()) {
+      const type = item.types.find((t) => t.startsWith('image/'));
+      if (!type) continue;
+      const blob = await item.getType(type);
+      const ext = type.split('/')[1].replace('jpeg', 'jpg').replace('svg+xml', 'svg');
+      return new File([blob], `clipboard.${ext}`, { type });
+    }
+  } catch {
+    // 没权限或不支持：当作剪贴板里没有图片
+  }
+  return null;
+}
+
 /** 插入图片：本地上传 / 网络链接 / AI 生成 */
 export const ImageInsertDialog: React.FC<ImageInsertDialogProps> = ({ onConfirm, onCancel }) => {
   const imageGenConfig = useAppStore((s) => s.imageGenConfig);
@@ -36,13 +55,15 @@ export const ImageInsertDialog: React.FC<ImageInsertDialogProps> = ({ onConfirm,
   React.useEffect(() => window.api.image?.onProgress?.((p) => { progressRef.current = p; }) ?? undefined, []);
   const [aiError, setAiError] = React.useState('');
   const [lightboxSrc, setLightboxSrc] = React.useState<string | null>(null);
+  const [clipboardNote, setClipboardNote] = React.useState('');
 
-  const handleFile = (file: File) => {
+  /** 选中 / 拖入 / 从剪贴板读到的图：读成 data URL 预览；有文件名的顺手填进描述，剪贴板来的没有像样的名字就不填 */
+  const handleFile = (file: File, nameAsAlt = true) => {
     if (!file.type.startsWith('image/')) return;
     const reader = new FileReader();
     reader.onload = (e) => {
       setPreview(e.target?.result as string);
-      if (!alt) setAlt(file.name.replace(/\.[^.]+$/, ''));
+      if (nameAsAlt && !alt) setAlt(file.name.replace(/\.[^.]+$/, ''));
     };
     reader.readAsDataURL(file);
   };
@@ -52,6 +73,13 @@ export const ImageInsertDialog: React.FC<ImageInsertDialogProps> = ({ onConfirm,
     setDragging(false);
     const file = e.dataTransfer.files[0];
     if (file) handleFile(file);
+  };
+
+  const handleClipboard = async () => {
+    setClipboardNote('');
+    const file = await readClipboardImage();
+    if (file) handleFile(file, false);
+    else setClipboardNote('剪贴板里没有图片');
   };
 
   const handleGenerate = async () => {
@@ -141,6 +169,10 @@ export const ImageInsertDialog: React.FC<ImageInsertDialogProps> = ({ onConfirm,
                 )}
               </div>
               <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
+              <div className="row gap-10 image-dialog__clipboard">
+                <button type="button" onClick={handleClipboard} className="btn btn-ghost btn-sm">从剪贴板读取</button>
+                {clipboardNote && <span className="text-xs text-muted">{clipboardNote}</span>}
+              </div>
             </>
           )}
 

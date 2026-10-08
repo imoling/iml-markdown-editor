@@ -6,7 +6,7 @@ import type { Editor } from '@tiptap/core';
 import { useAppStore } from '../../stores/appStore';
 import { markdownToHtml } from '../../utils/markdown';
 import { serializeDoc } from '../../utils/incrementalMarkdown';
-import { registerSource, placeCursorAfterFrontmatter, loadDocFresh } from '../../utils/sourceMap';
+import { registerSource, placeCursorAfterFrontmatter, loadDocFresh, endOfContent } from '../../utils/sourceMap';
 import { searchPluginKey } from '../../extensions/SearchExtension';
 import { editorExtensions } from './editorExtensions';
 import { useEditorAI } from './useEditorAI';
@@ -55,6 +55,9 @@ function reportSearchState(editor: Editor) {
   useAppStore.getState().setSearchCounts(total, current);
 }
 
+/** 每个标签页滚到哪：所有标签页共用一个编辑器和一个滚动容器，不记的话切过去就是上一篇的位置（#11） */
+const scrollTops = new Map<string, number>();
+
 export const TiptapEditor: React.FC = () => {
   const { 
     activeTabId, tabs, updateTabContent, navigationRequest, zoom,
@@ -64,6 +67,7 @@ export const TiptapEditor: React.FC = () => {
   const searchCommand = useAppStore((s) => s.searchCommand);
   const aiEnabled = useAppStore((s) => s.aiEnabled);
   const spellcheck = useAppStore((s) => s.spellcheck);
+  const showImageCaption = useAppStore((s) => s.showImageCaption);
   const focusMode = useAppStore((s) => s.focusMode);
   const registerEditorFlush = useAppStore((s) => s.registerEditorFlush);
   const activeTab = tabs.find(t => t.id === activeTabId);
@@ -161,7 +165,9 @@ export const TiptapEditor: React.FC = () => {
       startList: () => {
         const ed = editorRef.current as Editor | null;
         if (!ed || ed.isDestroyed) return;
-        ed.chain().insertContentAt(ed.state.doc.content.size, { type: 'bulletList', content: [{ type: 'listItem', content: [{ type: 'paragraph' }] }] }).focus('end').run();
+        // 文末补出来的空段落留在最后，列表插在它前面；光标进第一项（list + listItem + paragraph 三层）
+        const at = endOfContent(ed.state.doc);
+        ed.chain().insertContentAt(at, { type: 'bulletList', content: [{ type: 'listItem', content: [{ type: 'paragraph' }] }] }).focus(at + 3).run();
       },
       // 笔记短的时候正文只占页面上面一小块，图片多半是拖到下面的空白处松手的（见 utils/dropFiles.ts）
       appendImage: (file) => {
@@ -169,19 +175,25 @@ export const TiptapEditor: React.FC = () => {
           const ed = editorRef.current as Editor | null;
           if (!stored || !ed || ed.isDestroyed) return;
           const node = ed.state.schema.nodes.image.create({ src: stored, alt: file.name.replace(/\.[^.]+$/, '') });
-          ed.view.dispatch(ed.state.tr.insert(ed.state.doc.content.size, node).scrollIntoView());
+          ed.view.dispatch(ed.state.tr.insert(endOfContent(ed.state.doc), node).scrollIntoView());
         });
       },
     });
     return () => registerEditorActions(null);
   }, []);
 
+  // useEditor 没有依赖数组时，每次渲染都会把这份 options 重新套到编辑器上（editorProps 每次都是新对象，它认为变了）：
+  // 所以根元素的 class、spellcheck 这些要在这里按当前状态算，另起一个 effect 去 setOptions 会在下一次渲染被冲掉。
+  // 初始内容也只算一次：它只在创建编辑器时用，每次渲染都把整篇 Markdown 转一遍，带着几 MB 图片的文档会卡（#10）
+  const initialHtml = useRef<string | null>(null);
+  if (initialHtml.current === null) initialHtml.current = activeTab ? markdownToHtml(activeTab.content) : '';
   const editor = useEditor({
     extensions: editorExtensions,
-    content: activeTab ? markdownToHtml(activeTab.content) : '',
+    content: initialHtml.current,
     editorProps: {
       attributes: {
-        class: 'tiptap-prosemirror',
+        class: `tiptap-prosemirror${showImageCaption ? ' tiptap-prosemirror--captions' : ''}`,
+        spellcheck: spellcheck ? 'true' : 'false',
       },
       handleClick: (_view, _pos, event) => {
         // 点击双向链接芯片 → 打开（或新建）目标笔记
@@ -429,12 +441,6 @@ export const TiptapEditor: React.FC = () => {
     editorRef.current = editor;
   }, [editor]);
 
-  // 拼写检查开关（设置里改了立即生效）
-  useEffect(() => {
-    if (!editor) return;
-    editor.setOptions({ editorProps: { ...editor.options.editorProps, attributes: { class: 'tiptap-prosemirror', spellcheck: spellcheck ? 'true' : 'false' } } });
-  }, [editor, spellcheck]);
-
   // 专注模式：当前块高亮 + 打字机滚动（光标所在行保持在视口偏上的位置）
   const containerRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -455,6 +461,15 @@ export const TiptapEditor: React.FC = () => {
     keepCentered();
     return () => { editor.off('selectionUpdate', keepCentered); };
   }, [editor, focusMode]);
+
+  // 当前标签页每次滚动都记下来；切回来时在下面的内容同步里放回去
+  useEffect(() => {
+    const box = containerRef.current;
+    if (!box) return;
+    const onScroll = () => { const id = activeTabIdRef.current; if (id) scrollTops.set(id, box.scrollTop); };
+    box.addEventListener('scroll', onScroll, { passive: true });
+    return () => box.removeEventListener('scroll', onScroll);
+  }, [editor]);
 
   // 组件卸载（切换模式）时把尚未写回的内容刷到 store；没有待同步内容就不动，避免把未编辑的文件标脏
   useEffect(() => {
@@ -499,7 +514,10 @@ export const TiptapEditor: React.FC = () => {
     const isExternalWrite = !!externalWrite && externalWrite.id === activeTabId && externalWrite.rev !== prevExternalRevRef.current;
     prevExternalRevRef.current = externalWrite?.rev ?? 0;
 
-    const newHtml = markdownToHtml(activeTab.content);
+    // 整篇 Markdown → HTML 只在真要换内容时才做：带着几 MB 图片的笔记，每敲一个字都解析一遍会卡（#10）
+    const toHtml = () => markdownToHtml(activeTab.content);
+    // 载入后放回这一篇上次滚到的位置；没来过的在顶上
+    const restoreScroll = () => { if (containerRef.current) containerRef.current.scrollTop = scrollTops.get(activeTab.id) ?? 0; };
 
     // 检测是否是全新的 editor 实例（切换 word/markdown 模式后 TipTap 会完全卸载重载）
     const isNewEditor = prevEditorRef.current !== editor;
@@ -508,9 +526,10 @@ export const TiptapEditor: React.FC = () => {
     if (isNewEditor) {
       // 新实例时强制用 store 中的真实内容初始化，确保 data URL 图片不丢失；这一步不该留在撤销栈里
       lastSyncedMdRef.current = null;
-      loadDocFresh(editor, newHtml);
+      loadDocFresh(editor, toHtml());
       registerSource(editor, activeTab.content);
       placeCursorAfterFrontmatter(editor);
+      restoreScroll();
       return;
     }
 
@@ -522,16 +541,17 @@ export const TiptapEditor: React.FC = () => {
       // 编辑器有焦点（且窗口在前台）或 AI 正在生成时跳过，避免回流冲突；窗口在后台时允许外部改动同步进来
       if (!isExternalWrite && ((editor.isFocused && document.hasFocus()) || aiGenerating)) return;
 
-      const currentHtml = editor.getHTML();
+      const newHtml = toHtml();
+      // 编辑器里的空段落（块间多出来的空行、文末补的那个）在 HTML 里是 <p></p>，Markdown 转出来的没有：比较时去掉
+      const currentHtml = editor.getHTML().replace(/<p><\/p>/g, '');
       // 如果当前编辑器有 data URL 图片但 newHtml 没有，说明 markdown→html 转换丢失了图片，跳过
       if (currentHtml.includes('data:image/') && !newHtml.includes('data:image/')) {
         console.warn('[Tiptap:useEffect] newHtml dropped data URL images, skipping setContent');
         return;
       }
       // 只有在 HTML 发生实质性变化时才更新
-      const currentHtml2 = currentHtml;
-      if (currentHtml2 !== newHtml) {
-        if (currentHtml2.replace(/\s/g, '') === newHtml.replace(/\s/g, '')) return;
+      if (currentHtml !== newHtml) {
+        if (currentHtml.replace(/\s/g, '') === newHtml.replace(/\s/g, '')) return;
         const { from, to } = editor.state.selection;
         editor.commands.setContent(newHtml, false);
         registerSource(editor, activeTab.content);
@@ -547,11 +567,13 @@ export const TiptapEditor: React.FC = () => {
     }
 
     // tab 切换：换文档，并清空撤销历史（不然在这一篇里按 ⌘Z 会把上一篇的内容撤回来，见 loadDocFresh）
+    for (const id of scrollTops.keys()) if (!tabs.some((t) => t.id === id)) scrollTops.delete(id);
     lastSyncedMdRef.current = null;
-    loadDocFresh(editor, newHtml);
+    loadDocFresh(editor, toHtml());
     // 登记原文对照表：保存时没被编辑过的块直接写回原文（见 sourceMap.ts）
     registerSource(editor, activeTab.content);
     placeCursorAfterFrontmatter(editor);
+    restoreScroll();
   }, [activeTabId, editor, activeTab?.content, externalWrite?.rev]);
 
   useEffect(() => {

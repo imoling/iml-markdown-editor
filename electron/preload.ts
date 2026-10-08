@@ -32,6 +32,8 @@ contextBridge.exposeInMainWorld('api', {
   // 富文本进剪贴板由主进程写：不挑焦点、不要用户手势（复制为公众号格式）
   clipboard: {
     writeHtml: (html: string, text: string): Promise<boolean> => ipcRenderer.invoke('clipboard:writeHtml', html, text),
+    // 「插入图片」里的「从剪贴板读取」：剪贴板里是图片就给 PNG 字节，不是给 null
+    readImage: (): Promise<Uint8Array | null> => ipcRenderer.invoke('clipboard:readImage'),
   },
   // 本机生图：运行时与模型的下载、服务状态
   image: {

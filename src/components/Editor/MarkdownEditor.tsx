@@ -29,6 +29,9 @@ import { loadMermaid } from '../../utils/mermaidLoader';
 import { dataUrlFold, inDataUrlFold } from './dataUrlFold';
 import '../styles/editor.css';
 
+/** 每个标签页在源码区滚到哪：所有标签页共用一个编辑器，不记的话切过去就是上一篇的位置（#11） */
+const sourceScrollTops = new Map<string, number>();
+
 export const MarkdownEditor: React.FC = () => {
   const { activeTabId, tabs, updateTabContent, navigationRequest, appearanceMode } = useAppStore();
   const searchState = useAppStore((s) => s.search);
@@ -75,6 +78,18 @@ export const MarkdownEditor: React.FC = () => {
       updateTabContent(activeTabId, val);
     }
   };
+
+  // 切标签：恢复这一篇的滚动位置，之后每次滚动都记下来。CodeMirror 换完内容要等一帧才量得准高度，所以再补一次
+  useEffect(() => {
+    if (!cmView || !activeTabId) return;
+    const dom = cmView.scrollDOM;
+    const restore = () => { dom.scrollTop = sourceScrollTops.get(activeTabId) ?? 0; };
+    restore();
+    const frame = requestAnimationFrame(restore);
+    const onScroll = () => sourceScrollTops.set(activeTabId, dom.scrollTop);
+    dom.addEventListener('scroll', onScroll, { passive: true });
+    return () => { cancelAnimationFrame(frame); dom.removeEventListener('scroll', onScroll); };
+  }, [cmView, activeTabId]);
 
   // 目录点击 → 跳到对应行
   useEffect(() => {

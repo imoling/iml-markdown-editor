@@ -34,6 +34,8 @@ import { TagHighlight } from '../../extensions/TagHighlight';
 import { Kbd, Subscript, Superscript, Highlight, SoftAwareHardBreak, NoteLink } from '../../extensions/InlineMarks';
 import { NoteImage } from '../../extensions/NoteImage';
 import { FocusMode } from '../../extensions/FocusMode';
+import { TrailingNode } from '../../extensions/TrailingNode';
+import { TableEnter } from '../../extensions/TableEnter';
 import { AutoContinue } from '../../extensions/AutoContinue';
 import { autoContinueProvider } from './autoContinueProvider';
 
@@ -61,6 +63,9 @@ export const editorExtensions = [
   InlineMath,
   TagHighlight,
   FocusMode,
+  // 文末永远留一个空段落；表格里回车下移、末行回车跳出（#9）
+  TrailingNode,
+  TableEnter,
   AutoContinue.configure({ provider: autoContinueProvider }),
   Kbd,
   Subscript,

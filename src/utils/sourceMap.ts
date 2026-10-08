@@ -103,6 +103,59 @@ function splitBlocks(markdown: string): { head: string; headDefs: string[]; bloc
 
 const topLevelCount = (html: string) => new DOMParser().parseFromString(html, 'text/html').body.children.length;
 
+/** 顶层的空段落不是内容块：它代表块与块之间多出来的空行（见 extraBlankLines）；文末的那个是 TrailingNode 补的 */
+export const isBlankParagraph = (node: PMNode | null | undefined): boolean => !!node && node.type.name === 'paragraph' && node.content.size === 0;
+
+/**
+ * 两块之间多出来的空行数（完整版 #7「空行被吞」）。
+ * Markdown 里块与块之间隔一个空行是正常的段落间隔；再多出来的每个空行，富文本里显示成一个空段落，
+ * 保存时反过来把空段落写成多出来的空行。只数连续的空行：被链接引用定义隔开的两个空行不算
+ */
+export function extraBlankLines(gap: string, atStart = false): number {
+  const lines = gap.split('\n');
+  // 第一段是上一块末行的尾巴、最后一段是下一块首行的开头，都不是空行；文件开头没有上一块
+  const inner = lines.slice(atStart ? 0 : 1, -1);
+  let extra = 0;
+  let run = 0;
+  for (const line of inner) {
+    if (line.trim() === '') run++;
+    else { extra += Math.max(0, run - 1); run = 0; }
+  }
+  return extra + Math.max(0, run - 1);
+}
+
+/** 把 gap 里多出来的空行变成编辑器里的空段落。这是打开文件的一部分，不是用户的改动：不进撤销栈，也不算内容更新 */
+function insertBlankParagraphs(editor: Editor, map: SourceMap) {
+  const inserts: { index: number; count: number }[] = [];
+  const atHead = extraBlankLines(map.head, true);
+  if (atHead) inserts.push({ index: 0, count: atHead });
+  let index = 0;
+  map.blocks.forEach((block, i) => {
+    index += block.nodeCount;
+    // 文末的空行不管：保存时最后一块没动的话原样写回
+    if (i === map.blocks.length - 1) return;
+    const count = extraBlankLines(block.gap);
+    if (count) inserts.push({ index, count });
+  });
+  if (!inserts.length) return;
+  const { state } = editor;
+  const offsets: number[] = [];
+  state.doc.forEach((_node, offset) => offsets.push(offset));
+  offsets.push(state.doc.content.size);
+  const tr = state.tr;
+  // 从后往前插，前面的位置不受影响
+  for (const { index: at, count } of inserts.reverse()) {
+    tr.insert(offsets[at], Array.from({ length: count }, () => state.schema.nodes.paragraph.create()));
+  }
+  editor.view.dispatch(tr.setMeta('addToHistory', false).setMeta('preventUpdate', true));
+}
+
+/** 往文末追加内容时插在哪：文末补出来的空段落留在最后（它就是给人接着写的），新内容插在它前面 */
+export function endOfContent(doc: PMNode): number {
+  const last = doc.lastChild;
+  return last && isBlankParagraph(last) ? doc.content.size - last.nodeSize : doc.content.size;
+}
+
 /** 打开 / 重载文档后调用：doc 必须是刚由这份 markdown 生成、尚未编辑的文档 */
 export function registerSource(editor: Editor, markdown: string): SourceMap | null {
   sourceMaps.delete(editor);
@@ -113,11 +166,13 @@ export function registerSource(editor: Editor, markdown: string): SourceMap | nu
   if (!split) return null;
   const { head, headDefs, blocks } = split;
   const doc = editor.state.doc;
+  // 文末的空段落是 TrailingNode 补的（表格、图片收尾的文档），不算在块里
+  const bodyCount = doc.childCount - (doc.childCount > 0 && isBlankParagraph(doc.lastChild) ? 1 : 0);
 
   // 大多数文档里块与节点一一对应；数目对不上时再逐块数（混排列表等一块对多个节点的情况）
-  if (blocks.length !== doc.childCount) {
+  if (blocks.length !== bodyCount) {
     for (const b of blocks) if (b.type !== 'frontmatter') b.nodeCount = Math.max(1, topLevelCount(markdownToHtml(b.raw)));
-    if (blocks.reduce((sum, b) => sum + b.nodeCount, 0) !== doc.childCount) return null;
+    if (blocks.reduce((sum, b) => sum + b.nodeCount, 0) !== bodyCount) return null;
   }
 
   const origin = new WeakMap<PMNode, { block: number; part: number }>();
@@ -133,6 +188,7 @@ export function registerSource(editor: Editor, markdown: string): SourceMap | nu
 
   const map: SourceMap = { head, headDefs, blocks, eol, endsWithNewline: text.endsWith('\n'), origin };
   sourceMaps.set(editor, map);
+  insertBlankParagraphs(editor, map);
   return map;
 }
 

@@ -206,6 +206,8 @@ declare global {
       };
       clipboard?: {
         writeHtml: (html: string, text: string) => Promise<boolean>;
+        /** 系统剪贴板里的图片（PNG 字节）；没有图片给 null */
+        readImage: () => Promise<ArrayBuffer | Uint8Array | null>;
       };
       image: {
         getState: () => Promise<ImageGenState>;

@@ -301,6 +301,8 @@ export interface AppState {
   /** 在访达里显示片段文件；还没有就先按示例模板建一个（模板全是注释，不改变外观） */
   revealUserCss: () => Promise<void>;
   spellcheck: boolean;
+  /** 富文本里在图片下面显示图片描述（Markdown 的替代文字）；默认关，图片描述不是图注 */
+  showImageCaption: boolean;
   /** AI 总开关：关掉后所有 AI 入口隐藏，应用不会向任何模型服务发请求 */
   aiEnabled: boolean;
   editorPrefs: EditorPrefs;
@@ -580,6 +582,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     window.api.shell.showItemInFolder(file);
   },
   spellcheck: false,
+  showImageCaption: false,
   aiEnabled: true,
   editorPrefs: DEFAULT_EDITOR_PREFS,
   autoContinue: DEFAULT_AUTO_CONTINUE,
@@ -1452,6 +1455,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           userCss: settings.userCss ?? true,
           vimMode: !!settings.vimMode,
           spellcheck: !!settings.spellcheck,
+          showImageCaption: !!settings.showImageCaption,
           aiEnabled: settings.aiEnabled ?? true,
           editorPrefs: normalizeEditorPrefs(settings.editorPrefs),
           autoContinue: normalizeAutoContinue(settings.autoContinue),
@@ -1470,10 +1474,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   saveSettings: async () => {
-    const { appearanceMode, startupBehavior, autoSave, defaultLibraryPath, imageGenConfig, theme, imageCompression, imageStorage, fetchLinkTitle, linkPreview, userCss, vimMode, spellcheck, aiEnabled, editorPrefs } = get();
+    const { appearanceMode, startupBehavior, autoSave, defaultLibraryPath, imageGenConfig, theme, imageCompression, imageStorage, fetchLinkTitle, linkPreview, userCss, vimMode, spellcheck, showImageCaption, aiEnabled, editorPrefs } = get();
     await window.api.app.saveSettings({
       appearanceMode, startupBehavior, autoSave, defaultLibraryPath, imageGenConfig,
-      imageCompression, imageStorage, fetchLinkTitle, linkPreview, userCss, vimMode, spellcheck, aiEnabled, editorPrefs,
+      imageCompression, imageStorage, fetchLinkTitle, linkPreview, userCss, vimMode, spellcheck, showImageCaption, aiEnabled, editorPrefs,
       themeId: theme?.id,
     });
   },

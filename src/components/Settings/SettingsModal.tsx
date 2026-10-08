@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Moon, Sun, Monitor, Palette, Power, Save, Trash2, AlertTriangle, FolderOpen, Coffee, Type, ImageDown, FileImage, Link2, SpellCheck, ShieldCheck, ImageOff, Paintbrush, Keyboard } from 'lucide-react';
+import { X, Moon, Sun, Monitor, Palette, Power, Save, Trash2, AlertTriangle, FolderOpen, Coffee, Type, ImageDown, FileImage, Link2, SpellCheck, ShieldCheck, ImageOff, Paintbrush, Keyboard, Captions } from 'lucide-react';
 import { QuickCaptureRow } from './QuickCaptureRow';
 import { libraryToReturnTo } from '../../../electron/shared/syncFolders';
 import { DEFAULT_CAPTURE_SHORTCUT } from '../../../electron/shared/capture';
@@ -47,6 +47,7 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
     userCss: true,
     vimMode: false,
     spellcheck: false,
+    showImageCaption: false,
     aiEnabled: true,
     quickCapture: { enabled: true, shortcut: DEFAULT_CAPTURE_SHORTCUT },
   });
@@ -71,6 +72,7 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
         userCss: settings.userCss ?? true,
         vimMode: !!settings.vimMode,
         spellcheck: !!settings.spellcheck,
+        showImageCaption: !!settings.showImageCaption,
         aiEnabled: settings.aiEnabled ?? true,
         quickCapture: { enabled: settings.quickCapture?.enabled !== false, shortcut: settings.quickCapture?.shortcut || DEFAULT_CAPTURE_SHORTCUT },
       });
@@ -127,7 +129,7 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
     setLocal((s) => ({ ...s, editorPrefs }));
     applyEditorPrefs(editorPrefs);
   };
-  const toggleRow = (key: 'imageCompression' | 'fetchLinkTitle' | 'linkPreview' | 'userCss' | 'vimMode' | 'spellcheck' | 'aiEnabled', icon: React.ReactNode, title: string, desc: string) => (
+  const toggleRow = (key: 'imageCompression' | 'fetchLinkTitle' | 'linkPreview' | 'userCss' | 'vimMode' | 'spellcheck' | 'aiEnabled' | 'showImageCaption', icon: React.ReactNode, title: string, desc: string) => (
     <div className="settings-row">
       <div className="settings-row__label">
         {icon}
@@ -260,6 +262,8 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
                     ))}
                   </div>
                 </div>
+                <div className="settings-divider" />
+                {toggleRow('showImageCaption', <Captions size={18} color="var(--text-muted)" />, '图下显示图片描述', '没填描述的图不显示；只在富文本模式生效')}
                 <div className="settings-divider" />
                 {toggleRow('fetchLinkTitle', <Link2 size={18} color="var(--text-muted)" />, '粘贴网址时取网页标题', '单独粘贴一个网址时，取回标题变成 [标题](网址)')}
                 <div className="settings-divider" />
