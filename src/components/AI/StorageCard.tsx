@@ -7,12 +7,13 @@ const isMac = window.api.app.platform === 'darwin';
 const GB = 1024 ** 3;
 const MB = 1024 ** 2;
 export const fmtSize = (bytes: number) => (bytes >= GB ? `${(bytes / GB).toFixed(bytes >= 10 * GB ? 0 : 1)} GB` : `${Math.max(1, Math.round(bytes / MB))} MB`);
+const REVEAL_LABEL = isMac ? '在访达中显示' : '在资源管理器中显示';
 
 /**
- * 模型存放位置：对话 / 嵌入 / 转写 / 生图的模型和运行组件都在这个目录下。
- * 系统盘小的、想让模型跟着软件放在另一块盘上的，在这里换；换的时候已下载的会搬过去（主进程做，见 electron/modelStorage）
+ * 模型存放位置的状态和两个动作（换、恢复默认）。「本机资源」里的卡片和「快速开始 AI」里的那一行共用：
+ * 提示语、错误处理只写这一份
  */
-export const StorageCard: React.FC = () => {
+export function useModelStorage() {
   const notify = useAppStore((s) => s.notify);
   const [state, setState] = useState<StorageState | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -36,7 +37,19 @@ export const StorageCard: React.FC = () => {
     const picked = await window.api.dialog.open({ properties: ['openDirectory', 'createDirectory'] });
     if (picked && picked.length > 0) await change(picked[0]);
   };
+  const reveal = () => void window.api.storage.reveal();
 
+  return { state, error, change, pick, reveal };
+}
+
+const movingText = (moving: NonNullable<StorageState['moving']>) => `正在搬到新位置…${moving.totalBytes > 0 ? ` ${fmtSize(moving.movedBytes)} / ${fmtSize(moving.totalBytes)}` : ''}`;
+
+/**
+ * 模型存放位置：对话 / 嵌入 / 转写 / 生图的模型和运行组件都在这个目录下。
+ * 系统盘小的、想让模型跟着软件放在另一块盘上的，在这里换；换的时候已下载的会搬过去（主进程做，见 electron/modelStorage）
+ */
+export const StorageCard: React.FC = () => {
+  const { state, error, change, pick, reveal } = useModelStorage();
   if (!state) return null;
   const { moving } = state;
   const percent = moving && moving.totalBytes > 0 ? Math.min(100, Math.round((moving.movedBytes / moving.totalBytes) * 100)) : 0;
@@ -51,7 +64,7 @@ export const StorageCard: React.FC = () => {
       {moving ? (
         <>
           <div className="lm-progress"><div className={`lm-progress__bar ${moving.totalBytes > 0 ? '' : 'lm-progress__bar--indeterminate'}`} style={{ width: moving.totalBytes > 0 ? `${percent}%` : '100%' }} /></div>
-          <div className="lm-line lm-line--muted">正在搬到新位置…{moving.totalBytes > 0 && ` ${fmtSize(moving.movedBytes)} / ${fmtSize(moving.totalBytes)}`}</div>
+          <div className="lm-line lm-line--muted">{movingText(moving)}</div>
         </>
       ) : (
         <>
@@ -62,10 +75,33 @@ export const StorageCard: React.FC = () => {
           <div className="row gap-8">
             <button className="btn btn-secondary btn-sm" onClick={() => void pick()}>更改…</button>
             {!state.isDefault && <button className="btn btn-secondary btn-sm" onClick={() => void change(null)}>恢复默认</button>}
-            {state.available && <button className="btn btn-ghost btn-sm" onClick={() => void window.api.storage.reveal()}>{isMac ? '在访达中显示' : '在资源管理器中显示'}</button>}
+            {state.available && <button className="btn btn-ghost btn-sm" onClick={reveal}>{REVEAL_LABEL}</button>}
           </div>
         </>
       )}
+    </div>
+  );
+};
+
+/** 同一件事的紧凑版：一行，放在「快速开始 AI」里。要下十几 GB 之前先看一眼放哪 */
+export const StorageLine: React.FC = () => {
+  const { state, error, pick } = useModelStorage();
+  if (!state) return null;
+  return (
+    <div className="storage-line" data-storage-line>
+      <HardDrive size={13} />
+      <span className="storage-line__label">存放在</span>
+      <span className="lm-path storage-line__path" title={state.path}><bdi>{state.path}</bdi></span>
+      {state.moving
+        ? <span className="lm-line lm-line--muted">{movingText(state.moving)}</span>
+        : (
+          <>
+            {state.usedBytes > 0 && <span className="lm-line lm-line--muted">已下载 {fmtSize(state.usedBytes)}</span>}
+            {!state.available && <span className="lm-line lm-line--error">这个位置现在打不开</span>}
+            <button className="btn-link" onClick={() => void pick()}>更改…</button>
+          </>
+        )}
+      {error && <span className="lm-line lm-line--error">{error}</span>}
     </div>
   );
 };

@@ -538,6 +538,27 @@
 .lm-progress__bar { height: 100%; background: var(--brand-gradient, var(--color-brand-indigo)); border-radius: 3px; transition: width 0.3s; }
 .lm-progress__bar--verify { background: #10b981; }
 .lm-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+/* 快速开始 AI：四行本机模型，每行是「干什么 / 装什么 / 装没装」 */
+.setup-rows { display: flex; flex-direction: column; }
+.setup-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid var(--border-subtle); }
+.setup-row:first-child { border-top: none; padding-top: 2px; }
+.setup-row__icon { flex-shrink: 0; width: 24px; height: 24px; border-radius: 7px; display: flex; align-items: center; justify-content: center; color: var(--color-brand-indigo); background-color: color-mix(in srgb, var(--color-brand-indigo) 10%, transparent); }
+.setup-row--ready .setup-row__icon { color: #059669; background-color: rgba(16, 185, 129, 0.12); }
+.setup-row--unsupported .setup-row__icon { color: var(--text-muted); background-color: var(--bg-elevated); }
+.setup-row__body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.setup-row__title { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+.setup-row__meta { font-size: 11px; color: var(--text-muted); display: flex; flex-wrap: wrap; gap: 0 10px; }
+.setup-row__note::before { content: '·'; margin-right: 6px; }
+.setup-row__side { flex-shrink: 0; display: flex; align-items: center; gap: 8px; }
+.setup-row__ok { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: #059669; }
+.setup-row .lm-progress { margin-top: 2px; }
+.setup-cloud { display: flex; flex-direction: column; }
+.setup-cloud__row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 0; border-top: 1px solid var(--border-subtle); }
+.setup-cloud__row:first-child { border-top: none; padding-top: 2px; }
+.storage-line { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding-top: 10px; margin-top: 2px; border-top: 1px solid var(--border-subtle); font-size: 12px; color: var(--text-muted); }
+.storage-line svg { flex-shrink: 0; }
+.storage-line__path { flex: 1 1 160px; min-width: 0; font-size: 11.5px; }
+.storage-line .btn-link { font-size: 12px; }
 .lm-actions .btn-link { font-size: 12px; }
 .lm-models { display: flex; flex-direction: column; gap: 6px; }
 .lm-model {

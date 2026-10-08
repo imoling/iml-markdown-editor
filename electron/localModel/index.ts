@@ -7,7 +7,7 @@ import { MODEL_CATALOG, findModelSpec, resolveModelUrl, type LocalModelSpec } fr
 import { DEFAULT_LOCAL_CONFIG, normalizeLocalConfig, inferServiceType, type AIServiceType, type CustomModel, type LocalModelConfig } from './config';
 import { getDeviceInfo, checkRequirement, type DeviceInfo, type RequirementCheck } from './hardware';
 import { downloadFile, DownloadError, type DownloadProgress } from './download';
-import { resolveRuntime, installRuntime, type InstallPhase, type RuntimeInfo } from './runtime';
+import { resolveRuntime, installRuntime, type InstallPhase, type RuntimeInfo, readManagedRuntime } from './runtime';
 import { LlamaServer, pingChat, type ServerState } from './server';
 import { scheduler } from './scheduler';
 import { storageDir } from '../modelStorage';
@@ -156,8 +156,10 @@ export function onRuntimeChanged(listener: () => void) {
 const runtimeListeners = new Set<() => void>();
 
 export async function getRuntime(force = false): Promise<RuntimeInfo> {
-  // 记着的那个可执行文件不在了（模型放在移动硬盘上、盘被拔了）：重新找，别拿着一个已经没有的路径说「已安装」
+  // 记着的那个可执行文件不在了（模型放在移动硬盘上、盘被拔了）：重新找，别拿着一个已经没有的路径说「已安装」；
+  // 反过来，记着「没装」而登记里又有了（盘插回来了）：也重新找
   if (runtimeCache?.path && !fs.existsSync(runtimeCache.path)) runtimeCache = null;
+  else if (runtimeCache && !runtimeCache.installed && readManagedRuntime(runtimeDir())) runtimeCache = null;
   if (!runtimeCache || force) runtimeCache = await resolveRuntime(runtimeDir(), localConfig().runtimePath);
   return runtimeCache;
 }

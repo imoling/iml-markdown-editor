@@ -1,17 +1,16 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { X, Cpu, Gift, Plug, Check } from 'lucide-react';
+import { X, Cpu, Gift, Check, Wand2, MessageCircleQuestion, Mic, Image as ImageIcon } from 'lucide-react';
 import { useAppStore } from '../../stores/appStore';
 import { PRESETS } from '../../utils/aiService';
-import { pickBestLocalModel, useAiReadiness } from '../../utils/aiReadiness';
+import { chatModelOf, describeSetup, formatSize, oneClickBytes, ONE_CLICK_ROWS, type SetupRow, type SetupRowId } from '../../utils/aiSetup';
 import { stripIpcError } from './ModelConfigModal';
-import type { LocalState } from '../../types/window';
-import { GATEKEEPER_SCAN, DOWNLOAD_IN_BACKGROUND } from '../../utils/uiText';
+import { StorageLine } from './StorageCard';
+import type { LocalState, SemanticState, AsrState, ImageGenState } from '../../types/window';
+import { DOWNLOAD_IN_BACKGROUND } from '../../utils/uiText';
 
 interface Props {
   onClose: () => void;
 }
-
-const formatSize = (bytes: number) => (bytes >= 1024 ** 3 ? `${(bytes / 1024 ** 3).toFixed(1)} GB` : `${Math.round(bytes / 1024 ** 2)} MB`);
 
 /** 改配置时先读回磁盘上那份再合并：ai:saveConfig 是整体覆盖，直接写会把别的字段抹掉 */
 async function patchAiConfig(patch: Record<string, unknown>) {
@@ -19,74 +18,131 @@ async function patchAiConfig(patch: Record<string, unknown>) {
   await window.api.ai.saveConfig({ ...current, ...patch });
 }
 
+/** 四行各自是干什么的；meta 里再接模型名和大小 */
+const ROW_META: Record<SetupRowId, { title: string; icon: React.ReactNode; note?: string }> = {
+  chat: { title: '写作助手、自动续写', icon: <Wand2 size={14} /> },
+  embed: { title: '问你的笔记', icon: <MessageCircleQuestion size={14} />, note: '回答靠上面的对话模型，找笔记靠它' },
+  asr: { title: '实时转写', icon: <Mic size={14} /> },
+  image: { title: 'AI 配图', icon: <ImageIcon size={14} />, note: '想用再装；一张图要一两分钟' },
+};
+
 /**
- * 「快速开始 AI」：新用户打开 AI 气泡时，最常见的卡点不是不会用，而是压根还没配过模型。
- * 这里把三条路摆在一起各自一键 —— 本机模型（免费离线，但要下载）、Agnes（免费额度，但要注册）、
- * 已有的服务（填地址和 Key）。选哪条都行，选完就能用。
+ * 「快速开始 AI」：对话、问笔记、转写、配图都在这台电脑上跑，各自要一个模型。
+ * 这里把四样的状态摆在一起，缺什么装什么，也能一键把常用的三样装齐；要下十几 GB，所以放在哪也在这里改。
+ * 不想下载模型的，底下还有 Agnes 的免费额度和自己的服务两条路——它们只替对话，转写只有本机一条路。
  */
 export const AiSetupModal: React.FC<Props> = ({ onClose }) => {
   const openDialog = useAppStore((s) => s.openDialog);
   const aiEnabled = useAppStore((s) => s.aiEnabled);
   const notify = useAppStore((s) => s.notify);
-  const readiness = useAiReadiness(aiEnabled);
 
+  const [config, setConfig] = useState<any>(null);
   const [local, setLocal] = useState<LocalState | null>(null);
-  const [running, setRunning] = useState(false);
-  const [targetId, setTargetId] = useState<string | null>(null);
+  const [semantic, setSemantic] = useState<SemanticState | null>(null);
+  const [asr, setAsr] = useState<AsrState | null>(null);
+  const [image, setImage] = useState<ImageGenState | null>(null);
+  const [chatRunning, setChatRunning] = useState(false);
+  const [embedRunning, setEmbedRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // 状态广播很密，用它记住已经发起过的动作，避免重复触发下载
   const kicked = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     let alive = true;
+    const readConfig = () => window.api.ai.getConfig().then((c: any) => { if (alive) setConfig(c || {}); }).catch(() => { if (alive) setConfig({}); });
+    readConfig();
     window.api.local.getState().then((s) => { if (alive && s) setLocal(s); }).catch(() => {});
-    const off = window.api.local.onState((s) => { if (alive) setLocal(s); });
-    return () => { alive = false; off(); };
+    window.api.semantic.getState().then((s) => { if (alive && s) setSemantic(s); }).catch(() => {});
+    window.api.asr.getState().then((s) => { if (alive && s) setAsr(s); }).catch(() => {});
+    window.api.image.getState().then((s) => { if (alive && s) setImage(s); }).catch(() => {});
+    const offs = [
+      // 本机模型的状态广播里带着 serviceType，配置改了也会走这条——顺便重读一次 ai-config
+      window.api.local.onState((s) => { if (alive) { setLocal(s); void readConfig(); } }),
+      window.api.semantic.onState((s) => { if (alive) setSemantic(s); }),
+      window.api.asr.onState((s) => { if (alive) setAsr(s); }),
+      window.api.image.onState((s) => { if (alive) setImage(s); }),
+    ];
+    return () => { alive = false; offs.forEach((off) => off()); };
   }, []);
 
-  // 一键流程的状态机：装运行时 → 下模型 → 写配置。每一步都由主进程广播的新状态推进
-  useEffect(() => {
-    if (!running || !local) return;
-    const { runtime, install, models } = local;
+  const rows = describeSetup({ aiEnabled, config, local, semantic, asr, image });
+  const byId = Object.fromEntries(rows.map((r) => [r.id, r])) as Record<SetupRowId, SetupRow>;
+  const fail = (e: unknown) => setError(stripIpcError(e));
 
-    if (install.error) { setError(`安装运行时失败：${install.error}`); setRunning(false); return; }
-    if (!runtime.installed) {
-      if (!install.active && !kicked.current.has('runtime')) {
-        kicked.current.add('runtime');
-        window.api.local.installRuntime().catch((e) => { setError(stripIpcError(e)); setRunning(false); });
-      }
-      return;
+  /** 运行组件是对话和嵌入共用的：谁先要谁去装，装一次 */
+  const ensureRuntime = (): boolean => {
+    if (!local) return false;
+    if (local.runtime.installed) return true;
+    if (!local.install.active && !kicked.current.has('runtime')) {
+      kicked.current.add('runtime');
+      window.api.local.installRuntime().catch((e) => { fail(e); setChatRunning(false); setEmbedRunning(false); });
     }
+    return false;
+  };
 
-    const target = models.find((m) => m.id === targetId) ?? pickBestLocalModel(models);
-    if (!target) { setError('没有可下载的模型'); setRunning(false); return; }
-    if (target.id !== targetId) setTargetId(target.id);
-    if (target.download?.error) { setError(`下载失败：${target.download.error}`); setRunning(false); return; }
-
+  // 对话：装运行组件 → 下模型 → 写配置。每一步都由主进程广播的新状态推进
+  useEffect(() => {
+    if (!chatRunning || !local) return;
+    if (local.install.error) { setChatRunning(false); return; }
+    if (!ensureRuntime()) return;
+    const target = chatModelOf(local, config);
+    if (!target) { setError('没有可下载的模型'); setChatRunning(false); return; }
+    if (target.download?.error) { setChatRunning(false); return; }
     if (target.downloaded) {
-      setRunning(false);
+      setChatRunning(false);
       patchAiConfig({ serviceType: 'builtin', local: { ...(local.config || {}), modelId: target.id } })
         .then(() => notify(`本机模型已就绪：${target.name}`))
-        .catch((e) => setError(stripIpcError(e)));
+        .catch(fail);
       return;
     }
     if (!target.download?.active && !kicked.current.has(`dl:${target.id}`)) {
       kicked.current.add(`dl:${target.id}`);
-      window.api.local.downloadModel(target.id).catch((e) => { setError(stripIpcError(e)); setRunning(false); });
+      window.api.local.downloadModel(target.id).catch((e) => { fail(e); setChatRunning(false); });
     }
-  }, [running, local, targetId]);
+  }, [chatRunning, local, config]);
 
-  const startOneClick = () => {
-    kicked.current.clear();
+  // 问笔记：运行组件 → 嵌入模型 → 打开语义索引
+  useEffect(() => {
+    if (!embedRunning || !semantic || !local) return;
+    if (local.install.error) { setEmbedRunning(false); return; }
+    const model = semantic.models.find((m) => m.id === semantic.modelId) ?? semantic.models[0];
+    if (!model) { setError('没有可下载的嵌入模型'); setEmbedRunning(false); return; }
+    if (model.download?.error) { setEmbedRunning(false); return; }
+    if (model.downloaded) {
+      if (!ensureRuntime()) return;
+      setEmbedRunning(false);
+      (semantic.enabled ? Promise.resolve() : window.api.semantic.setEnabled(true).then(() => undefined))
+        .then(() => notify('问你的笔记已就绪，笔记多的话建索引要几分钟'))
+        .catch(fail);
+      return;
+    }
+    if (!model.download?.active && !kicked.current.has(`embed:${model.id}`)) {
+      kicked.current.add(`embed:${model.id}`);
+      window.api.semantic.downloadModel(model.id).catch((e) => { fail(e); setEmbedRunning(false); });
+    }
+  }, [embedRunning, semantic, local]);
+
+  const install = (id: SetupRowId) => {
     setError(null);
-    setRunning(true);
+    if (id === 'chat') { kicked.current.delete(`dl:${chatModelOf(local, config)?.id}`); kicked.current.delete('runtime'); setChatRunning(true); }
+    else if (id === 'embed') { kicked.current.delete(`embed:${semantic?.modelId}`); kicked.current.delete('runtime'); setEmbedRunning(true); }
+    else if (id === 'asr') window.api.asr.install().catch(fail);
+    else if (id === 'image') window.api.image.install().catch(fail);
   };
-
-  const cancelOneClick = () => {
-    setRunning(false);
-    if (local?.install.active) window.api.local.cancelInstall().catch(() => {});
-    if (targetId) window.api.local.cancelDownload(targetId).catch(() => {});
+  const cancel = (id: SetupRowId) => {
+    if (id === 'chat') {
+      setChatRunning(false);
+      if (local?.install.active) window.api.local.cancelInstall().catch(() => {});
+      const target = chatModelOf(local, config);
+      if (target?.download?.active) window.api.local.cancelDownload(target.id).catch(() => {});
+    } else if (id === 'embed') {
+      setEmbedRunning(false);
+      if (semantic) window.api.semantic.cancelDownload(semantic.modelId).catch(() => {});
+      if (!chatRunning && local?.install.active) window.api.local.cancelInstall().catch(() => {});
+    } else if (id === 'asr') window.api.asr.cancelInstall().catch(() => {});
+    else if (id === 'image') window.api.image.cancelInstall().catch(() => {});
   };
+  const installAll = () => { for (const id of ONE_CLICK_ROWS) if (byId[id].status === 'missing') install(id); };
 
   /** Agnes：把地址和模型先填好，用户只差一个 Key */
   const useAgnes = async () => {
@@ -95,33 +151,30 @@ export const AiSetupModal: React.FC<Props> = ({ onClose }) => {
     try {
       await patchAiConfig({ serviceType: 'cloud', protocol: preset.protocol, endpoint: preset.endpoint, model: preset.model });
       openDialog('ai-config');
-    } catch (e: any) {
-      setError(stripIpcError(e));
+    } catch (e) {
+      fail(e);
     }
   };
 
-  const best = local ? pickBestLocalModel(local.models) : null;
-  const target = local?.models.find((m) => m.id === targetId) ?? best;
-  const dl = target?.download;
-  const dlPct = dl?.active && dl.total ? Math.round(((dl.received || 0) / dl.total) * 100) : 0;
-  const installPct = local?.install.active && local.install.total
-    ? Math.round(((local.install.received || 0) / local.install.total) * 100) : 0;
+  const toInstall = oneClickBytes(rows);
+  const anyInstalling = rows.some((r) => r.status === 'installing');
+  const loaded = rows.every((r) => r.status !== 'unknown');
 
-  const progressText = () => {
-    if (!running) return null;
-    if (!local) return '正在读取本机信息…';
-    if (!local.runtime.installed) {
-      if (local.install.phase === 'downloading') return `下载推理运行时 ${installPct}%`;
-      if (local.install.phase === 'extracting') return '解压推理运行时…';
-      if (local.install.phase === 'warming') return GATEKEEPER_SCAN;
-      return '准备安装推理运行时…';
+  const side = (row: SetupRow) => {
+    switch (row.status) {
+      case 'unknown': return <span className="lm-line lm-line--muted">正在读取…</span>;
+      case 'unsupported': return <span className="lm-line lm-line--muted">这台电脑不支持</span>;
+      case 'ready': return <span className="setup-row__ok"><Check size={13} /> 已就绪</span>;
+      case 'cloud': return (
+        <>
+          <span className="lm-line lm-line--muted">用的是网络服务</span>
+          <button className="btn-link" disabled={!aiEnabled} onClick={() => install('chat')}>改用本机模型</button>
+        </>
+      );
+      case 'installing': return <button className="btn btn-secondary btn-xs" onClick={() => cancel(row.id)}>取消</button>;
+      default: return <button className="btn btn-secondary btn-xs" disabled={!aiEnabled} onClick={() => install(row.id)}>{row.error ? '重试' : '装好'}</button>;
     }
-    if (dl?.phase === 'verifying') return '校验模型完整性…';
-    if (dl?.active) return `下载 ${target?.name} ${dlPct}% · ${formatSize(dl.received || 0)} / ${formatSize(dl.total || target?.size || 0)}`;
-    return '准备下载模型…';
   };
-
-  const builtinDone = readiness.ready && !running;
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -129,7 +182,7 @@ export const AiSetupModal: React.FC<Props> = ({ onClose }) => {
         <header className="modal-head">
           <div>
             <h1 className="modal-title">快速开始 AI</h1>
-            <p className="modal-subtitle">续写、润色、配图都要先有一个模型，三条路选一条</p>
+            <p className="modal-subtitle">对话、问笔记、转写、配图都在这台电脑上跑，笔记不出本机</p>
           </div>
           <button onClick={onClose} className="icon-btn" title="关闭"><X size={20} /></button>
         </header>
@@ -141,72 +194,83 @@ export const AiSetupModal: React.FC<Props> = ({ onClose }) => {
             </div>
           )}
 
-          {/* 路线一：本机模型 —— 唯一一条完全不用注册、不用花钱的路 */}
           <section className="lm-section">
-            <div className="lm-card">
+            <div className="lm-card" data-setup>
               <div className="lm-card__head">
-                <div className="lm-card__title"><Cpu size={14} /> 用本机模型</div>
+                <div className="lm-card__title"><Cpu size={14} /> 本机模型</div>
                 <span className="lm-badge lm-badge--ok">免费 · 离线 · 不用注册</span>
               </div>
-              <div className="lm-line">
-                编辑器自己下载模型并在这台电脑上跑，笔记不出本机。
-                {best && <> 按你的配置会选 <strong>{best.name}</strong>，连同运行时约 {formatSize(best.size + 12 * 1024 * 1024)}。</>}
+              <div className="setup-rows">
+                {rows.map((row) => {
+                  const meta = ROW_META[row.id];
+                  const percent = row.progress === null ? null : Math.round(row.progress * 100);
+                  return (
+                    <div key={row.id} className={`setup-row setup-row--${row.status}`} data-setup-row={row.id}>
+                      <div className="setup-row__icon">{meta.icon}</div>
+                      <div className="setup-row__body">
+                        <div className="setup-row__title">{meta.title}</div>
+                        {row.model && (
+                          <div className="setup-row__meta">
+                            {row.id === 'embed' && '嵌入模型 '}{row.model}
+                            {row.bytes > 0 && row.status !== 'ready' && ` · ${formatSize(row.bytes)}`}
+                            {meta.note && row.status !== 'ready' && row.status !== 'installing' && <span className="setup-row__note">{meta.note}</span>}
+                          </div>
+                        )}
+                        {row.status === 'installing' && (
+                          <>
+                            <div className="lm-progress"><div className={`lm-progress__bar ${percent === null ? 'lm-progress__bar--indeterminate' : ''}`} style={{ width: percent === null ? '100%' : `${percent}%` }} /></div>
+                            <div className="lm-line lm-line--muted">{row.step}{percent !== null && ` ${percent}%`}</div>
+                          </>
+                        )}
+                        {row.error && <div className="lm-line lm-line--error">{row.error}</div>}
+                      </div>
+                      <div className="setup-row__side">{side(row)}</div>
+                    </div>
+                  );
+                })}
               </div>
-              {running && <div className="lm-progress"><div className={`lm-progress__bar ${dl?.phase === 'verifying' ? 'lm-progress__bar--verify' : ''}`} style={{ width: `${local && !local.runtime.installed ? installPct : dlPct}%` }} /></div>}
-              {running && <div className="lm-line lm-line--muted">{progressText()}</div>}
               {error && <div className="lm-line lm-line--error">{error}</div>}
               <div className="lm-actions">
-                {running ? (
-                  <>
-                    <button className="btn btn-secondary btn-xs" onClick={cancelOneClick}>取消</button>
-                    <span className="lm-line lm-line--muted">{DOWNLOAD_IN_BACKGROUND}</span>
-                  </>
-                ) : builtinDone ? (
-                  <span className="lm-line"><Check size={13} /> 已就绪，回到笔记里按空格就能用</span>
-                ) : (
-                  <>
-                    <button className="btn btn-primary btn-xs" disabled={!aiEnabled || !local} onClick={startOneClick}>一键装好</button>
-                    <button className="btn-link" onClick={() => openDialog('ai-config')}>自己挑模型…</button>
-                  </>
+                {loaded && toInstall > 0 && !anyInstalling && (
+                  <button className="btn btn-primary btn-xs" disabled={!aiEnabled} onClick={installAll}>一键装好 · 约 {formatSize(toInstall)}</button>
                 )}
+                {anyInstalling && <span className="lm-line lm-line--muted">{DOWNLOAD_IN_BACKGROUND}</span>}
+                {loaded && toInstall === 0 && !anyInstalling && byId.image.status !== 'ready' && <span className="lm-line lm-line--muted">常用的三样都齐了；配图想用再装</span>}
+                <button className="btn-link" onClick={() => openDialog('ai-config')}>自己挑模型…</button>
               </div>
+              <StorageLine />
             </div>
           </section>
 
-          {/* 路线二：Agnes 免费额度 —— 不占磁盘，代价是要注册 */}
+          {/* 不想下载模型的两条路：只替对话；转写只有本机一条路 */}
           <section className="lm-section">
             <div className="lm-card">
               <div className="lm-card__head">
-                <div className="lm-card__title"><Gift size={14} /> 用 Agnes 的免费额度</div>
-                <span className="lm-badge lm-badge--info">免费额度 · 不占磁盘</span>
+                <div className="lm-card__title"><Gift size={14} /> 不想下载模型</div>
+                <span className="lm-badge lm-badge--info">只替对话 · 不占磁盘</span>
               </div>
-              <div className="lm-line">
-                在 www.agnes-ai.cn 创建 Key 填进来，不用下载模型
-              </div>
-              <div className="lm-actions">
-                <button className="btn btn-secondary btn-xs" disabled={!aiEnabled} onClick={useAgnes}>填 Key 用起来</button>
-              </div>
-            </div>
-          </section>
-
-          {/* 路线三：已经有服务的人，直接去填 */}
-          <section className="lm-section">
-            <div className="lm-card">
-              <div className="lm-card__head">
-                <div className="lm-card__title"><Plug size={14} /> 我已经有模型服务</div>
-              </div>
-              <div className="lm-line">
-                OpenAI、DeepSeek，或自己跑着的 Ollama / LM Studio
-              </div>
-              <div className="lm-actions">
-                <button className="btn btn-secondary btn-xs" disabled={!aiEnabled} onClick={() => openDialog('ai-config')}>去填写…</button>
+              <div className="setup-cloud">
+                <div className="setup-cloud__row">
+                  <div>
+                    <div className="setup-row__title">用 Agnes 的免费额度</div>
+                    <div className="setup-row__meta">在 www.agnes-ai.cn 创建 Key 填进来</div>
+                  </div>
+                  <button className="btn btn-secondary btn-xs" disabled={!aiEnabled} onClick={useAgnes}>填 Key 用起来</button>
+                </div>
+                <div className="setup-cloud__row">
+                  <div>
+                    <div className="setup-row__title">我已经有模型服务</div>
+                    <div className="setup-row__meta">OpenAI、DeepSeek，或自己跑着的 Ollama / LM Studio</div>
+                  </div>
+                  <button className="btn btn-secondary btn-xs" disabled={!aiEnabled} onClick={() => openDialog('ai-config')}>去填写…</button>
+                </div>
               </div>
             </div>
           </section>
         </div>
 
         <footer className="modal-footer">
-          <span className="hint history-modal__note">这些设置随时可以在「智能 → 写作助手」里改</span>
+          <span className="hint history-modal__note">这些设置随时可以在「智能」菜单里改</span>
           <button onClick={onClose} className="btn btn-primary btn-wide">完成</button>
         </footer>
       </div>
