@@ -1,4 +1,4 @@
-# iML Markdown Editor · [![Release v26.7.0](https://img.shields.io/badge/Release-v26.7.0-indigo?style=for-the-badge&logo=github)](https://github.com/imoling/iml-markdown-editor/releases)
+# iML Markdown Editor · [![Release v26.8.0](https://img.shields.io/badge/Release-v26.8.0-indigo?style=for-the-badge&logo=github)](https://github.com/imoling/iml-markdown-editor/releases)
 <!--
   图片为什么不用相对路径（screenshots/xxx.png）：
   相对路径会被 GitHub 发到 raw.githubusercontent.com，而这个域名在国内多数网络下被 DNS 污染（解析到 0.0.0.0），
@@ -42,6 +42,13 @@ macOS（Apple 芯片 / Intel）· Windows（x64 / ARM）· 80 ~ 90 MB · MIT 开
 ---
 
 ## 特性
+
+### 🧩 四样本机模型，一键装齐（26.8）
+
+- **快速开始 AI**：对话、问笔记、转写、配图各自用哪个模型、多大、装没装，四行一眼看完，缺哪样点哪样；「一键装好」把常用的三样装齐（约 2.7 GB），配图想用再装。模型放在哪也在这里改
+- **空行留得住**：富文本里回车空出来的一行，保存后重新打开还在；表格里回车到下一行，最后一行回车跳出表格
+- **图表按自己的大小显示**，右上角能放大、缩小，倍数记在代码第一行的注释里
+- 图片可以显示描述、可以从剪贴板插入；每个标签页记住自己的滚动位置；带着很多图的笔记打字不再卡
 
 ### 📂 东西放哪，你说了算（26.7）
 
@@ -242,10 +249,10 @@ macOS（Apple 芯片 / Intel）· Windows（x64 / ARM）· 80 ~ 90 MB · MIT 开
 
 | 平台 | 安装包 |
 |---|---|
-| macOS Apple Silicon（M 系列） | `iML.Markdown.Editor-26.7.0-arm64.dmg` |
-| macOS Intel（x64） | `iML.Markdown.Editor-26.7.0-x64.dmg` |
-| Windows（绝大多数电脑选这个） | `iML.Markdown.Editor-Setup-26.7.0-x64.exe` |
-| Windows on ARM（骁龙本等） | `iML.Markdown.Editor-Setup-26.7.0-arm64.exe` |
+| macOS Apple Silicon（M 系列） | `iML.Markdown.Editor-26.8.0-arm64.dmg` |
+| macOS Intel（x64） | `iML.Markdown.Editor-26.8.0-x64.dmg` |
+| Windows（绝大多数电脑选这个） | `iML.Markdown.Editor-Setup-26.8.0-x64.exe` |
+| Windows on ARM（骁龙本等） | `iML.Markdown.Editor-Setup-26.8.0-arm64.exe` |
 
 前往 [Releases](https://github.com/imoling/iml-markdown-editor/releases) 下载最新版本（80 ~ 90 MB）。已经装了的，应用会在发现新版本时提醒一次，并直接给出对应的安装包。安装包由 GitHub Actions 在打 `v*` 标签时自动构建并发布。
 
@@ -317,6 +324,12 @@ Windows 上把 `⌘` 换成 `Ctrl`，`⌥` 换成 `Alt`。
 ---
 
 ## 版本历史
+
+**26.8.0（2026-10-09）— 四样本机模型，一键装齐**
+
+- **快速开始 AI** 重做：对话、问笔记、转写、配图四行，各自用哪个模型、多大、装没装；缺哪样点哪样，「一键装好」装齐常用的三样；模型存放位置也在这里改
+- 从轻量版 26.4.5 搬回来的修正：空行留得住（#7）、表格回车到下一行 / 最后一行回车出表格、图表按自己的大小显示并能缩放、图片描述、从剪贴板插图、标签页各自记滚动位置、带很多图的笔记打字不再卡、拼写检查开关生效
+- 829 个测试用例
 
 **26.7.0（2026-09-27）— 东西放哪，你说了算**
 

@@ -8,7 +8,8 @@ export type WhatsNewImage =
   | 'v264-hero' | 'v264-palette' | 'v264-tasks' | 'v264-daily' | 'v264-export' | 'v264-transcribe' | 'v264-asrconfig'
   | 'v265-image' | 'v265-hero' | 'v265-resources' | 'v265-fold' | 'v265-syscap' | 'v265-wechat' | 'v265-daily'
   | 'v266-autocontinue' | 'v266-accepted' | 'v266-settings' | 'v266-start'
-  | 'v267-drop' | 'v267-inline' | 'v267-library' | 'v267-storage';
+  | 'v267-drop' | 'v267-inline' | 'v267-library' | 'v267-storage'
+  | 'v268-setup' | 'v268-table' | 'v268-diagram' | 'v268-caption';
 
 export interface WhatsNewPage {
   key: string;
@@ -34,6 +35,37 @@ export interface WhatsNewEntry {
 
 /** 每个大版本一条；新版本加在最前面 */
 export const WHATS_NEW: WhatsNewEntry[] = [
+  {
+    version: '26.8',
+    title: '四样本机模型，一键装齐',
+    releaseUrl: 'https://github.com/imoling/iml-markdown-editor/releases/tag/v26.8.0',
+    pages: [
+      {
+        key: 'setup', kicker: '新特性', title: '快速开始 AI：缺什么装什么', hint: '帮助 → 快速开始 AI…',
+        desc: '对话、问笔记、转写、配图现在都在这台电脑上跑，各自要一个模型。「快速开始 AI」把四样摆在一起：用哪个模型、多大、装没装，一眼看完，缺哪样点哪样。',
+        bullets: ['「一键装好」把常用的三样装齐，约 2.7 GB；配图六个多 GB，想用再装', '模型放在哪也在这里改：要下十几 GB 之前先看一眼', '不想下载模型的，Agnes 的免费额度和自己的服务还在，只替对话'],
+        image: 'v268-setup',
+      },
+      {
+        key: 'blank', kicker: '修正', title: '空行留得住，表格出得去',
+        desc: '富文本里回车空出来的一行，保存后重新打开还在。表格里回车到正下方那一格，最后一行回车跳出表格，接着往下写；格内换行用 Shift + 回车。',
+        bullets: ['文末是表格、图片、代码块时，下面总有一行能点进去写', '列宽按内容分配，内容多的列自然宽', '列表、引用里的空行 Markdown 本身存不下，仍然留不住'],
+        image: 'v268-table',
+      },
+      {
+        key: 'diagram', kicker: '修正', title: '图表按自己的大小显示，能放大缩小',
+        desc: 'Mermaid 图不再被拉到和页面一样宽，两个节点的小图就是小图。鼠标移到图上，右上角有放大、缩小、原始大小三个按钮。',
+        bullets: ['倍数和拖出来的高度记在代码第一行的注释里，重新打开还在', '别的工具把那一行当注释，照常渲染'],
+        image: 'v268-diagram',
+      },
+      {
+        key: 'caption', kicker: '还有这些', title: '图片描述、剪贴板、滚动位置',
+        desc: '设置 → 粘贴与输入 →「图下显示图片描述」：打开后图片下面显示插入时填的描述。「插入图片」里多了「从剪贴板读取」。',
+        bullets: ['每个标签页记住自己的滚动位置，切回来还在原处', '写进笔记里的图片多了，打字不再卡', '「拼写检查」开关原来不生效，现在生效了'],
+        image: 'v268-caption',
+      },
+    ],
+  },
   {
     version: '26.7',
     title: '东西放哪，你说了算',
