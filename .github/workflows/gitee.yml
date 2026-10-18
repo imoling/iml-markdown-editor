@@ -1,0 +1,66 @@
+# 同步到 Gitee：每次推送后把所有分支和标签强推到 Gitee（以 GitHub 为准，Gitee 上独有的分支不动）；
+# 发布构建完成或发布有改动时，把发布说明同步过去，安装包只放最新一个发布（见 scripts/sync-gitee.sh）。
+# 需要仓库密钥 GITEE_TOKEN（Gitee 私人令牌，勾选 projects 权限）。没配时只给警告，不算失败。
+# 也可以手动触发，补同步某个标签的发布（连安装包），不填就按上面的规则同步全部。
+name: gitee
+
+on:
+  push:
+    branches: ['**']
+    tags: ['**']
+  release:
+    types: [published, edited]
+  workflow_run:
+    workflows: [Release]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 要同步的发布标签，比如 v0.1.0；不填同步全部
+        required: false
+
+concurrency:
+  group: gitee
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion != 'cancelled'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+      GITEE_REPO: ${{ github.repository }}
+      GITHUB_REPO: ${{ github.repository }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: 检查密钥
+        id: check
+        run: |
+          if [ -z "$GITEE_TOKEN" ]; then
+            echo "::warning::没配 GITEE_TOKEN，跳过同步到 Gitee"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.check.outputs.skip != 'true'
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 0
+      - name: 推送分支和标签
+        if: steps.check.outputs.skip != 'true'
+        run: |
+          url="https://${GITEE_REPO%%/*}:${GITEE_TOKEN}@gitee.com/${GITEE_REPO}.git"
+          git fetch --tags --force origin
+          refs=()
+          for b in $(git for-each-ref --format='%(refname:strip=3)' refs/remotes/origin); do
+            [ "$b" = HEAD ] || refs+=("refs/remotes/origin/$b:refs/heads/$b")
+          done
+          git push --force "$url" "${refs[@]}"
+          git push --force "$url" 'refs/tags/*:refs/tags/*'
+      - name: 同步发布
+        # 打标签那次推送时发布还在构建，等构建完成（workflow_run）或发布有改动（release）再同步
+        if: steps.check.outputs.skip != 'true' && github.event_name != 'push'
+        env:
+          TAG: ${{ inputs.tag }}
+        run: bash scripts/sync-gitee.sh ${TAG:+"$TAG"}
