@@ -70,7 +70,7 @@ export function createMockApi(initialFiles: Record<string, string> = {}) {
       getLogs: vi.fn(async () => []), test: vi.fn(), openModelsFolder: vi.fn(), onState: vi.fn(() => () => {}), onLog: vi.fn(() => () => {}),
     },
     shell: { openExternal: vi.fn(), showItemInFolder: vi.fn() },
-    library: { watch: vi.fn(async () => true), findOrphanImages: vi.fn(async () => []), trashImages: vi.fn(async () => ({ trashed: 0, failed: [] })) },
+    library: { watch: vi.fn(async () => true), watchOpenFiles: vi.fn(async () => {}), findOrphanImages: vi.fn(async () => []), trashImages: vi.fn(async () => ({ trashed: 0, failed: [] })) },
     history: { list: vi.fn(async () => []), read: vi.fn(async () => null) },
     web: { fetchTitle: vi.fn(async () => null) },
     asr: {

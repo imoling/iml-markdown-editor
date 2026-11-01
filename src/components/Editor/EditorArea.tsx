@@ -5,6 +5,7 @@ import { MarkdownEditor } from './MarkdownEditor';
 import { FindReplacePanel } from './FindReplacePanel';
 import { StartPage } from './StartPage';
 import { LinkPreview } from './LinkPreview';
+import { ExternalChangeBar } from './ExternalChangeBar';
 
 export const EditorArea: React.FC = () => {
   const { mode, activeTabId, autoSave, saveActiveFile } = useAppStore();
@@ -20,6 +21,7 @@ export const EditorArea: React.FC = () => {
     <main className="editor-area editor-area--host" onBlur={handleBlur}>
       <FindReplacePanel />
       <LinkPreview />
+      <ExternalChangeBar />
       <div className={`editor-content ${mode === 'word' ? 'editor-content--column' : 'editor-content--row'}`}>
         {!activeTabId ? <StartPage /> : mode === 'word' ? <TiptapEditor /> : <MarkdownEditor />}
       </div>

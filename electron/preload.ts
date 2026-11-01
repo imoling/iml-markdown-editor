@@ -121,6 +121,7 @@ contextBridge.exposeInMainWorld('api', {
   },
   library: {
     watch: (dirPath: string): Promise<boolean> => ipcRenderer.invoke('library:watch', dirPath),
+    watchOpenFiles: (paths: string[]): Promise<void> => ipcRenderer.invoke('library:watchOpenFiles', paths),
     findOrphanImages: (extraTexts?: string[]) => ipcRenderer.invoke('library:findOrphanImages', extraTexts),
     trashImages: (paths: string[]) => ipcRenderer.invoke('library:trashImages', paths),
   },
@@ -196,7 +197,7 @@ contextBridge.exposeInMainWorld('api', {
     findAttachment: (name: string, fromDir?: string | null): Promise<string | null> => ipcRenderer.invoke('search:findAttachment', name, fromDir),
     openAttachment: (filePath: string): Promise<boolean> => ipcRenderer.invoke('search:openAttachment', filePath),
     tags: () => ipcRenderer.invoke('search:tags'),
-    notesByTag: (tag: string) => ipcRenderer.invoke('search:notesByTag', tag),
+    notesByTag: (tag: string, includeTemplates?: boolean) => ipcRenderer.invoke('search:notesByTag', tag, includeTemplates),
   },
   capture: {
     /** 快速捕获的开关、快捷键，以及快捷键有没有注册上 */

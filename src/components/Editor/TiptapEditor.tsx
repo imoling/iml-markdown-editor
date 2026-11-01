@@ -555,6 +555,7 @@ export const TiptapEditor: React.FC = () => {
         const { from, to } = editor.state.selection;
         editor.commands.setContent(newHtml, false);
         registerSource(editor, activeTab.content);
+        lastSyncedMdRef.current = activeTab.content; // 不然外部把文件改回原样时，会被上面当成「刚写回的内容」跳过
         if (isExternalWrite) {
           // 写入的内容都在用户正文的后面，原来的光标位置还有效：放回去，不打断他正在写的那一行
           const max = editor.state.doc.content.size;

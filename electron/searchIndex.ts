@@ -204,13 +204,13 @@ export class SearchIndex {
 
   listNotes(): { path: string; title: string; aliases: string[]; chars: number }[] {
     // chars 给日记月历画深浅用：写得多的日子颜色深
-    return [...this.notes.values()].map((n) => ({ path: n.path, title: n.title, aliases: n.aliases, chars: n.content.length })).sort((a, b) => a.title.localeCompare(b.title));
+    return this.allNotes().map((n) => ({ path: n.path, title: n.title, aliases: n.aliases, chars: n.content.length })).sort((a, b) => a.title.localeCompare(b.title));
   }
 
   /** 全库标签及篇数；层级标签 a/b 同时计入父标签 a */
   listTags(): { tag: string; count: number }[] {
     const counts = new Map<string, { tag: string; notes: Set<string> }>();
-    for (const note of this.notes.values()) {
+    for (const note of this.allNotes()) {
       for (const tag of note.tags) {
         const parts = tag.split('/');
         for (let i = 1; i <= parts.length; i++) {
@@ -227,8 +227,8 @@ export class SearchIndex {
   }
 
   /** 带某个标签（或其子标签）的笔记，最近修改的在前 */
-  notesByTag(tag: string): { path: string; title: string; tags: string[]; mtime: number }[] {
-    return [...this.notes.values()]
+  notesByTag(tag: string, includeTemplates = false): { path: string; title: string; tags: string[]; mtime: number }[] {
+    return (includeTemplates ? [...this.notes.values()] : this.allNotes())
       .filter((n) => n.tags.some((t) => tagMatches(t, tag)))
       .sort((a, b) => b.mtime - a.mtime)
       .map((n) => ({ path: n.path, title: n.title, tags: n.tags, mtime: n.mtime }));
@@ -239,8 +239,11 @@ export class SearchIndex {
     return this.notes.get(filePath) ?? null;
   }
 
+  /** 真正的笔记：「模板」目录里的是给新笔记预留的空格子，标题还是 {{title}}，不算 */
   allNotes(): IndexedNote[] {
-    return [...this.notes.values()];
+    if (!this.root) return [...this.notes.values()];
+    const templates = path.join(this.root, TEMPLATE_DIR) + path.sep;
+    return [...this.notes.values()].filter((n) => !n.path.startsWith(templates));
   }
 
   /** 多个词以空格分隔时要求全部命中；片段按第一个词截取 */
@@ -278,10 +281,9 @@ export class SearchIndex {
    * 「模板」目录里的不算——那是给新笔记预留的空格子，不是要做的事。
    */
   listTasks(includeDone = false): { path: string; title: string; mtime: number; tasks: NoteTask[] }[] {
-    const templates = this.root ? path.join(this.root, TEMPLATE_DIR) + path.sep : null;
     const out: { path: string; title: string; mtime: number; tasks: NoteTask[] }[] = [];
-    for (const note of this.notes.values()) {
-      if (note.tasks.length === 0 || (templates && note.path.startsWith(templates))) continue;
+    for (const note of this.allNotes()) {
+      if (note.tasks.length === 0) continue;
       const tasks = includeDone ? note.tasks : note.tasks.filter((t) => !t.done);
       if (tasks.length) out.push({ path: note.path, title: note.title, mtime: note.mtime, tasks });
     }

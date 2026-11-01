@@ -93,6 +93,12 @@ const App: React.FC = () => {
     document.title = activeTab ? `${activeTab.title} — iML Markdown Editor` : 'iML Markdown Editor';
   }, [activeTab?.title]);
 
+  // 标签页开着哪些文件告诉主进程：整库监听看不到库外的文件
+  const openFileList = useAppStore((s) => s.tabs.filter((t) => !t.id.startsWith('new-')).map((t) => t.id).join('\n'));
+  useEffect(() => {
+    void window.api.library.watchOpenFiles(openFileList ? openFileList.split('\n') : []);
+  }, [openFileList]);
+
   // Update outline when active tab content changes
   useEffect(() => {
     if (activeTab) {

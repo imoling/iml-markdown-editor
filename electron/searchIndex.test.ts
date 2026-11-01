@@ -198,4 +198,19 @@ describe('SearchIndex', () => {
     // frontmatter 里的 # 注释不会被当成标题
     expect(SearchIndex.titleOf('/x/文件名.md', '---\n# 注释\ntags: []\n---\n\n正文')).toBe('文件名');
   });
+
+  it('模板目录不算笔记：快速打开、标签、语义索引都看不到；改标签时要带上它', async () => {
+    write('tpl-test/真笔记.md', '# 真笔记\n\n#周报');
+    write('模板/周报.md', '---\ntags: [周报, 只在模板里]\n---\n\n# {{title}}\n');
+    const index = new SearchIndex();
+    await index.build(root);
+    expect(index.listNotes().map((n) => n.title)).toContain('真笔记');
+    expect(index.listNotes().map((n) => n.title)).not.toContain('{{title}}');
+    expect(index.allNotes().some((n) => n.path.includes('模板'))).toBe(false);
+    const tags = Object.fromEntries(index.listTags().map((t) => [t.tag, t.count]));
+    expect(tags['周报']).toBe(1);
+    expect(tags['只在模板里']).toBeUndefined();
+    expect(index.notesByTag('周报').map((n) => n.title)).toEqual(['真笔记']);
+    expect(index.notesByTag('周报', true).map((n) => n.title).sort()).toEqual(['真笔记', '{{title}}'].sort());
+  });
 });

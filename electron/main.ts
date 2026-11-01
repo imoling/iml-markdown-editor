@@ -17,6 +17,7 @@ import { NoteHistory } from './history';
 import { setupQuickCapture } from './capture';
 import { syncFolderCandidates, labelCloudStorageDir, SYNC_LIBRARY_NAME } from './shared/syncFolders';
 import { describeLibrary, normalizeRecentLibraries, touchRecentLibraries } from './shared/recentLibraries';
+import { OpenFileWatcher, filesOutsideLibrary } from './openFileWatcher';
 import { parseAppUrl, appUrlFromArgv, APP_URL_SCHEME, AppUrlAction } from './shared/appUrl';
 import { registerAssetScheme, handleAssetProtocol, findOrphanImages, filterTrashable, fetchPageTitle } from './assets';
 import { AI_DISABLED } from './shared/uiText';
@@ -357,6 +358,13 @@ const aiAbortControllers = new Map<string, AbortController>();
 let libraryWatcher: fs.FSWatcher | null = null;
 let libraryChangeTimer: ReturnType<typeof setTimeout> | null = null;
 const libraryChanged = new Set<string>();
+// 库外打开的文件：整库监听看不到它们，单独盯着
+const openFileWatcher = new OpenFileWatcher((paths) => {
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('library:changed', paths);
+});
+let watchedLibrary: string | null = null;
+let openFiles: string[] = [];
+const syncOpenFileWatcher = () => openFileWatcher.sync(filesOutsideLibrary(openFiles, watchedLibrary));
 // 笔记库全文索引
 const searchIndex = new SearchIndex();
 
@@ -794,7 +802,11 @@ app.whenReady().then(() => {
       libraryWatcher.close();
       libraryWatcher = null;
     }
-    if (!dirPath || !fs.existsSync(dirPath)) return false;
+    watchedLibrary = null;
+    if (!dirPath || !fs.existsSync(dirPath)) {
+      syncOpenFileWatcher();
+      return false;
+    }
     try {
       libraryWatcher = fs.watch(dirPath, { recursive: true }, (_type, filename) => {
         if (!filename) return;
@@ -814,6 +826,8 @@ app.whenReady().then(() => {
         }, 400);
       });
       libraryWatcher.on('error', (err) => console.warn('[library:watch]', err));
+      watchedLibrary = dirPath;
+      syncOpenFileWatcher();
       // 监听开始的同时后台建索引
       // 建完要说一声：日记月历、快速打开这些都是挂载时问一次 listNotes，冷启动时索引还没建好，不吭声它们就一直是空的
       searchIndex.build(dirPath).then(() => {
@@ -823,8 +837,13 @@ app.whenReady().then(() => {
       return true;
     } catch (err) {
       console.warn('[library:watch] failed:', err);
+      syncOpenFileWatcher();
       return false;
     }
+  });
+  ipcMain.handle('library:watchOpenFiles', (_event, paths: string[]) => {
+    openFiles = Array.isArray(paths) ? paths.map(String).filter((p) => path.isAbsolute(p)) : [];
+    syncOpenFileWatcher();
   });
 
   // ── 全文搜索 ──
@@ -842,7 +861,7 @@ app.whenReady().then(() => {
   ipcMain.handle('search:tasks', (_event, includeDone?: boolean) => searchIndex.listTasks(!!includeDone));
   ipcMain.handle('search:unlinkedMentions', (_event, filePath: string) => searchIndex.unlinkedMentions(String(filePath || '')));
   ipcMain.handle('search:tags', () => searchIndex.listTags());
-  ipcMain.handle('search:notesByTag', (_event, tag: string) => searchIndex.notesByTag(String(tag || '')));
+  ipcMain.handle('search:notesByTag', (_event, tag: string, includeTemplates?: boolean) => searchIndex.notesByTag(String(tag || ''), !!includeTemplates));
 
   // ── 图片整理：找出没有任何笔记引用的图片；确认后移入废纸篓（可恢复）──
   ipcMain.handle('library:findOrphanImages', (_event, extraTexts?: string[]) => {

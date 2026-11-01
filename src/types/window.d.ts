@@ -134,6 +134,8 @@ declare global {
       };
       library: {
         watch: (dirPath: string) => Promise<boolean>;
+        /** 告诉主进程标签页里开着哪些文件：库外的也要知道它们变没变 */
+        watchOpenFiles: (paths: string[]) => Promise<void>;
         findOrphanImages: (extraTexts?: string[]) => Promise<OrphanImage[]>;
         trashImages: (paths: string[]) => Promise<{ trashed: number; failed: string[] }>;
       };
@@ -195,7 +197,7 @@ declare global {
         /** 用系统默认应用打开库里的一个附件（PDF 卡片上的「打开」）；不是库里的附件返回 false */
         openAttachment: (filePath: string) => Promise<boolean>;
         tags: () => Promise<TagCount[]>;
-        notesByTag: (tag: string) => Promise<TaggedNote[]>;
+        notesByTag: (tag: string, includeTemplates?: boolean) => Promise<TaggedNote[]>;
       };
       capture: {
         status: () => Promise<{ enabled: boolean; shortcut: string; registered: boolean }>;

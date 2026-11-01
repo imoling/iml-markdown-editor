@@ -777,6 +777,10 @@ ul[data-type="taskList"] li[data-checked="true"] > div {
 
 /* ── 编辑区壳 / 源码分栏 / 气泡菜单细节（从内联样式收口） ── */
 .editor-area--host { position: relative; display: flex; flex-direction: column; flex: 1; height: 100%; }
+.external-bar { display: flex; align-items: center; gap: 8px; flex-shrink: 0; padding: 8px 16px; border-bottom: 1px solid var(--border-subtle); background: color-mix(in srgb, var(--color-brand-indigo) 8%, var(--bg-page)); }
+.external-bar__text { display: flex; align-items: baseline; gap: 10px; flex: 1; min-width: 0; font-size: 12px; color: var(--text-secondary); }
+.external-bar__text strong { font-size: 13px; font-weight: 600; color: var(--text-primary); white-space: nowrap; }
+.external-bar__text span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .editor-content { flex: 1; padding: 0; overflow: hidden; display: flex; height: 100%; }
 .editor-content--column { flex-direction: column; }
 .editor-content--row { flex-direction: row; }

@@ -37,8 +37,10 @@ export interface Tab {
   content: string;
   isDirty: boolean;
   mode: 'word' | 'markdown';
-  /** 磁盘上的文件被外部改动（或删除）而本标签页有未保存修改，需要用户决定 */
+  /** 磁盘上的文件被外部改动（或删除）而本标签页有未保存修改，需要用户决定；决定之前自动保存不写盘 */
   externallyModified?: boolean;
+  /** externallyModified 的原因是磁盘上的文件不见了 */
+  diskMissing?: boolean;
   /** 上次从磁盘读到 / 写进磁盘的内容的指纹：用来分清「磁盘真的被别人改了」和「只是我这边打了字、磁盘没动」 */
   diskSig?: string;
 }
@@ -357,6 +359,8 @@ export interface AppState {
   getNewNoteDir: () => string;
   /** 主进程通知：笔记库里这些路径被外部改动 */
   handleExternalChanges: (paths: string[]) => Promise<void>;
+  /** 放弃这边的修改，换成磁盘上的版本 */
+  reloadTabFromDisk: (id: string) => Promise<boolean>;
   /** 打开（不存在则按「模板/日记.md」或内置模板新建）某一天的日记，默认今天：<笔记库>/日记/YYYY-MM-DD.md */
   openDailyNote: (date?: Date) => Promise<void>;
   /** 执行一个 iml:// 链接要做的事（主进程已经解析、校验过） */
@@ -498,6 +502,14 @@ function findNode(nodes: FileNode[], targetPath: string): FileNode | undefined {
     }
   }
   return undefined;
+}
+
+/** 标签页换成磁盘上的内容，并留下记号让富文本编辑器重载（光标在里面也要重载，不然屏幕上是旧的，接着打字就把新内容盖了） */
+function followDisk(state: AppState, id: string, content: string): Partial<AppState> {
+  return {
+    tabs: state.tabs.map((t) => (t.id === id ? { ...t, content, isDirty: false, externallyModified: false, diskMissing: false, diskSig: contentSig(content) } : t)),
+    externalWrite: { id, rev: (state.externalWrite?.rev ?? 0) + 1 },
+  };
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -993,7 +1005,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const b = to.trim().replace(/^#/, '');
     if (!a || !isValidTagName(b) || a === b) return { changed: 0, failed: 0 };
     let notes: { path: string }[] = [];
-    try { notes = await window.api.search.notesByTag(a); } catch { notes = []; }
+    try { notes = await window.api.search.notesByTag(a, true); } catch { notes = []; } // 模板也要改：不然新笔记又把旧标签带回来
     let changed = 0;
     let failed = 0;
     for (const note of notes) {
@@ -1017,26 +1029,42 @@ export const useAppStore = create<AppState>((set, get) => ({
   handleExternalChanges: async (paths: string[]) => {
     await get().refreshWorkspace();
     const changed = new Set(paths);
-    for (const tab of get().tabs) {
-      if (tab.id.startsWith('new-') || !changed.has(tab.id)) continue;
-      const result = await window.api.fs.readFile(tab.id);
+    for (const { id } of get().tabs) {
+      if (id.startsWith('new-') || !changed.has(id)) continue;
+      const result = await window.api.fs.readFile(id);
+      // 防抖压着的字先刷进来再判断：不然刚打的字算「没改动」，会被磁盘内容冲掉
+      get().editorFlush?.();
+      const tab = get().tabs.find((t) => t.id === id);
+      if (!tab) continue;
       const mark = (patch: Partial<Tab>) =>
-        set((state) => ({ tabs: state.tabs.map((t) => (t.id === tab.id ? { ...t, ...patch } : t)) }));
+        set((state) => ({ tabs: state.tabs.map((t) => (t.id === id ? { ...t, ...patch } : t)) }));
       if (!result.success) {
-        mark({ externallyModified: true }); // 被外部删除 / 移动
+        mark({ externallyModified: true, diskMissing: true }); // 被外部删除 / 移动
         continue;
       }
       const diskContent = result.content || '';
-      if (diskContent === tab.content) continue;
+      const sig = contentSig(diskContent);
+      if (diskContent === tab.content) {
+        if (tab.externallyModified || tab.diskSig !== sig) mark({ isDirty: false, externallyModified: false, diskMissing: false, diskSig: sig });
+        continue;
+      }
       // 磁盘上还是我们上次读到 / 写进去的那一份：不是别人改了文件，只是这边打了字还没存。
       // 典型场景是应用自己新建文件（会议记录、双链新建的笔记）→ 打开 → 用户马上开始打字，文件监听的通知这时才到
-      if (tab.diskSig && tab.diskSig === contentSig(diskContent)) continue;
+      if (tab.diskSig === sig && !tab.diskMissing) continue;
       if (tab.isDirty) {
-        mark({ externallyModified: true, diskSig: contentSig(diskContent) }); // 两边都改了，交给用户决定（保存即覆盖）
+        mark({ externallyModified: true, diskMissing: false, diskSig: sig }); // 两边都改了，交给用户决定
       } else {
-        mark({ content: diskContent, isDirty: false, externallyModified: false, diskSig: contentSig(diskContent) }); // 未改动的标签页静默跟随磁盘
+        set((state) => followDisk(state, id, diskContent)); // 未改动的标签页静默跟随磁盘
       }
     }
+  },
+
+  reloadTabFromDisk: async (id) => {
+    const result = await window.api.fs.readFile(id);
+    if (!result.success) return false;
+    get().editorFlush?.();
+    set((state) => followDisk(state, id, result.content || ''));
+    return true;
   },
 
   updateFileNode: (path: string, updates: Partial<FileNode>) => set((state) => {
@@ -1255,6 +1283,19 @@ export const useAppStore = create<AppState>((set, get) => ({
     // 失焦触发的静默保存：没改过就不写盘。否则只是点开看一眼，文件的修改时间也会变，同步盘跟着重传一遍
     if (isAutoSave && !isTempFile && !activeTab.isDirty) return true;
 
+    if (isAutoSave && !isTempFile) {
+      if (activeTab.externallyModified) return false; // 用户还没决定留哪份，不替他覆盖
+      // 文件监听有防抖：通知还没到就失焦了也不能盖掉，写之前再看一眼磁盘
+      const disk = await window.api.fs.readFile(filePath);
+      const sig = disk.success ? contentSig(disk.content || '') : activeTab.diskSig;
+      if (activeTab.diskSig && (!disk.success || sig !== activeTab.diskSig)) {
+        set((state) => ({
+          tabs: state.tabs.map((t) => (t.id === filePath ? { ...t, externallyModified: true, diskMissing: !disk.success, diskSig: sig } : t)),
+        }));
+        return false;
+      }
+    }
+
     if (isTempFile || saveAs) {
       if (isTempFile && isAutoSave) {
         // 无感静默创建新文件：文件名取自内容的第一行正文。
@@ -1287,11 +1328,10 @@ export const useAppStore = create<AppState>((set, get) => ({
         if (get().workspacePath && filePath.startsWith(get().workspacePath!)) {
           get().refreshWorkspace();
         }
-      } else {
-        set((state) => ({
-          tabs: state.tabs.map(t => t.id === filePath ? { ...t, isDirty: false, externallyModified: false, diskSig: contentSig(activeTab.content) } : t)
-        }));
       }
+      set((state) => ({
+        tabs: state.tabs.map(t => t.id === filePath ? { ...t, isDirty: false, externallyModified: false, diskMissing: false, diskSig: contentSig(activeTab.content) } : t)
+      }));
       return true;
     }
     return false;
@@ -1398,6 +1438,7 @@ export const useAppStore = create<AppState>((set, get) => ({
             mode: t.mode || 'word',
             isDirty: !!t.isDirty,
             content: typeof t.content === 'string' ? t.content : '',
+            diskSig: typeof t.diskSig === 'string' ? t.diskSig : undefined,
           }));
         if (restoredTabs.length > 0) {
           // 并行读盘、一次性写回：避免逐个 set 让整棵组件树反复渲染
@@ -1409,7 +1450,10 @@ export const useAppStore = create<AppState>((set, get) => ({
               const diskContent = result.content || '';
               // 上次退出前未保存的修改优先于磁盘内容，避免重启丢稿
               const useDirty = tab.isDirty && tab.content.length > 0 && tab.content !== diskContent;
-              return { ...tab, content: useDirty ? tab.content : diskContent, isDirty: useDirty };
+              const diskSig = contentSig(diskContent);
+              // 退出之后文件又被别的程序改过：恢复的修改和磁盘上是两份，交给用户决定
+              const externallyModified = useDirty && !!tab.diskSig && tab.diskSig !== diskSig;
+              return { ...tab, content: useDirty ? tab.content : diskContent, isDirty: useDirty, diskSig, externallyModified };
             } catch (e) {
               return null;
             }
@@ -1636,7 +1680,7 @@ function persistSession(state: AppState) {
     sidebarWidth: state.sidebarWidth,
     tabs: state.tabs.map(t => {
       const keepContent = (t.isDirty || t.id.startsWith('new-')) && t.content.length <= MAX_PERSISTED_CONTENT;
-      return { id: t.id, title: t.title, isDirty: t.isDirty, mode: t.mode, ...(keepContent ? { content: t.content } : {}) };
+      return { id: t.id, title: t.title, isDirty: t.isDirty, mode: t.mode, ...(keepContent ? { content: t.content, diskSig: t.diskSig } : {}) };
     }),
   };
   try {
