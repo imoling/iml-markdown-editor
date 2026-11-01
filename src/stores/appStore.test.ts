@@ -906,3 +906,41 @@ describe('状态栏提示', () => {
     }
   });
 });
+
+describe('移动文件', () => {
+  const LIBRARY = '/lib';
+  const useLibrary = (files: Record<string, string>) => {
+    const api = useApi(files);
+    void api.fs.mkdir('/lib/项目');
+    useAppStore.setState({ workspacePath: LIBRARY, defaultLibraryPath: LIBRARY } as any);
+    return api;
+  };
+
+  it('笔记搬进文件夹：文件到位，相对图片路径跟着改', async () => {
+    const api = useLibrary({ '/lib/a.md': '![图](assets/x.png)\n', '/lib/项目/b.md': 'b' });
+    expect(await useAppStore.getState().moveFile('/lib/a.md', '/lib/项目')).toBe(true);
+    expect(api.files.has('/lib/a.md')).toBe(false);
+    expect(api.files.get('/lib/项目/a.md')).toBe('![图](../assets/x.png)\n');
+  });
+
+  it('开着的标签页跟着走；有没存的字时只改编辑器里的内容', async () => {
+    const api = useLibrary({ '/lib/a.md': '![图](assets/x.png)\n' });
+    await useAppStore.getState().openFileByPath('/lib/a.md');
+    useAppStore.getState().updateTabContent('/lib/a.md', '![图](assets/x.png)\n没存的字\n');
+    await useAppStore.getState().moveFile('/lib/a.md', '/lib/项目');
+    expect(useAppStore.getState().activeTabId).toBe('/lib/项目/a.md');
+    expect(useAppStore.getState().tabs[0]).toMatchObject({ id: '/lib/项目/a.md', isDirty: true, content: '![图](../assets/x.png)\n没存的字\n' });
+    expect(api.files.get('/lib/项目/a.md')).toBe('![图](assets/x.png)\n');
+  });
+
+  it('同名、自己里面、笔记库外面、原地都不动', async () => {
+    const api = useLibrary({ '/lib/a.md': 'a', '/lib/项目/a.md': '另一篇', '/out/x.md': 'x' });
+    const { moveFile } = useAppStore.getState();
+    expect(await moveFile('/lib/a.md', '/lib/项目')).toBe(false);
+    expect(await moveFile('/lib/项目', '/lib/项目')).toBe(false);
+    expect(await moveFile('/lib/a.md', '/out')).toBe(false);
+    expect(await moveFile('/lib/a.md', '/lib')).toBe(false);
+    expect(api.files.get('/lib/a.md')).toBe('a');
+    expect(api.files.get('/lib/项目/a.md')).toBe('另一篇');
+  });
+});

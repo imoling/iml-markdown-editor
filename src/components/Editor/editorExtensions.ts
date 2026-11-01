@@ -31,11 +31,12 @@ import { Folding } from '../../extensions/Folding';
 import { ImagePlaceholder } from '../../extensions/ImagePlaceholder';
 import { InlineMath } from '../../extensions/InlineMath';
 import { TagHighlight } from '../../extensions/TagHighlight';
-import { Kbd, Subscript, Superscript, Highlight, SoftAwareHardBreak, NoteLink } from '../../extensions/InlineMarks';
+import { Kbd, Subscript, Superscript, Highlight, SoftAwareHardBreak, NoteLink, shouldAutoLink } from '../../extensions/InlineMarks';
 import { NoteImage } from '../../extensions/NoteImage';
 import { FocusMode } from '../../extensions/FocusMode';
 import { TrailingNode } from '../../extensions/TrailingNode';
 import { TableEnter } from '../../extensions/TableEnter';
+import { ListNumbering } from '../../extensions/ListNumbering';
 import { AutoContinue } from '../../extensions/AutoContinue';
 import { autoContinueProvider } from './autoContinueProvider';
 
@@ -66,6 +67,7 @@ export const editorExtensions = [
   // 文末永远留一个空段落；表格里回车下移、末行回车跳出（#9）
   TrailingNode,
   TableEnter,
+  ListNumbering,
   AutoContinue.configure({ provider: autoContinueProvider }),
   Kbd,
   Subscript,
@@ -102,6 +104,7 @@ export const editorExtensions = [
   Underline,
   NoteLink.configure({
     openOnClick: false,
+    shouldAutoLink,
     // obsidian:// zotero:// 这类应用链接也要留住；只挡掉能执行脚本的协议
     isAllowedUri: (url) => !/^\s*(javascript|vbscript|data):/i.test(url || ''),
   }),

@@ -519,6 +519,7 @@ ul[data-type="taskList"] li[data-checked="true"] > div {
 /* 图片节点（NoteImage）：外层只包住图，选中框才不会拉到整行；图下的图片描述由设置「图下显示图片描述」控制（#6） */
 .tiptap-prosemirror .note-image { display: block; width: fit-content; max-width: 100%; margin: 1rem 0; }
 .tiptap-prosemirror .note-image img { margin: 0; }
+.tiptap-prosemirror .note-image.ProseMirror-selectednode img { outline: 2px solid var(--color-brand-indigo); outline-offset: 2px; }
 .tiptap-prosemirror .note-image__caption { display: none; margin-top: 6px; font-size: 13px; line-height: 1.5; color: var(--text-muted); text-align: center; }
 .tiptap-prosemirror--captions .note-image__caption:not(:empty) { display: block; }
 

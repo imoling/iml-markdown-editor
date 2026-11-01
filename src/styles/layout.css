@@ -158,6 +158,9 @@
   user-select: none;
 }
 
+.tree-item--drop, .workspace-tree.tree-item--drop { background-color: color-mix(in srgb, var(--color-brand-indigo) 14%, transparent); box-shadow: inset 0 0 0 1px var(--color-brand-indigo); }
+.tree-dragging, .tree-dragging * { cursor: grabbing !important; user-select: none; }
+.tree-drag-ghost { position: fixed; left: 0; top: 0; z-index: 9999; pointer-events: none; max-width: 220px; padding: 4px 10px; border-radius: 6px; font-size: 12px; color: var(--text-primary); background-color: var(--bg-elevated); border: 1px solid var(--border-subtle); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tree-item:hover {
   background-color: var(--bg-hover-editor);
 }

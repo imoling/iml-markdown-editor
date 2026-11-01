@@ -3,6 +3,7 @@ import type { Node as PMNode } from '@tiptap/pm/model';
 import { Plugin, PluginKey, TextSelection } from '@tiptap/pm/state';
 import type { EditorState, Transaction } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
+import type { EditorView } from '@tiptap/pm/view';
 
 export interface SearchMatch {
   from: number;
@@ -17,6 +18,8 @@ export interface SearchPluginState {
   current: number;
   /** 高亮装饰集，随 matches / current 一起在 apply 中构建，避免每次视图更新重建 */
   decorations: DecorationSet;
+  /** 每跳到一个匹配加一：只有一个匹配时 current 不变，也要滚回去 */
+  jumps: number;
 }
 
 interface SearchMeta {
@@ -25,6 +28,8 @@ interface SearchMeta {
   /** 命令里已经算好的匹配列表，apply 直接复用，省掉一次全文扫描 */
   matches?: SearchMatch[];
   current?: number;
+  /** 这次选中了一个匹配，要把它滚出来 */
+  jumped?: boolean;
 }
 
 export const searchPluginKey = new PluginKey<SearchPluginState>('imlSearch');
@@ -72,7 +77,25 @@ function buildDecorations(doc: PMNode, matches: SearchMatch[], current: number):
 }
 
 function selectMatch(tr: Transaction, match: SearchMatch) {
-  tr.setSelection(TextSelection.create(tr.doc, match.from, match.to)).scrollIntoView();
+  tr.setSelection(TextSelection.create(tr.doc, match.from, match.to));
+}
+
+/** 离滚动区边缘这么近就算没露出来：查找面板浮在上面，还会盖住一截 */
+const EDGE = 64;
+
+/**
+ * 把当前匹配滚出来。不用 tr.scrollIntoView()：ProseMirror 发现 DOM 选区不在编辑器里就什么都不做，
+ * 而查找时焦点正好在查找框上（轻量版 #15）。已经看得见的不动，看不见的放到中间，不贴着工具栏。
+ */
+function revealCurrentMatch(view: EditorView) {
+  const el = view.dom.querySelector('.search-match-current');
+  if (!el) return;
+  let scroller = el.parentElement;
+  while (scroller && !/auto|scroll/.test(getComputedStyle(scroller).overflowY)) scroller = scroller.parentElement;
+  const area = scroller?.getBoundingClientRect();
+  const box = el.getBoundingClientRect();
+  if (area && box.top >= area.top + EDGE && box.bottom <= area.bottom - EDGE) return;
+  el.scrollIntoView?.({ block: 'center', inline: 'nearest' });
 }
 
 /** 从光标位置起，向后找最近的匹配作为当前项 */
@@ -96,7 +119,7 @@ function step(
     : (ps.current + dir + len) % len;
   if (dispatch) {
     selectMatch(tr, ps.matches[current]);
-    tr.setMeta(searchPluginKey, { matches: ps.matches, current } satisfies SearchMeta);
+    tr.setMeta(searchPluginKey, { matches: ps.matches, current, jumped: true } satisfies SearchMeta);
   }
   return true;
 }
@@ -127,7 +150,7 @@ export const SearchExtension = Extension.create({
           const current = nearestIndex(matches, state.selection.from);
           if (dispatch) {
             if (current >= 0) selectMatch(tr, matches[current]);
-            tr.setMeta(searchPluginKey, { query, caseSensitive, matches, current } satisfies SearchMeta);
+            tr.setMeta(searchPluginKey, { query, caseSensitive, matches, current, jumped: current >= 0 } satisfies SearchMeta);
           }
           return true;
         },
@@ -151,7 +174,7 @@ export const SearchExtension = Extension.create({
             const matches = findMatches(tr.doc, ps.query, ps.caseSensitive);
             const current = nearestIndex(matches, target.from + replacement.length);
             if (current >= 0) selectMatch(tr, matches[current]);
-            tr.setMeta(searchPluginKey, { matches, current } satisfies SearchMeta);
+            tr.setMeta(searchPluginKey, { matches, current, jumped: current >= 0 } satisfies SearchMeta);
           }
           return true;
         },
@@ -175,7 +198,7 @@ export const SearchExtension = Extension.create({
       new Plugin<SearchPluginState>({
         key: searchPluginKey,
         state: {
-          init: () => ({ query: '', caseSensitive: false, matches: [], current: -1, decorations: DecorationSet.empty }),
+          init: () => ({ query: '', caseSensitive: false, matches: [], current: -1, decorations: DecorationSet.empty, jumps: 0 }),
           apply(tr, prev, _oldState, newState) {
             const meta = tr.getMeta(searchPluginKey) as SearchMeta | undefined;
             if (!meta && !tr.docChanged) return prev;
@@ -186,7 +209,7 @@ export const SearchExtension = Extension.create({
             let current = meta?.current ?? prev.current;
             if (current >= matches.length) current = matches.length - 1;
             if (matches.length === 0) current = -1;
-            return { query, caseSensitive, matches, current, decorations: buildDecorations(newState.doc, matches, current) };
+            return { query, caseSensitive, matches, current, decorations: buildDecorations(newState.doc, matches, current), jumps: prev.jumps + (meta?.jumped ? 1 : 0) };
           },
         },
         props: {
@@ -194,6 +217,11 @@ export const SearchExtension = Extension.create({
             return searchPluginKey.getState(state)?.decorations ?? DecorationSet.empty;
           },
         },
+        view: () => ({
+          update(view, prevState) {
+            if (searchPluginKey.getState(view.state)?.jumps !== searchPluginKey.getState(prevState)?.jumps) revealCurrentMatch(view);
+          },
+        }),
       }),
     ];
   },

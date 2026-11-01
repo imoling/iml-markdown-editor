@@ -29,7 +29,11 @@ app.name = 'iML Markdown Editor';
 app.setName('iML Markdown Editor');
 
 // 冒烟测试：IML_SMOKE_USERDATA 指向临时目录，配置 / 运行时 / 模型都不碰用户的真实数据
-if (isDev && process.env.IML_SMOKE_USERDATA) app.setPath('userData', process.env.IML_SMOKE_USERDATA);
+if (isDev && process.env.IML_SMOKE_USERDATA) {
+  app.setPath('userData', process.env.IML_SMOKE_USERDATA);
+  // 开发用的 Electron 和安装版不是同一个程序：碰真钥匙串会弹系统授权框，测试里用假的
+  app.commandLine.appendSwitch('use-mock-keychain');
+}
 // 冒烟测试：IML_SMOKE_FAKE_MIC=/path/to.wav 把一段 WAV 当麦克风输入（循环播放去掉 %noloop），无人值守也能测实时转写。
 // 沙箱不让假设备读文件，所以要一并关掉 —— 只在开发模式、且显式给了这个变量时才会走到这里
 if (isDev && process.env.IML_SMOKE_FAKE_MIC) {

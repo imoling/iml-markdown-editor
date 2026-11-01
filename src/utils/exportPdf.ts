@@ -62,7 +62,7 @@ const MAX_DOCX_IMAGE_PIXELS = 1600;
  * 给 Word 导出取一张图：不管原来是什么格式（webp、avif、svg、gif…）都画到画布上转成 PNG——Word 和 WPS 都认。
  * 本地图片走 fetch 拿字节再转成 data: 地址去加载：直接拿 iml-asset:// 当 <img> 的地址画到画布上，画布会被当成跨源而「污染」，导不出来。
  */
-async function loadImageAsPng(src: string, noteDir: string | null): Promise<{ data: Uint8Array; width: number; height: number } | null> {
+export async function loadImageAsPng(src: string, noteDir: string | null): Promise<{ data: Uint8Array; width: number; height: number } | null> {
   try {
     let dataUrl: string;
     if (src.startsWith('svg:')) dataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(src.slice(4))}`;

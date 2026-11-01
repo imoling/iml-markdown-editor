@@ -83,3 +83,30 @@ describe('search commands', () => {
     expect(searchPluginKey.getState(editor.state)!.matches).toHaveLength(0);
   });
 });
+
+describe('跳转时把匹配滚出来（轻量版 #15）', () => {
+  const calls: unknown[] = [];
+  const original = Element.prototype.scrollIntoView;
+  beforeEach(() => {
+    calls.length = 0;
+    Element.prototype.scrollIntoView = function (this: Element, arg?: unknown) { calls.push([this.className, arg]); };
+  });
+  afterEach(() => { Element.prototype.scrollIntoView = original; });
+
+  it('焦点在查找框里也滚；只有一个匹配时再按下一个也要滚回去', () => {
+    editor.commands.setContent('<p>only one needle here</p>');
+    editor.commands.setSearchTerm('needle', false);
+    expect(calls).toHaveLength(1);
+    editor.commands.findNext();
+    expect(calls).toHaveLength(2);
+    expect(calls[0]).toEqual(['search-match search-match-current', { block: 'center', inline: 'nearest' }]);
+  });
+
+  it('查不到、普通打字都不滚', () => {
+    editor.commands.setSearchTerm('不存在', false);
+    editor.commands.setSearchTerm('Hello', false);
+    calls.length = 0;
+    editor.commands.insertContentAt(1, 'x');
+    expect(calls).toHaveLength(0);
+  });
+});

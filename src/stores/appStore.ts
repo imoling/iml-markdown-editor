@@ -18,6 +18,7 @@ const FILE_SORT_KEY = 'iml.fileSort';
 import { renameTagInMarkdown, isValidTagName, tagMatches } from '../../electron/shared/noteMeta';
 
 export type DialogId = 'about' | 'shortcuts' | 'quick-open' | 'command-palette' | 'ai-config' | 'ai-setup' | 'image-config' | 'semantic-config' | 'transcribe-config' | 'settings' | 'whats-new' | 'history' | 'image-cleanup' | 'wechat-copy' | 'resources' | 'auto-continue';
+import { rebaseRelativeLinks } from '../utils/rebaseLinks';
 import { DAILY_DIR, TEMPLATE_DIR, DEFAULT_DAILY_TEMPLATE, SAMPLE_TEMPLATES, renderNoteTemplate } from '../utils/noteTemplates';
 import { DEFAULT_AUTO_CONTINUE, normalizeAutoContinue, type AutoContinuePrefs } from '../utils/autoContinue';
 
@@ -473,6 +474,10 @@ export interface AppState {
   setRenamingPath: (path: string | null) => void;
   setContextMenu: (contextMenu: Partial<AppState['contextMenu']>) => void;
   renameFile: (oldPath: string, newName: string) => Promise<boolean>;
+  /** 文件或文件夹搬到新路径，标签页、选中、展开状态跟着走 */
+  relocate: (oldPath: string, newPath: string) => Promise<boolean>;
+  /** 移到别的文件夹，笔记里的相对地址跟着改 */
+  moveFile: (from: string, toDir: string) => Promise<boolean>;
   deleteFile: (path: string) => Promise<boolean>;
   duplicateFile: (path: string) => Promise<boolean>;
 }
@@ -491,6 +496,14 @@ export async function readLibraryDir(dirPath: string): Promise<FileNode[] | null
   return (result.files as FileNode[]).filter(
     (f) => !f.name.startsWith('.') && (f.isDirectory || NOTE_FILE_RE.test(f.name)),
   );
+}
+
+/** 这个路径底下所有的笔记；本身是笔记就是它自己 */
+async function notesUnder(path: string): Promise<string[]> {
+  const entries = await readLibraryDir(path);
+  if (!entries) return NOTE_FILE_RE.test(path) ? [path] : [];
+  const nested = await Promise.all(entries.map((e) => (e.isDirectory ? notesUnder(e.path) : [e.path])));
+  return nested.flat();
 }
 
 function findNode(nodes: FileNode[], targetPath: string): FileNode | undefined {
@@ -1531,10 +1544,13 @@ export const useAppStore = create<AppState>((set, get) => ({
   setContextMenu: (cm) => set((state) => ({ contextMenu: { ...state.contextMenu, ...cm } })),
 
   renameFile: async (oldPath: string, newName: string) => {
+    const sep = pathSep(oldPath);
+    return get().relocate(oldPath, `${oldPath.substring(0, oldPath.lastIndexOf(sep))}${sep}${newName}`);
+  },
+
+  relocate: async (oldPath: string, newPath: string) => {
     try {
       const sep = pathSep(oldPath);
-      const parentDir = oldPath.substring(0, oldPath.lastIndexOf(sep));
-      const newPath = `${parentDir}${sep}${newName}`;
       
       const result = await window.api.fs.rename(oldPath, newPath);
       if (result.success) {
@@ -1550,6 +1566,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           renamingPath: null,
           selectedNodePath: state.selectedNodePath ? remap(state.selectedNodePath) : state.selectedNodePath,
           starredFiles: state.starredFiles.map(remap),
+          recentFiles: state.recentFiles.map(remap),
           expandedPaths: state.expandedPaths.map(remap),
         }));
         await get().refreshWorkspace();
@@ -1560,6 +1577,43 @@ export const useAppStore = create<AppState>((set, get) => ({
       console.error('Rename failed:', e);
       return false;
     }
+  },
+
+  moveFile: async (from, toDir) => {
+    const { workspacePath, notify } = get();
+    const sep = pathSep(from);
+    const parent = from.slice(0, from.lastIndexOf(sep));
+    if (toDir === parent) return false;
+    if (!workspacePath || (toDir !== workspacePath && !toDir.startsWith(workspacePath + sep))) {
+      notify('移动失败：只能移到笔记库里的文件夹');
+      return false;
+    }
+    if (toDir === from || toDir.startsWith(from + sep)) {
+      notify('移动失败：不能移到自己里面');
+      return false;
+    }
+    const to = `${toDir}${sep}${from.slice(parent.length + 1)}`;
+    if (await window.api.fs.exists(to)) {
+      notify('移动失败：那里已有同名文件');
+      return false;
+    }
+    get().editorFlush?.();
+    if (!(await get().relocate(from, to))) {
+      notify('移动失败：文件没动');
+      return false;
+    }
+    // 换了目录，笔记里的相对地址要跟着改，不然图片全裂
+    const notes = await notesUnder(to);
+    const movedRoot = notes.length === 1 && notes[0] === to ? null : from;
+    for (const note of notes) {
+      const newDir = note.slice(0, note.lastIndexOf(sep));
+      const oldDir = movedRoot ? from + newDir.slice(to.length) : parent;
+      await get().rewriteNote(note, (content) => rebaseRelativeLinks(content, oldDir, newDir, movedRoot));
+    }
+    const files = await readLibraryDir(toDir);
+    if (files) get().updateFileNode(toDir, { children: files });
+    get().setExpanded(toDir, true);
+    return true;
   },
 
   deleteFile: async (path: string) => {

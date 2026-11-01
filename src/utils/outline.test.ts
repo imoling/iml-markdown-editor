@@ -22,3 +22,11 @@ describe('extractHeadings', () => {
     expect(extractHeadings('#tag 不是标题\n#\n')).toEqual([]);
   });
 });
+
+describe('Windows 换行（CRLF）', () => {
+  it('标题一个不少，行号和 LF 一样；围栏里的仍然不算（轻量版 #16）', () => {
+    const md = '---\r\ntitle: x\r\n---\r\n\r\n# 一\r\n\r\n```\r\n# 代码\r\n```\r\n\r\n## 二\r\n';
+    expect(extractHeadings(md)).toEqual(extractHeadings(md.replace(/\r/g, '')));
+    expect(extractHeadings(md).map((h) => h.text)).toEqual(['一', '二']);
+  });
+});

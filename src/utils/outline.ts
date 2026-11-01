@@ -3,7 +3,8 @@ import { splitFrontmatter } from '../../electron/shared/noteMeta';
 
 export function extractHeadings(markdown: string): HeadingNode[] {
   const headings: HeadingNode[] = [];
-  const lines = markdown.split('\n');
+  // Windows 换行（CRLF）的文件：`.` 不匹配 \r，不去掉的话下面的正则一个标题都认不出来
+  const lines = markdown.split(/\r?\n/);
   // frontmatter 里的 `# 注释`、围栏代码里的 `# xxx` 都不是标题；行号保持与源文件一致（目录跳转靠它定位）
   const skipUntil = splitFrontmatter(markdown).lineOffset;
   let fence: string | null = null;

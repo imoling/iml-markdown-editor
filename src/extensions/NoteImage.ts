@@ -1,6 +1,8 @@
 import Image from '@tiptap/extension-image';
 import { resolveAssetUrl } from '../utils/assetUrl';
+import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { currentNoteDir } from '../utils/currentNoteDir';
+import { copyImageSelection } from '../utils/copyImage';
 
 /**
  * 图片节点：文档里保存的仍是 Markdown 里写的地址（assets/a.png），
@@ -13,6 +15,11 @@ export const NoteImage = Image.extend({
   addAttributes() {
     return {
       ...this.parent?.(),
+      // 从笔记里复制出去的图片换成了 data: 地址，贴回笔记时用原地址，不把整张图写进文件
+      src: {
+        default: null,
+        parseHTML: (el: HTMLElement) => el.getAttribute('data-note-src') || el.getAttribute('src'),
+      },
       // 源文件里路径带空格、又没用 <> 包起来的宽松写法：保存时原样写回
       lenient: {
         default: false,
@@ -50,5 +57,15 @@ export const NoteImage = Image.extend({
         },
       };
     };
+  },
+
+  addProseMirrorPlugins() {
+    return [
+      ...(this.parent?.() ?? []),
+      new Plugin({
+        key: new PluginKey('noteImageCopy'),
+        props: { handleDOMEvents: { copy: (view, event) => copyImageSelection(view, event) } },
+      }),
+    ];
   },
 });
