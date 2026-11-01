@@ -211,6 +211,8 @@ declare global {
         writeHtml: (html: string, text: string) => Promise<boolean>;
         /** 系统剪贴板里的图片（PNG 字节）；没有图片给 null */
         readImage: () => Promise<ArrayBuffer | Uint8Array | null>;
+        /** 只有壳能直接写系统剪贴板时才有（轻量版） */
+        writeImage?: (png: ArrayBuffer) => Promise<unknown>;
       };
       image: {
         getState: () => Promise<ImageGenState>;

@@ -46,14 +46,22 @@ export function copyImageSelection(view: EditorView, event: ClipboardEvent): boo
 
   event.preventDefault();
   const noteDir = currentNoteDir();
-  let item: ClipboardItem;
+  // 壳自己能写系统剪贴板就走壳：WKWebView 的剪贴板接口对手势的要求更严，写不进去也不报在明面上
+  const shell = window.api.clipboard;
+  let written: Promise<unknown>;
   if (single) {
-    item = new ClipboardItem({ 'image/png': pngBlob(single.attrs.src, noteDir) });
+    const png = pngBlob(single.attrs.src, noteDir);
+    written = shell?.writeImage
+      ? png.then((blob) => blob.arrayBuffer()).then(shell.writeImage)
+      : navigator.clipboard.write([new ClipboardItem({ 'image/png': png })]);
   } else {
     const { dom, text } = view.serializeForClipboard(slice);
-    item = new ClipboardItem({ 'text/html': htmlWithImages(dom, noteDir), 'text/plain': new Blob([text], { type: 'text/plain' }) });
+    const html = htmlWithImages(dom, noteDir);
+    written = shell?.writeImage
+      ? html.then((blob) => blob.text()).then((markup) => shell.writeHtml(markup, text))
+      : navigator.clipboard.write([new ClipboardItem({ 'text/html': html, 'text/plain': new Blob([text], { type: 'text/plain' }) })]);
   }
-  navigator.clipboard.write([item]).catch((err) => {
+  written.catch((err) => {
     console.warn('[copy image]', err);
     useAppStore.getState().notify('复制图片失败：图片读不出来');
   });

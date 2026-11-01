@@ -1,4 +1,4 @@
-# iML Markdown Editor · [![Release v26.8.0](https://img.shields.io/badge/Release-v26.8.0-indigo?style=for-the-badge&logo=github)](https://github.com/imoling/iml-markdown-editor/releases)
+# iML Markdown Editor · [![Release v26.9.0](https://img.shields.io/badge/Release-v26.9.0-indigo?style=for-the-badge&logo=github)](https://github.com/imoling/iml-markdown-editor/releases)
 <!--
   图片为什么不用相对路径（screenshots/xxx.png）：
   相对路径会被 GitHub 发到 raw.githubusercontent.com，而这个域名在国内多数网络下被 DNS 污染（解析到 0.0.0.0），
@@ -42,6 +42,13 @@ macOS（Apple 芯片 / Intel）· Windows（x64 / ARM）· 80 ~ 90 MB · MIT 开
 ---
 
 ## 特性
+
+### 🤝 和 Agent 一起改笔记，谁的字都不丢（26.9）
+
+- **外面改了，这边跟得上**：Claude Code 这类 Agent 改了开着的笔记，页面马上更新，库外打开的文件也一样；两边都改过时，由你选「载入新版本」「另存为」还是「保留我的」，选之前自动保存不写盘
+- **文件和文件夹能移动**：拖到文件夹上，或右键「移动到…」；笔记里的相对图片路径跟着改，图片不会裂
+- **图片能选中，也复制得走**：点一下有选中框，`⌘C` 复制的是真图片，贴到微信、Word 都有图；文字连图片一起复制也带图
+- 查找时页面会滚到匹配项；Windows 换行的文件大纲不再为空；列表中间插一段文字，后面的编号接着数；`asset.py`、`README.md` 这类文件名不再变成链接
 
 ### 🧩 四样本机模型，一键装齐（26.8）
 
@@ -252,10 +259,10 @@ macOS（Apple 芯片 / Intel）· Windows（x64 / ARM）· 80 ~ 90 MB · MIT 开
 
 | 平台 | 安装包 |
 |---|---|
-| macOS Apple Silicon（M 系列） | `iML.Markdown.Editor-26.8.0-arm64.dmg` |
-| macOS Intel（x64） | `iML.Markdown.Editor-26.8.0-x64.dmg` |
-| Windows（绝大多数电脑选这个） | `iML.Markdown.Editor-Setup-26.8.0-x64.exe` |
-| Windows on ARM（骁龙本等） | `iML.Markdown.Editor-Setup-26.8.0-arm64.exe` |
+| macOS Apple Silicon（M 系列） | `iML.Markdown.Editor-26.9.0-arm64.dmg` |
+| macOS Intel（x64） | `iML.Markdown.Editor-26.9.0-x64.dmg` |
+| Windows（绝大多数电脑选这个） | `iML.Markdown.Editor-Setup-26.9.0-x64.exe` |
+| Windows on ARM（骁龙本等） | `iML.Markdown.Editor-Setup-26.9.0-arm64.exe` |
 
 前往 [Releases](https://github.com/imoling/iml-markdown-editor/releases) 下载最新版本（80 ~ 90 MB）。已经装了的，应用会在发现新版本时提醒一次，并直接给出对应的安装包。安装包由 GitHub Actions 在打 `v*` 标签时自动构建并发布。
 
@@ -327,6 +334,15 @@ Windows 上把 `⌘` 换成 `Ctrl`，`⌥` 换成 `Alt`。
 ---
 
 ## 版本历史
+
+**26.9.0（2026-11-02）— 和 Agent 一起改笔记，谁的字都不丢**
+
+- 外部改动：屏幕跟随（含库外文件），两边都改时由用户决定，自动保存不再覆盖（#9）
+- 文件和文件夹能拖动、能右键「移动到…」，相对图片路径跟着改
+- 图片有选中框，能复制真图片；文字连图片一起复制也带图
+- 查找滚到匹配项、CRLF 文件的大纲、列表拆开后接着数、文件名不再变链接（轻量版 #12 #14 #15 #16）
+- 模板不再进快速打开、补全、标签和语义索引；许可证改为 MIT
+- 876 个测试用例
 
 **26.8.0（2026-10-09）— 四样本机模型，一键装齐**
 
@@ -444,4 +460,4 @@ AI 写作重构为 Skill 体系。首发公众号热点写作 Skill。新增独�
 
 ## 许可证
 
-[CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/) — 非商业使用。
+[MIT](LICENSE)

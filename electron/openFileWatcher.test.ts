@@ -37,7 +37,7 @@ describe('OpenFileWatcher', () => {
 
   afterEach(() => {
     watcher.close();
-    fs.rmSync(dir, { recursive: true, force: true });
+    fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }); // Windows 上监听刚关，目录可能还占着
   });
 
   it('文件被改了就通知，同目录没打开的文件不通知', async () => {

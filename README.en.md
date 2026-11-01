@@ -1,4 +1,4 @@
-# iML Markdown Editor · [![Release v26.8.0](https://img.shields.io/badge/Release-v26.8.0-indigo?style=for-the-badge&logo=github)](https://github.com/imoling/iml-markdown-editor/releases)
+# iML Markdown Editor · [![Release v26.9.0](https://img.shields.io/badge/Release-v26.9.0-indigo?style=for-the-badge&logo=github)](https://github.com/imoling/iml-markdown-editor/releases)
 
 **[中文](README.md)** · English
 
@@ -29,6 +29,10 @@ Most "AI notes" apps ship your text to somebody's server. This one downloads the
 Models are downloaded on demand, never bundled. The installer stays at 80–90 MB.
 *Help → Quick start AI* lists all four (chat, embeddings, transcription, image generation) with what is installed
 and what each one needs; one click installs the three everyday ones (about 2.7 GB).
+
+Agents can work on the same notes: when Claude Code or another tool changes an open note, the page follows; if both sides
+changed, you choose which version to keep, and autosave never overwrites it. Files and folders can be dragged or moved
+from the context menu, with relative image paths rewritten for you.
 They add up to well over 10 GB, so you choose where they live: *Intelligence → Local resources → Model storage*
 moves what is already downloaded to another folder or disk, and rolls back if anything fails halfway.
 
@@ -103,10 +107,10 @@ with inline styles.
 
 | Platform | Installer |
 |---|---|
-| macOS Apple Silicon | `iML.Markdown.Editor-26.8.0-arm64.dmg` |
-| macOS Intel | `iML.Markdown.Editor-26.8.0-x64.dmg` |
-| Windows x64 | `iML.Markdown.Editor-Setup-26.8.0-x64.exe` |
-| Windows on ARM | `iML.Markdown.Editor-Setup-26.8.0-arm64.exe` |
+| macOS Apple Silicon | `iML.Markdown.Editor-26.9.0-arm64.dmg` |
+| macOS Intel | `iML.Markdown.Editor-26.9.0-x64.dmg` |
+| Windows x64 | `iML.Markdown.Editor-Setup-26.9.0-x64.exe` |
+| Windows on ARM | `iML.Markdown.Editor-Setup-26.9.0-arm64.exe` |
 
 → **[Latest release](https://github.com/imoling/iml-markdown-editor/releases/latest)**
 

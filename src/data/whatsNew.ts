@@ -9,7 +9,8 @@ export type WhatsNewImage =
   | 'v265-image' | 'v265-hero' | 'v265-resources' | 'v265-fold' | 'v265-syscap' | 'v265-wechat' | 'v265-daily'
   | 'v266-autocontinue' | 'v266-accepted' | 'v266-settings' | 'v266-start'
   | 'v267-drop' | 'v267-inline' | 'v267-library' | 'v267-storage'
-  | 'v268-setup' | 'v268-table' | 'v268-diagram' | 'v268-caption';
+  | 'v268-setup' | 'v268-table' | 'v268-diagram' | 'v268-caption'
+  | 'v269-agent' | 'v269-move' | 'v269-image' | 'v269-find';
 
 export interface WhatsNewPage {
   key: string;
@@ -35,6 +36,37 @@ export interface WhatsNewEntry {
 
 /** 每个大版本一条；新版本加在最前面 */
 export const WHATS_NEW: WhatsNewEntry[] = [
+  {
+    version: '26.9',
+    title: '和 Agent 一起改笔记，谁的字都不丢',
+    releaseUrl: 'https://github.com/imoling/iml-markdown-editor/releases/tag/v26.9.0',
+    pages: [
+      {
+        key: 'agent', kicker: '新特性', title: '外面改了，这边跟得上',
+        desc: 'Claude Code 这类 Agent 改了开着的笔记，页面马上更新，不用重新打开。两边都改过时，编辑区顶部让你选留哪份，选之前自动保存不写盘，谁的字都不会被悄悄盖掉。',
+        bullets: ['不在笔记库里的文件也一样跟随', '选「保留我的」时，外部版本留在版本历史里', '文件被移走了，不会自动写回原处'],
+        image: 'v269-agent',
+      },
+      {
+        key: 'move', kicker: '新特性', title: '文件和文件夹能移动了', hint: '拖到文件夹上，或右键「移动到…」',
+        desc: '笔记里指向图片和附件的相对路径会跟着改，搬完图片还在。开着的笔记跟着走，没存的字也还在。',
+        bullets: ['整个文件夹一起搬也行', '目标位置有同名文件时不覆盖'],
+        image: 'v269-move',
+      },
+      {
+        key: 'image', kicker: '新特性', title: '图片能选中，也复制得走', hint: '点一下图片，再按 ⌘C',
+        desc: '选中的图片有选中框，复制的是真图片，贴到微信、Word 都有图。文字连图片一起选中复制，图片也带得走。',
+        bullets: ['WebP 也会转成 PNG', '贴回笔记时用原来的路径，不把整张图写进文件'],
+        image: 'v269-image',
+      },
+      {
+        key: 'find', kicker: '修正', title: '查找、大纲、编号、链接',
+        desc: '在查找框里点上下箭头或按回车，页面会滚到匹配项。Windows 换行的文件大纲不再是空的。',
+        bullets: ['列表中间插一段文字，后面的编号接着数', 'asset.py、README.md 这类文件名不再变成链接', '许可证改为 MIT'],
+        image: 'v269-find',
+      },
+    ],
+  },
   {
     version: '26.8',
     title: '四样本机模型，一键装齐',

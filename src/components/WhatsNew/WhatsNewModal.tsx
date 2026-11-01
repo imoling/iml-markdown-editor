@@ -46,6 +46,10 @@ import v268Setup from '../../assets/whats-new/v268-setup.webp';
 import v268Table from '../../assets/whats-new/v268-table.webp';
 import v268Diagram from '../../assets/whats-new/v268-diagram.webp';
 import v268Caption from '../../assets/whats-new/v268-caption.webp';
+import v269Agent from '../../assets/whats-new/v269-agent.webp';
+import v269Move from '../../assets/whats-new/v269-move.webp';
+import v269Image from '../../assets/whats-new/v269-image.webp';
+import v269Find from '../../assets/whats-new/v269-find.webp';
 
 const IMAGES: Record<WhatsNewImage, string> = {
   hero: heroImg, slash: slashImg, wiki: wikiImg, search: searchImg, daily: dailyImg, local: localImg,
@@ -57,6 +61,7 @@ const IMAGES: Record<WhatsNewImage, string> = {
   'v266-autocontinue': v266AutoContinue, 'v266-accepted': v266Accepted, 'v266-settings': v266Settings, 'v266-start': v266Start,
   'v267-drop': v267Drop, 'v267-inline': v267Inline, 'v267-library': v267Library, 'v267-storage': v267Storage,
   'v268-setup': v268Setup, 'v268-table': v268Table, 'v268-diagram': v268Diagram, 'v268-caption': v268Caption,
+  'v269-agent': v269Agent, 'v269-move': v269Move, 'v269-image': v269Image, 'v269-find': v269Find,
 };
 
 interface Props {
