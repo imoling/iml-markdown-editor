@@ -23,7 +23,7 @@ jobs:
       matrix:
         include:
           - name: macOS
-            os: macos-14
+            os: macos-15
             script: build:mac
           - name: Windows
             os: windows-latest
