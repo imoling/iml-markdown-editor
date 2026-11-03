@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAppStore } from '../../stores/appStore';
+import { useShallow } from 'zustand/react/shallow';
 import { Plus, FolderOpen, FileText, Settings, Clock, Star, CalendarDays, Wand2, ChevronRight } from 'lucide-react';
 import { formatVersion } from '../../utils/version';
 import { useAiReadiness } from '../../utils/aiReadiness';
@@ -43,7 +44,11 @@ const FileList: React.FC<{ paths: string[]; icon: React.ReactNode; empty: string
 
 /** 无文档打开时的启动页 */
 export const StartPage: React.FC = () => {
-  const { createNewFile, openDirectory, openFile, recentFiles, starredFiles, openFileByPath, openDailyNote, openDialog } = useAppStore();
+  const {
+    createNewFile, openDirectory, openFile, recentFiles, starredFiles, openFileByPath, openDailyNote, openDialog,
+  } = useAppStore(useShallow((s) => ({
+    createNewFile: s.createNewFile, openDirectory: s.openDirectory, openFile: s.openFile, recentFiles: s.recentFiles, starredFiles: s.starredFiles, openFileByPath: s.openFileByPath, openDailyNote: s.openDailyNote, openDialog: s.openDialog,
+  })));
   const [timeGreeting] = useState(greetingForNow);
   // AI 没配好时在这里递一句 —— 配好了就不再出现，不打扰老用户
   const aiEnabled = useAppStore((s) => s.aiEnabled);

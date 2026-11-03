@@ -17,7 +17,7 @@ import { applyUserCss, snippetsPathOf, SNIPPETS_TEMPLATE } from '../utils/userCs
 const FILE_SORT_KEY = 'iml.fileSort';
 import { renameTagInMarkdown, isValidTagName, tagMatches } from '../../electron/shared/noteMeta';
 
-export type DialogId = 'about' | 'shortcuts' | 'quick-open' | 'command-palette' | 'ai-config' | 'ai-setup' | 'image-config' | 'semantic-config' | 'transcribe-config' | 'settings' | 'whats-new' | 'history' | 'image-cleanup' | 'wechat-copy' | 'resources' | 'auto-continue';
+export type DialogId = 'about' | 'shortcuts' | 'quick-open' | 'command-palette' | 'ai-config' | 'ai-setup' | 'image-config' | 'semantic-config' | 'transcribe-config' | 'settings' | 'whats-new' | 'history' | 'image-cleanup' | 'wechat-copy' | 'resources' | 'memory-harvest' | 'memory-export' | 'memory-sync' | 'auto-continue';
 import { rebaseRelativeLinks } from '../utils/rebaseLinks';
 import { DAILY_DIR, TEMPLATE_DIR, DEFAULT_DAILY_TEMPLATE, SAMPLE_TEMPLATES, renderNoteTemplate } from '../utils/noteTemplates';
 import { DEFAULT_AUTO_CONTINUE, normalizeAutoContinue, type AutoContinuePrefs } from '../utils/autoContinue';
@@ -154,7 +154,7 @@ export const DEFAULT_IMAGE_GEN_CONFIG: ImageGenConfig = {
 
 /** 状态栏提示上的按钮（「打开」「在访达中显示」……）；点过就收起提示 */
 export interface NoticeAction { label: string; run: () => void }
-export type SidebarTab = 'library' | 'catalog' | 'tags' | 'tasks' | 'search' | 'ask' | 'transcribe';
+export type SidebarTab = 'library' | 'context' | 'catalog' | 'tags' | 'tasks' | 'search' | 'ask' | 'transcribe';
 
 /** 正文排版：字体、字号、行距、页宽（富文本与预览共用） */
 export interface EditorPrefs {
@@ -240,6 +240,11 @@ export interface AppState {
   /** 最近一次「不是编辑器自己打的字」的改写（转写、纪要这类侧边栏功能写进笔记）。富文本编辑器看到 rev 变了就重载这篇，哪怕光标正在里面 */
   externalWrite: { id: string; rev: number } | null;
   sidebarTab: SidebarTab;
+  /** 待办面板看全部，还是只看逾期和今天 */
+  tasksFilter: 'all' | 'today';
+  setTasksFilter: (filter: 'all' | 'today') => void;
+  /** 打开待办面板，只看逾期和今天 */
+  openTodayTasks: () => void;
   /** 标签视图里选中的标签 */
   selectedTag: string | null;
   /** 状态栏里一闪而过的提示（图片压缩了多少、恢复了哪个版本……）；带按钮的会多停留一会儿 */
@@ -381,6 +386,8 @@ export interface AppState {
    * `[[笔记#小节]]` 打开后跳到小节，`[[#小节]]` 在本篇内跳，`[[笔记#^块]]` 跳到那一段。
    */
   openWikiLink: (target: string) => Promise<void>;
+  /** 侧栏切到「上下文」：各 AI 工具的身份、记忆和记忆库 */
+  openContext: () => void;
   /**
    * 把 notePath 那篇里的一处「未链接提及」改成指向 targetPath 的 [[链接]]。
    * 那篇有没存盘的改动时只改编辑器里的内容；否则直接写盘（覆盖前版本历史会留底）。
@@ -547,6 +554,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   setSelectionText: (text) => { if (get().selectionText !== text) set({ selectionText: text }); },
   externalWrite: null,
   sidebarTab: 'library',
+  tasksFilter: 'all',
+  setTasksFilter: (tasksFilter) => set({ tasksFilter }),
+  openTodayTasks: () => set({ sidebarTab: 'tasks', sidebarVisible: true, focusMode: false, tasksFilter: 'today' }),
   selectedTag: null,
   notice: null,
   focusMode: false,
@@ -945,8 +955,9 @@ export const useAppStore = create<AppState>((set, get) => ({
     const currentDir = activeTabId && !activeTabId.startsWith('new-')
       ? activeTabId.substring(0, activeTabId.lastIndexOf(pathSep(activeTabId)))
       : (workspacePath || defaultLibraryPath);
+    const from = activeTabId && !activeTabId.startsWith('new-') ? activeTabId : undefined;
     let notes: { path: string; title: string; aliases?: string[] }[] = [];
-    try { notes = await window.api.search.listNotes(); } catch { notes = []; }
+    try { notes = await window.api.search.listNotes(from); } catch { notes = []; }
     const link = resolveWikiTarget(notes, raw, currentDir);
 
     // 打开之后跳到 #小节 / #^块；小节对不上就停在笔记开头，不报错
@@ -966,6 +977,8 @@ export const useAppStore = create<AppState>((set, get) => ({
       jump(link.hit.path);
       return;
     }
+    // 从 AI 上下文里的文件点出去的：那些目录里不新建文件
+    if (from && await window.api.aiContext.owns(from).catch(() => false)) { get().notify(`记忆和笔记库里都没有「${link.note}」`); return; }
     // 新建：名字只取笔记名那一段（不带 #小节；路径写法取最后一级）
     const name = (link.note.split(/[/\\]/).pop() || '').replace(/[\\/:*?"<>|#^[\]]/g, '').trim();
     const dir = currentDir || workspacePath || defaultLibraryPath;
@@ -1181,6 +1194,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   openGlobalSearch: () => set((state) => ({ sidebarTab: 'search', sidebarVisible: true, globalSearchFocus: state.globalSearchFocus + 1 })),
   openTranscribe: () => set({ sidebarTab: 'transcribe', sidebarVisible: true, focusMode: false }),
   openAsk: () => { set({ sidebarTab: 'ask', sidebarVisible: true, focusMode: false }); useAskStore.getState().requestFocus(); },
+  openContext: () => set({ sidebarTab: 'context', sidebarVisible: true, focusMode: false }),
   showFindWith: (query) => set((state) => ({ findVisible: true, replaceVisible: false, search: { ...state.search, query } })),
   openTag: (tag) => set({ selectedTag: tag, sidebarTab: 'tags', sidebarVisible: true, focusMode: false }),
   notify: (text, ms, actions) => {

@@ -4,11 +4,15 @@ import { Sidebar, ActivityBar } from './components/Sidebar/Sidebar';
 import { EditorArea } from './components/Editor/EditorArea';
 import { StatusBar } from './components/StatusBar/StatusBar';
 import { useAppStore, THEME_PRESETS, clearSessionAndReload, type DialogId } from './stores/appStore';
+import { useShallow } from 'zustand/react/shallow';
 import { useTranscribeStore } from './stores/transcribeStore';
 import AboutModal from './components/About/AboutModal';
 import ShortcutsModal from './components/Help/ShortcutsModal';
 import WechatCopyModal from './components/Export/WechatCopyModal';
 import ResourcesModal from './components/AI/ResourcesModal';
+import { MemoryHarvestModal } from './components/AI/MemoryHarvestModal';
+import { MemoryExportModal } from './components/AI/MemoryExportModal';
+import { MemorySyncModal } from './components/AI/MemorySyncModal';
 import ModelConfigModal from './components/AI/ModelConfigModal';
 import { ImageConfigModal } from './components/AI/ImageConfigModal';
 import { SettingsModal } from './components/Settings/SettingsModal';
@@ -51,40 +55,14 @@ async function drainPendingOpenFiles() {
 const handledCaptures = new Set<number>();
 
 const App: React.FC = () => {
-  const { 
-    toggleMode, 
-    activeTabId, 
-    tabs,
-    sidebarVisible,
-    statusBarVisible,
-    setOutline,
-    toggleSidebar,
-    toggleToolbar,
-    toggleStatusBar,
-    createNewFile,
-    toggleFind,
-    toggleReplace,
-    openFile,
-    openFileByPath,
-    openDirectory,
-    saveActiveFile,
-    tabToClose,
-    pendingCloseIds,
-    closeTab,
-    setActiveTab,
-    autoCheckUpdates,
-    theme,
-    setTheme,
-    loadSession,
-    loadSettings,
-    appearanceMode,
-    applyAppearance,
-    dialog,
-    openDialog,
-    closeDialog,
-    focusMode,
-  } = useAppStore();
+  const {
+    toggleMode, activeTabId, tabs, sidebarVisible, statusBarVisible, setOutline, toggleSidebar, toggleToolbar, toggleStatusBar, createNewFile, toggleFind, toggleReplace, openFile, openFileByPath, openDirectory, saveActiveFile, tabToClose, pendingCloseIds, closeTab, setActiveTab, autoCheckUpdates, theme, setTheme, loadSession, loadSettings, appearanceMode, applyAppearance, dialog, openDialog, closeDialog, focusMode,
+  } = useAppStore(useShallow((s) => ({
+    toggleMode: s.toggleMode, activeTabId: s.activeTabId, tabs: s.tabs, sidebarVisible: s.sidebarVisible, statusBarVisible: s.statusBarVisible, setOutline: s.setOutline, toggleSidebar: s.toggleSidebar, toggleToolbar: s.toggleToolbar, toggleStatusBar: s.toggleStatusBar, createNewFile: s.createNewFile, toggleFind: s.toggleFind, toggleReplace: s.toggleReplace, openFile: s.openFile, openFileByPath: s.openFileByPath, openDirectory: s.openDirectory, saveActiveFile: s.saveActiveFile, tabToClose: s.tabToClose, pendingCloseIds: s.pendingCloseIds, closeTab: s.closeTab, setActiveTab: s.setActiveTab, autoCheckUpdates: s.autoCheckUpdates, theme: s.theme, setTheme: s.setTheme, loadSession: s.loadSession, loadSettings: s.loadSettings, appearanceMode: s.appearanceMode, applyAppearance: s.applyAppearance, dialog: s.dialog, openDialog: s.openDialog, closeDialog: s.closeDialog, focusMode: s.focusMode,
+  })));
 
+  // 只订阅这一个布尔：App 不再整库订阅，弹不弹要靠它自己触发重渲染
+  const updateShow = useAppStore((s) => s.updateStatus.show);
   const activeTab = tabs.find(t => t.id === activeTabId);
   const whatsNewEntry = latestWhatsNew(window.api.appVersion);
 
@@ -381,6 +359,7 @@ const App: React.FC = () => {
       s.requestCloseTab(s.activeTabId);
     });
     window.api.events.on('menu:ask-notes', () => useAppStore.getState().openAsk());
+    window.api.events.on('menu:show-sidebar', (tab: string) => { if (tab === 'context') useAppStore.getState().openContext(); });
     window.api.events.on('menu:close-other-tabs', () => {
       const s = useAppStore.getState();
       if (s.dialog || s.tabToClose || !s.activeTabId) return;
@@ -533,9 +512,7 @@ const App: React.FC = () => {
       )}
 
       {/* 检查更新状态弹窗 */}
-      {useAppStore.getState().updateStatus.show && (
-        <UpdateModal />
-      )}
+      {updateShow && <UpdateModal />}
 
       {/* 配置 / 关于 / 快捷键：主窗口内的浮层，不新开窗口 */}
       {dialog === 'about' && <AboutModal isOpen onClose={closeDialog} />}
@@ -547,6 +524,9 @@ const App: React.FC = () => {
       {dialog === 'history' && <HistoryModal onClose={closeDialog} />}
       {dialog === 'wechat-copy' && <WechatCopyModal onClose={closeDialog} />}
       {dialog === 'resources' && <ResourcesModal onClose={closeDialog} />}
+      {dialog === 'memory-harvest' && <MemoryHarvestModal onClose={closeDialog} />}
+      {dialog === 'memory-export' && <MemoryExportModal onClose={closeDialog} />}
+      {dialog === 'memory-sync' && <MemorySyncModal onClose={closeDialog} />}
       {dialog === 'image-cleanup' && <ImageCleanupModal onClose={closeDialog} />}
       {dialog === 'semantic-config' && <SemanticIndexModal onClose={closeDialog} />}
       {dialog === 'auto-continue' && <AutoContinueModal onClose={closeDialog} />}
@@ -570,7 +550,7 @@ const formatMB = (bytes: number) => `${Math.round(bytes / 1024 / 1024)} MB`;
  * 并把人直接送到这台电脑该下的那个安装包，而不是一个要自己挑文件的页面。
  */
 const UpdateModal: React.FC = () => {
-  const { updateStatus, setUpdateStatus } = useAppStore();
+  const { updateStatus, setUpdateStatus } = useAppStore(useShallow((s) => ({ updateStatus: s.updateStatus, setUpdateStatus: s.setUpdateStatus })));
   const close = () => setUpdateStatus({ ...updateStatus, show: false });
   const current = window.api.appVersion;
   const hasUpdate = isNewerVersion(updateStatus.latestVersion, current);

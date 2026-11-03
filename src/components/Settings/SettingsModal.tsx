@@ -4,6 +4,7 @@ import { QuickCaptureRow } from './QuickCaptureRow';
 import { libraryToReturnTo } from '../../../electron/shared/syncFolders';
 import { DEFAULT_CAPTURE_SHORTCUT } from '../../../electron/shared/capture';
 import { useAppStore, THEME_PRESETS, EDITOR_FONTS, PAGE_WIDTHS, DEFAULT_EDITOR_PREFS, normalizeEditorPrefs, applyEditorPrefs, normalizeImageStorage, type EditorPrefs, type ImageStorage } from '../../stores/appStore';
+import { useShallow } from 'zustand/react/shallow';
 
 type AppearanceMode = 'light' | 'dark' | 'system' | 'eye-protection';
 
@@ -28,7 +29,11 @@ interface Props {
 export const SettingsModal: React.FC<Props> = ({ onClose }) => {
   const isStandalone = new URLSearchParams(window.location.search).get('window') === 'settings';
   const isMac = window.api.app.platform === 'darwin';
-  const { setTheme, applyAppearance, loadSettings, openDialog } = useAppStore();
+  const {
+    setTheme, applyAppearance, loadSettings, openDialog,
+  } = useAppStore(useShallow((s) => ({
+    setTheme: s.setTheme, applyAppearance: s.applyAppearance, loadSettings: s.loadSettings, openDialog: s.openDialog,
+  })));
   const isOpen = isStandalone || !!onClose;
 
   const [local, setLocal] = useState({

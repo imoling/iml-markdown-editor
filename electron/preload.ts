@@ -49,6 +49,22 @@ contextBridge.exposeInMainWorld('api', {
     onProgress: (cb: (p: any) => void) => { const l = (_e: any, p: any) => cb(p); ipcRenderer.on('image:progress', l); return () => ipcRenderer.removeListener('image:progress', l); },
   },
   // 本机资源：几个本机模型的启停、内存、空闲超时
+  aiContext: {
+    scan: () => ipcRenderer.invoke('aiContext:scan'),
+    read: (file: string) => ipcRenderer.invoke('aiContext:read', file),
+    search: (query: string) => ipcRenderer.invoke('aiContext:search', query),
+    reveal: (file: string) => ipcRenderer.invoke('aiContext:reveal', file),
+    cliState: () => ipcRenderer.invoke('aiContext:cliState'),
+    installCli: () => ipcRenderer.invoke('aiContext:installCli'),
+    owns: (file: string) => ipcRenderer.invoke('aiContext:owns', file),
+    memoryState: () => ipcRenderer.invoke('aiContext:memoryState'),
+    createMemory: () => ipcRenderer.invoke('aiContext:createMemory'),
+    harvest: () => ipcRenderer.invoke('aiContext:harvest'),
+    applyHarvest: (apply: unknown) => ipcRenderer.invoke('aiContext:applyHarvest', apply),
+    bundle: (names?: string[]) => ipcRenderer.invoke('aiContext:bundle', names),
+    syncPlan: () => ipcRenderer.invoke('aiContext:syncPlan'),
+    applySync: (ids: string[]) => ipcRenderer.invoke('aiContext:applySync', ids),
+  },
   resources: {
     getState: () => ipcRenderer.invoke('resources:getState'),
     start: (id: string) => ipcRenderer.invoke('resources:start', id),
@@ -190,7 +206,7 @@ contextBridge.exposeInMainWorld('api', {
   search: {
     query: (query: string, limit?: number) => ipcRenderer.invoke('search:query', query, limit),
     status: () => ipcRenderer.invoke('search:status'),
-    listNotes: () => ipcRenderer.invoke('search:listNotes'),
+    listNotes: (from?: string) => ipcRenderer.invoke('search:listNotes', from),
     backlinks: (nameOrPath: string) => ipcRenderer.invoke('search:backlinks', nameOrPath),
     unlinkedMentions: (filePath: string) => ipcRenderer.invoke('search:unlinkedMentions', filePath),
     tasks: (includeDone?: boolean) => ipcRenderer.invoke('search:tasks', includeDone),

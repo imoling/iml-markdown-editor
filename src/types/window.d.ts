@@ -23,6 +23,15 @@ export type { UpdateInfo } from '../../electron/update';
 export type AsrEvent = PipelineEvent | { type: 'error'; message: string } | { type: 'done' } | { type: 'fed'; samples: number };
 export type { OrphanImage } from '../../electron/assets';
 
+export type { ContextFile, ContextHit, ContextScan, ToolContext } from '../../electron/aiContext/scan';
+export type { MemoryFile, MemoryState } from '../../electron/aiContext/memory';
+export type { HarvestApply, HarvestResult, MemoryCandidate } from '../../electron/aiContext/harvest';
+export type { SyncPlan, SyncRow } from '../../electron/aiContext/sync';
+import type { ContextHit, ContextScan } from '../../electron/aiContext/scan';
+import type { MemoryFile, MemoryState } from '../../electron/aiContext/memory';
+import type { HarvestApply, HarvestResult } from '../../electron/aiContext/harvest';
+import type { SyncPlan } from '../../electron/aiContext/sync';
+
 export interface TagCount { tag: string; count: number }
 export interface TaggedNote { path: string; title: string; tags: string[]; mtime: number }
 
@@ -132,6 +141,25 @@ declare global {
         openExternal: (url: string) => Promise<void>;
         showItemInFolder: (path: string) => Promise<void>;
       };
+      aiContext: {
+        scan: () => Promise<ContextScan>;
+        read: (file: string) => Promise<string | null>;
+        search: (query: string) => Promise<ContextHit[]>;
+        reveal: (file: string) => Promise<void>;
+        cliState: () => Promise<{ installed: boolean; path: string }>;
+        installCli: () => Promise<{ installed: boolean; path: string }>;
+        /** 这个路径是不是 AI 上下文里的文件（各工具的身份 / 记忆，或记忆库里的一篇） */
+        owns: (file: string) => Promise<boolean>;
+        /** 记忆库：当前笔记库里的「记忆」目录；没打开笔记库时是 null */
+        memoryState: () => Promise<MemoryState | null>;
+        createMemory: () => Promise<MemoryState | null>;
+        harvest: () => Promise<HarvestResult>;
+        applyHarvest: (apply: HarvestApply) => Promise<{ appended: number; files: string[] }>;
+        bundle: (names?: string[]) => Promise<{ text: string; files: MemoryFile[] }>;
+        /** 各工具的规则文件里记忆库那一块是不是最新的 */
+        syncPlan: () => Promise<SyncPlan>;
+        applySync: (ids: string[]) => Promise<{ written: string[]; backups: string[] }>;
+      };
       library: {
         watch: (dirPath: string) => Promise<boolean>;
         /** 告诉主进程标签页里开着哪些文件：库外的也要知道它们变没变 */
@@ -186,7 +214,8 @@ declare global {
       search: {
         query: (query: string, limit?: number) => Promise<SearchResult[]>;
         status: () => Promise<{ root: string | null; count: number; building: boolean }>;
-        listNotes: () => Promise<{ path: string; title: string; aliases?: string[]; chars?: number }[]>;
+        /** 传当前笔记的路径：从 AI 上下文里的文件出发时，记忆和各工具的文件也在候选里 */
+        listNotes: (from?: string) => Promise<{ path: string; title: string; aliases?: string[]; chars?: number }[]>;
         /** 传库里笔记的路径：按它的文件名 / 一级标题 / 别名找链接；传别的当成一个名字 */
         backlinks: (nameOrPath: string) => Promise<BacklinkResult[]>;
         unlinkedMentions: (filePath: string) => Promise<MentionResult[]>;

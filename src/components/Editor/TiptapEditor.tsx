@@ -4,6 +4,7 @@ import { EditorContent, useEditor } from '@tiptap/react';
 import { TextSelection } from '@tiptap/pm/state';
 import type { Editor } from '@tiptap/core';
 import { useAppStore } from '../../stores/appStore';
+import { useShallow } from 'zustand/react/shallow';
 import { markdownToHtml } from '../../utils/markdown';
 import { serializeDoc } from '../../utils/incrementalMarkdown';
 import { registerSource, placeCursorAfterFrontmatter, loadDocFresh, endOfContent } from '../../utils/sourceMap';
@@ -59,10 +60,11 @@ function reportSearchState(editor: Editor) {
 const scrollTops = new Map<string, number>();
 
 export const TiptapEditor: React.FC = () => {
-  const { 
-    activeTabId, tabs, updateTabContent, navigationRequest, zoom,
-    outline, toolbarVisible,
-  } = useAppStore();
+  const {
+    activeTabId, tabs, updateTabContent, navigationRequest, zoom, outline, toolbarVisible,
+  } = useAppStore(useShallow((s) => ({
+    activeTabId: s.activeTabId, tabs: s.tabs, updateTabContent: s.updateTabContent, navigationRequest: s.navigationRequest, zoom: s.zoom, outline: s.outline, toolbarVisible: s.toolbarVisible,
+  })));
   const search = useAppStore((s) => s.search);
   const searchCommand = useAppStore((s) => s.searchCommand);
   const aiEnabled = useAppStore((s) => s.aiEnabled);
@@ -692,10 +694,10 @@ export const TiptapEditor: React.FC = () => {
   wikiRef.current = wiki;
   useEffect(() => {
     wikiLinkRegistry.items = async (query) => {
-      let notes: { title: string; path: string; aliases?: string[] }[] = [];
-      try { notes = await window.api.search.listNotes(); } catch { notes = []; }
-      // [[笔记# → 列那篇笔记的小节
       const { tabs, activeTabId: currentId } = useAppStore.getState();
+      let notes: { title: string; path: string; aliases?: string[] }[] = [];
+      try { notes = await window.api.search.listNotes(currentId && !currentId.startsWith('new-') ? currentId : undefined); } catch { notes = []; }
+      // [[笔记# → 列那篇笔记的小节
       const headings = await wikiHeadingCandidates(notes, query, {
         currentPath: currentId && !currentId.startsWith('new-') ? currentId : null,
         currentContent: tabs.find((t) => t.id === currentId)?.content ?? '',

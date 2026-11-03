@@ -70,6 +70,7 @@ export function createMockApi(initialFiles: Record<string, string> = {}) {
       getLogs: vi.fn(async () => []), test: vi.fn(), openModelsFolder: vi.fn(), onState: vi.fn(() => () => {}), onLog: vi.fn(() => () => {}),
     },
     shell: { openExternal: vi.fn(), showItemInFolder: vi.fn() },
+    aiContext: { scan: vi.fn(async () => ({ tools: [], cloud: [] })), read: vi.fn(async () => null), search: vi.fn(async () => []), reveal: vi.fn(async () => {}), cliState: vi.fn(async () => ({ installed: false, path: '' })), installCli: vi.fn(async () => ({ installed: true, path: '' })), owns: vi.fn(async () => false), memoryState: vi.fn(async () => null), createMemory: vi.fn(async () => null), harvest: vi.fn(async () => ({ candidates: [], domains: [] })), applyHarvest: vi.fn(async () => ({ appended: 0, files: [] })), bundle: vi.fn(async () => ({ text: '', files: [] })), syncPlan: vi.fn(async () => ({ ready: false, rows: [] })), applySync: vi.fn(async () => ({ written: [], backups: [] })) },
     library: { watch: vi.fn(async () => true), watchOpenFiles: vi.fn(async () => {}), findOrphanImages: vi.fn(async () => []), trashImages: vi.fn(async () => ({ trashed: 0, failed: [] })) },
     history: { list: vi.fn(async () => []), read: vi.fn(async () => null) },
     web: { fetchTitle: vi.fn(async () => null) },

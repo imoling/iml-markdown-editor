@@ -54,6 +54,8 @@ export const TasksPanel: React.FC = () => {
   const toggleTask = useAppStore((s) => s.toggleTask);
   const openTask = useAppStore((s) => s.openTask);
   const notify = useAppStore((s) => s.notify);
+  const filter = useAppStore((s) => s.tasksFilter);
+  const setFilter = useAppStore((s) => s.setTasksFilter);
   const [notes, setNotes] = useState<NoteTasks[] | null>(null);
   const [showDone, setShowDone] = useState(() => localStorage.getItem(SHOW_DONE_KEY) === '1');
   const [reload, setReload] = useState(0);
@@ -84,6 +86,8 @@ export const TasksPanel: React.FC = () => {
     for (const rows of buckets.values()) rows.sort((a, b) => (a.task.due! < b.task.due! ? -1 : a.task.due! > b.task.due! ? 1 : 0));
     return { dated: BUCKET_ORDER.filter((b) => buckets.has(b)).map((b) => ({ bucket: b, rows: buckets.get(b)! })), undated: rest, openCount: open };
   }, [notes, today]);
+
+  const shownDated = filter === 'today' ? dated.filter(({ bucket }) => bucket === 'overdue' || bucket === 'today') : dated;
 
   const flip = async (path: string, task: NoteTask) => {
     const next = !task.done;
@@ -123,19 +127,25 @@ export const TasksPanel: React.FC = () => {
     <div className="tasks-panel">
       <div className="tasks-panel__head">
         <span className="sidebar-section-title tasks-panel__title">待办{openCount ? ` · ${openCount}` : ''}</span>
+        <div className="tasks-panel__filter">
+          <button className={filter === 'today' ? 'active' : ''} onClick={() => setFilter('today')}>今天</button>
+          <button className={filter === 'all' ? 'active' : ''} onClick={() => setFilter('all')}>全部</button>
+        </div>
         <button className="icon-btn icon-btn--sm hover-bg" onClick={toggleShowDone} title={showDone ? '隐藏已完成的' : '显示已完成的'}>
           {showDone ? <EyeOff size={13} /> : <Eye size={13} />}
         </button>
       </div>
 
-      {dated.map(({ bucket, rows }) => (
+      {shownDated.map(({ bucket, rows }) => (
         <div key={bucket} className="tasks-panel__group">
           <div className={`tasks-panel__group-title ${bucket === 'overdue' ? 'tasks-panel__group-title--overdue' : ''}`}><CalendarClock size={11} /> {BUCKET_LABEL[bucket]} · {rows.length}</div>
           {rows.map((r) => <TaskRow key={`${r.path}:${r.task.line}`} path={r.path} task={r.task} flat note={r.title} {...rowProps} />)}
         </div>
       ))}
 
-      {undated.map((note) => (
+      {filter === 'today' && shownDated.length === 0 && <div className="tree-empty tree-empty--root">今天没有到期的事</div>}
+
+      {filter === 'all' && undated.map((note) => (
         <div key={note.path} className="tasks-panel__group">
           <div className="tasks-panel__group-title tasks-panel__group-title--note" onClick={() => void useAppStore.getState().openFileByPath(note.path)} title={note.path}>
             <FileText size={11} /> <span className="truncate flex-1">{note.title}</span>

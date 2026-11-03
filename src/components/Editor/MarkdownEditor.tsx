@@ -16,6 +16,7 @@ import {
   selectNextOccurrence,
 } from '@codemirror/search';
 import { useAppStore } from '../../stores/appStore';
+import { useShallow } from 'zustand/react/shallow';
 import { markdownToHtml, htmlToMarkdown } from '../../utils/markdown';
 import { sanitizeHtml } from '../../utils/sanitize';
 import { resolveImagesInHtml, noteDirOf } from '../../utils/assetUrl';
@@ -33,7 +34,11 @@ import '../styles/editor.css';
 const sourceScrollTops = new Map<string, number>();
 
 export const MarkdownEditor: React.FC = () => {
-  const { activeTabId, tabs, updateTabContent, navigationRequest, appearanceMode } = useAppStore();
+  const {
+    activeTabId, tabs, updateTabContent, navigationRequest, appearanceMode,
+  } = useAppStore(useShallow((s) => ({
+    activeTabId: s.activeTabId, tabs: s.tabs, updateTabContent: s.updateTabContent, navigationRequest: s.navigationRequest, appearanceMode: s.appearanceMode,
+  })));
   const searchState = useAppStore((s) => s.search);
   const searchCommand = useAppStore((s) => s.searchCommand);
   const activeTab = tabs.find((t) => t.id === activeTabId);
@@ -206,10 +211,10 @@ export const MarkdownEditor: React.FC = () => {
   const wikiCompletion = async (context: CompletionContext): Promise<CompletionResult | null> => {
     const word = context.matchBefore(/\[\[[^\]\n]*/);
     if (!word) return null;
-    let notes: { title: string; path: string; aliases?: string[] }[] = [];
-    try { notes = await window.api.search.listNotes(); } catch { notes = []; }
-    // [[笔记# → 列那篇笔记的小节
     const { tabs, activeTabId: currentId } = useAppStore.getState();
+    let notes: { title: string; path: string; aliases?: string[] }[] = [];
+    try { notes = await window.api.search.listNotes(currentId && !currentId.startsWith('new-') ? currentId : undefined); } catch { notes = []; }
+    // [[笔记# → 列那篇笔记的小节
     const headings = await wikiHeadingCandidates(notes, word.text.slice(2), {
       currentPath: currentId && !currentId.startsWith('new-') ? currentId : null,
       currentContent: tabs.find((t) => t.id === currentId)?.content ?? '',

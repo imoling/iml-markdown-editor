@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { extractTasks, toggleTaskLine, dueBucket } from './tasks';
+import { extractTasks, toggleTaskLine, dueBucket, countDue, dueNotice } from './tasks';
 
 const NOTE = [
   '---', 'tags: [会议]', 'todo: "- [ ] 这是属性不是待办"', '---', '',
@@ -22,6 +22,24 @@ const NOTE = [
   '- [ ] 日期不存在 📅 2026-02-31',
   '- [X] 大写 X 也是已完成 ✅ 2026-09-19',
 ].join('\n');
+
+describe('countDue', () => {
+  const note = (...tasks: { done: boolean; due: string | null }[]) => ({ tasks });
+
+  it('只数没做完的逾期和今天', () => {
+    const notes = [
+      note({ done: false, due: '2026-11-01' }, { done: true, due: '2026-11-01' }),
+      note({ done: false, due: '2026-11-03' }, { done: false, due: '2026-11-04' }, { done: false, due: null }),
+    ];
+    expect(countDue(notes, '2026-11-03')).toEqual({ overdue: 1, due: 1 });
+  });
+
+  it('提醒只说有的那一项', () => {
+    expect(dueNotice(1, 2)).toBe('今天 2 件到期，逾期 1 件');
+    expect(dueNotice(0, 2)).toBe('今天 2 件到期');
+    expect(dueNotice(3, 0)).toBe('逾期 3 件');
+  });
+});
 
 describe('extractTasks', () => {
   const tasks = extractTasks(NOTE);

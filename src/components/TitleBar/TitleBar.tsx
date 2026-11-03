@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAppStore, needsSavePrompt } from '../../stores/appStore';
-import { FileCode, X, FileDown, Plus, Save, FileUp, FolderOpen, Sidebar as SidebarIcon, Layout, RotateCw, Minus, Square, Settings, Image, CalendarDays, Sparkles, History, Focus, ImageOff, Network, Wand2, Search, MessageCircleQuestion, Mic, ChevronRight, Copy, Gauge, PenLine } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
+import { Bot, FileCode, X, FileDown, Plus, Save, FileUp, FolderOpen, Sidebar as SidebarIcon, Layout, RotateCw, Minus, Square, Settings, Image, CalendarDays, Sparkles, History, Focus, ImageOff, Network, Wand2, Search, MessageCircleQuestion, Mic, ChevronRight, Copy, Gauge, PenLine } from 'lucide-react';
 import { exportActiveTabToPdf, exportActiveTabToHtml, exportActiveTabToDocx, exportActiveTabToImage } from '../../utils/exportPdf';
 import { isNewerVersion } from '../../utils/version';
 
@@ -24,7 +25,11 @@ const MenuDivider = () => <div className="menu-divider" />;
 
 /** 标签页右键菜单：一次关掉一批，省得挨个点小叉 */
 const TabContextMenu: React.FC<{ tabId: string; x: number; y: number; onDone: () => void }> = ({ tabId, x, y, onDone }) => {
-  const { tabs, requestCloseTab, closeOtherTabs, closeTabsToRight, closeSavedTabs, closeAllTabs } = useAppStore();
+  const {
+    tabs, requestCloseTab, closeOtherTabs, closeTabsToRight, closeSavedTabs, closeAllTabs,
+  } = useAppStore(useShallow((s) => ({
+    tabs: s.tabs, requestCloseTab: s.requestCloseTab, closeOtherTabs: s.closeOtherTabs, closeTabsToRight: s.closeTabsToRight, closeSavedTabs: s.closeSavedTabs, closeAllTabs: s.closeAllTabs,
+  })));
   const isMac = window.api.app.platform === 'darwin';
   const mod = isMac ? '⌘' : 'Ctrl+';
 
@@ -60,14 +65,12 @@ const TabContextMenu: React.FC<{ tabId: string; x: number; y: number; onDone: ()
   );
 };
 
-export const TitleBar: React.FC = () => {
+const TitleBarImpl: React.FC = () => {
   const {
-    tabs, activeTabId, setActiveTab, requestCloseTab, closeOtherTabs, reopenClosedTab, closedTabs,
-    toggleSidebar, toggleToolbar, toggleStatusBar, createNewFile,
-    sidebarVisible, toolbarVisible, statusBarVisible,
-    openFile, openDirectory, saveActiveFile, refreshWorkspace, updateStatus, checkUpdates, openDailyNote, openDialog,
-    focusMode, toggleFocusMode, aiEnabled,
-  } = useAppStore();
+    tabs, activeTabId, setActiveTab, requestCloseTab, closeOtherTabs, reopenClosedTab, closedTabs, toggleSidebar, toggleToolbar, toggleStatusBar, createNewFile, sidebarVisible, toolbarVisible, statusBarVisible, openFile, openDirectory, saveActiveFile, refreshWorkspace, updateStatus, checkUpdates, openDailyNote, openDialog, focusMode, toggleFocusMode, aiEnabled,
+  } = useAppStore(useShallow((s) => ({
+    tabs: s.tabs, activeTabId: s.activeTabId, setActiveTab: s.setActiveTab, requestCloseTab: s.requestCloseTab, closeOtherTabs: s.closeOtherTabs, reopenClosedTab: s.reopenClosedTab, closedTabs: s.closedTabs, toggleSidebar: s.toggleSidebar, toggleToolbar: s.toggleToolbar, toggleStatusBar: s.toggleStatusBar, createNewFile: s.createNewFile, sidebarVisible: s.sidebarVisible, toolbarVisible: s.toolbarVisible, statusBarVisible: s.statusBarVisible, openFile: s.openFile, openDirectory: s.openDirectory, saveActiveFile: s.saveActiveFile, refreshWorkspace: s.refreshWorkspace, updateStatus: s.updateStatus, checkUpdates: s.checkUpdates, openDailyNote: s.openDailyNote, openDialog: s.openDialog, focusMode: s.focusMode, toggleFocusMode: s.toggleFocusMode, aiEnabled: s.aiEnabled,
+  })));
 
   const hasUpdate = isNewerVersion(updateStatus.latestVersion, window.api.appVersion);
   const [activeMenu, setActiveMenu] = useState<MenuId | null>(null);
@@ -176,6 +179,7 @@ export const TitleBar: React.FC = () => {
           <MenuItem icon={<Image size={14} />} label="AI 配图…" onClick={run(() => openDialog('image-config'))} />
           <MenuDivider />
           <MenuItem icon={<Gauge size={14} />} label="本机资源…" onClick={run(() => openDialog('resources'))} />
+          <MenuItem icon={<Bot size={14} />} label="AI 上下文" onClick={run(() => useAppStore.getState().openContext())} />
         </Menu>
 
         <Menu id="help" label="帮助" width={180} badge={hasUpdate}>
@@ -232,3 +236,6 @@ export const TitleBar: React.FC = () => {
     </header>
   );
 };
+
+/** 不接 props，只靠自己订阅的 store 片段更新：App 因为弹窗、标签页这类事重渲染时，这一整块不跟着重画 */
+export const TitleBar = React.memo(TitleBarImpl);

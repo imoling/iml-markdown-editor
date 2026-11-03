@@ -102,6 +102,8 @@ export const COMMANDS: AppCommand[] = [
   { id: 'ai.writing', group: '智能', title: '写作助手（模型设置）…', shortcut: '⇧⌘M', keywords: ['xz', 'mx', 'model', 'llm', '本机模型', 'ollama'], run: () => store().openDialog('ai-config') },
   { id: 'ai.auto-continue', group: '智能', title: '自动续写…', keywords: ['zdxx', 'xx', 'autocomplete', 'inscribe', 'copilot', '补全', 'Tab'], enabled: aiOn, run: () => store().openDialog('auto-continue') },
   { id: 'ai.auto-continue-toggle', group: '智能', title: '开关自动续写', keywords: ['zdxx', 'xx', 'autocomplete', '补全'], enabled: aiOn, run: () => { const s = store(); s.setAutoContinue({ enabled: !s.autoContinue.enabled }); s.notify(s.autoContinue.enabled ? '已关闭自动续写' : '已开启自动续写'); } },
+  { id: 'ai.context', group: '智能', title: 'AI 上下文（各 AI 工具的身份、记忆和你的记忆库）', keywords: ['aisxw', 'context', 'memory', 'jy', '记忆', '身份', 'claude', 'codex'], run: showSidebar('context') },
+  { id: 'tasks.today', group: '智能', title: '今天要做的事', keywords: ['jt', 'today', 'daiban', '待办', '到期', '逾期'], run: () => store().openTodayTasks() },
   { id: 'ai.resources', group: '智能', title: '本机资源（模型启停与内存）…', keywords: ['bjzy', 'resources', 'memory', 'nc', '内存', '启停', '模型', '调度'], run: () => store().openDialog('resources') },
   { id: 'ai.related', group: '智能', title: '相关笔记与语义搜索…', keywords: ['xg', 'yy', 'semantic', 'embedding', '向量'], enabled: aiOn, run: () => store().openDialog('semantic-config') },
   { id: 'ai.transcribe-config', group: '智能', title: '实时转写设置…', keywords: ['zx', 'mkf', 'asr', '麦克风', '语音模型'], enabled: aiOn, run: () => store().openDialog('transcribe-config') },

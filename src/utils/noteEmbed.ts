@@ -61,7 +61,7 @@ export async function loadLinkedContent(target: string, { fromPath, maxChars = 2
   }
 
   let notes: { path: string; title: string; aliases?: string[] }[] = [];
-  try { notes = await window.api.search.listNotes(); } catch { notes = []; }
+  try { notes = await window.api.search.listNotes(fromPath ?? undefined); } catch { notes = []; }
   const link = resolveWikiTarget(notes, raw, fromDir);
   const path = link.note ? link.hit?.path ?? null : fromPath;
   if (!path) return { kind: 'missing', name: link.note || raw };

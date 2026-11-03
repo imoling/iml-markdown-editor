@@ -119,6 +119,28 @@ export class SearchIndex {
     }
   }
 
+  /** 按给定的文件清单建索引（AI 上下文那套：文件散在各个隐藏目录里，不是一个根）。没有根，所以也没有模板目录一说 */
+  async buildFiles(files: string[]): Promise<void> {
+    const id = ++this.buildId;
+    this.root = null;
+    this.building = true;
+    this.notes.clear();
+    this.attachments.clear();
+    try {
+      for (const file of files) {
+        if (id !== this.buildId) return;
+        if (NOTE_RE.test(file)) await this.addFile(file);
+      }
+    } finally {
+      if (id === this.buildId) this.building = false;
+    }
+  }
+
+  /** 这个路径在不在索引里 */
+  has(filePath: string): boolean {
+    return this.notes.has(filePath);
+  }
+
   private async walk(dir: string, id: number): Promise<void> {
     let entries: fs.Dirent[];
     try {

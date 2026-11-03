@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 上下文面板：三版设计</title>
+<style>
+  :root {
+    --ink: #1D1D1F; --ink2: #48484A; --ink3: #636366; --muted: #8E8E93;
+    --line: #E5E5EA; --line2: #D1D1D6; --page: #fff; --surface: #F8F9FA; --elevated: #F2F2F7;
+    --brand: #6366F1; --brand-soft: rgba(99,102,241,.12); --brand-soft2: rgba(99,102,241,.07);
+    --green: #34C759; --orange: #FF9500; --coral: #FF3B30;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; color: var(--ink); background: #F5F5F7; line-height: 1.65; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 40px 32px 80px; }
+  h1 { font-size: 28px; margin: 0 0 6px; }
+  .sub { color: var(--ink3); margin: 0 0 28px; }
+  h2 { font-size: 20px; margin: 48px 0 12px; padding-top: 24px; border-top: 1px solid var(--line2); }
+  h3 { font-size: 15px; margin: 22px 0 8px; }
+  p { margin: 8px 0; }
+  ul { margin: 6px 0 6px 20px; padding: 0; }
+  li { margin: 3px 0; }
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; margin: 10px 0; background: #fff; }
+  th, td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--elevated); font-weight: 600; }
+  code { font-family: "JetBrains Mono", Menlo, monospace; font-size: 12.5px; background: var(--brand-soft2); padding: 1px 5px; border-radius: 4px; }
+  .pill { display: inline-block; font-size: 11px; padding: 1px 8px; border-radius: 999px; background: var(--brand-soft); color: var(--brand); font-weight: 600; vertical-align: middle; margin-left: 6px; }
+  .pill--rec { background: rgba(52,199,89,.15); color: #1f8f3f; }
+
+  /* ── 三版并排 ── */
+  .variants { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 16px; }
+  .variant { background: #fff; border: 1px solid var(--line2); border-radius: 14px; padding: 16px; }
+  .variant h3 { margin: 0 0 4px; font-size: 16px; }
+  .variant .tag { font-size: 12px; color: var(--ink3); margin-bottom: 12px; }
+  .variant .pros, .variant .cons { font-size: 13px; }
+  .variant .pros b { color: #1f8f3f; } .variant .cons b { color: #b23b2e; }
+
+  /* ── 仿真侧栏 ── */
+  .shell { display: flex; height: 520px; border: 1px solid var(--line2); border-radius: 10px; overflow: hidden; background: var(--surface); font-size: 12.5px; margin: 0 auto 14px; width: 100%; max-width: 300px; }
+  .rail { width: 48px; display: flex; flex-direction: column; align-items: center; padding: 8px 0; gap: 4px; border-right: 1px solid var(--line); background: var(--surface); }
+  .rail button { width: 36px; height: 36px; border: 0; border-radius: 8px; background: none; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: var(--muted); font-size: 8.5px; white-space: nowrap; position: relative; font-family: inherit; }
+  .rail button.active { background: var(--brand-soft); color: var(--brand); }
+  .rail button.active::before { content: ''; position: absolute; left: -7px; top: 50%; transform: translateY(-50%); width: 3px; height: 20px; background: var(--brand); border-radius: 0 3px 3px 0; }
+  .rail svg { width: 15px; height: 15px; }
+  .panel { flex: 1; display: flex; flex-direction: column; padding: 10px 6px; overflow: hidden; }
+  .hdr { display: flex; align-items: center; gap: 4px; padding: 4px 6px; font-weight: 600; color: var(--ink); }
+  .hdr .sp { flex: 1; }
+  .hdr .ib { width: 18px; height: 18px; border-radius: 4px; color: var(--muted); display: flex; align-items: center; justify-content: center; }
+  .search { margin: 6px 4px 8px; padding: 5px 8px; border: 1px solid var(--line); border-radius: 7px; background: #fff; color: var(--muted); font-size: 12px; display: flex; gap: 6px; align-items: center; }
+  .row { display: flex; align-items: center; gap: 5px; padding: 4px 6px; border-radius: 6px; color: var(--ink2); white-space: nowrap; overflow: hidden; }
+  .row.sel { background: rgba(127,127,127,.12); }
+  .row .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+  .row .chev { width: 10px; color: var(--muted); font-size: 10px; flex-shrink: 0; }
+  .row .ico { width: 13px; height: 13px; flex-shrink: 0; color: var(--brand); }
+  .row .ico.g { color: var(--green); } .row .ico.o { color: var(--orange); } .row .ico.m { color: var(--muted); }
+  .row .meta { font-size: 10.5px; color: var(--muted); flex-shrink: 0; }
+  .row .badge { font-size: 10px; padding: 0 5px; border-radius: 999px; background: var(--brand-soft); color: var(--brand); font-weight: 600; flex-shrink: 0; }
+  .row .badge.ok { background: rgba(52,199,89,.15); color: #1f8f3f; }
+  .row .badge.warn { background: rgba(255,149,0,.15); color: #b56a00; }
+  .d1 { padding-left: 20px; } .d2 { padding-left: 34px; } .d3 { padding-left: 48px; }
+  .sect { font-size: 10.5px; font-weight: 600; color: var(--muted); padding: 8px 8px 2px; opacity: .8; letter-spacing: .02em; }
+  .foot { margin-top: auto; border-top: 1px solid var(--line); padding-top: 8px; display: flex; flex-direction: column; gap: 4px; }
+  .foot .act { display: flex; align-items: center; gap: 6px; padding: 5px 8px; border-radius: 6px; color: var(--ink2); font-size: 12px; }
+  .foot .act.primary { background: var(--brand); color: #fff; justify-content: center; font-weight: 600; }
+  .foot .act .ico { width: 12px; height: 12px; }
+  .chip { font-size: 9.5px; padding: 0 4px; border-radius: 3px; background: var(--elevated); color: var(--ink3); flex-shrink: 0; border: 1px solid var(--line); }
+
+  /* ── 弹窗 ── */
+  .modal { background: #fff; border: 1px solid var(--line2); border-radius: 14px; box-shadow: 0 12px 40px rgba(0,0,0,.08); overflow: hidden; margin: 14px 0 6px; }
+  .modal__hd { padding: 14px 18px 10px; border-bottom: 1px solid var(--line); }
+  .modal__hd h4 { margin: 0; font-size: 15px; }
+  .modal__hd p { margin: 2px 0 0; font-size: 12px; color: var(--muted); }
+  .modal__bd { padding: 10px 18px; font-size: 13px; }
+  .modal__ft { padding: 10px 18px 14px; display: flex; gap: 8px; justify-content: flex-end; align-items: center; border-top: 1px solid var(--line); font-size: 13px; }
+  .btn { padding: 6px 14px; border-radius: 8px; border: 1px solid var(--line2); background: #fff; font-size: 13px; }
+  .btn.primary { background: var(--brand); border-color: var(--brand); color: #fff; font-weight: 600; }
+  .ft-note { margin-right: auto; font-size: 12px; color: var(--muted); }
+  .cand { display: grid; grid-template-columns: 22px 1fr 150px; gap: 8px; padding: 7px 0; border-bottom: 1px dashed var(--line); align-items: start; }
+  .cand:last-child { border-bottom: 0; }
+  .cand .src { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .cand .to { font-size: 12px; color: var(--ink3); text-align: right; }
+  .cand .to b { color: var(--ink); font-weight: 500; }
+  .cand .box { width: 14px; height: 14px; border: 1.5px solid var(--line2); border-radius: 4px; margin-top: 3px; }
+  .cand .box.on { background: var(--brand); border-color: var(--brand); position: relative; }
+  .cand .box.on::after { content: ''; position: absolute; left: 4px; top: 1px; width: 4px; height: 7px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+  .grouph { font-size: 12px; font-weight: 600; color: var(--ink3); margin: 10px 0 4px; }
+  .sync { display: grid; grid-template-columns: 110px 1fr 120px; gap: 10px; padding: 8px 0; border-bottom: 1px dashed var(--line); align-items: center; }
+  .sync:last-child { border-bottom: 0; }
+  .sync .f { font-family: Menlo, monospace; font-size: 11.5px; color: var(--ink3); }
+  .sync .st { font-size: 12px; text-align: right; }
+  .st.ok { color: #1f8f3f; } .st.warn { color: #b56a00; } .st.na { color: var(--muted); }
+  .block { background: var(--elevated); border-radius: 8px; padding: 8px 12px; font-family: Menlo, monospace; font-size: 11.5px; color: var(--ink2); white-space: pre; overflow-x: auto; margin: 8px 0; line-height: 1.5; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .note { font-size: 12.5px; color: var(--ink3); background: #fff; border: 1px solid var(--line); border-left: 3px solid var(--brand); padding: 8px 12px; border-radius: 6px; margin: 10px 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>AI 上下文面板：三版设计</h1>
+<p class="sub">2026-11-03 · 承接 <code>docs/ai-memory-design.md</code>，把入口从「智能」菜单里的只读弹窗改成侧栏页签。先看三版面板，再看三个弹窗，最后是要你定的几件事。</p>
+
+<h2>已经定下来的（三版共用）</h2>
+<ul>
+  <li><b>入口</b>：侧栏图标栏里新加一个页签，紧挨「笔记库」下面；「智能 → AI 上下文…」那个弹窗撤掉，命令行安装搬进面板</li>
+  <li><b>记忆库</b>：<code>笔记库/记忆/</code>，一领域一篇，纯 Markdown 列表，一条一行带来源；工具只追加，不删改</li>
+  <li><b>来源</b>：只读工具表（<code>electron/aiContext/tools.ts</code>）里列的路径；不碰 SQLite、凭证、会话记录</li>
+  <li><b>索引</b>：这些文件单独建一份索引，和笔记库的分开。好处是记忆之间的 457 处 <code>[[链接]]</code> 能点、反链能看；笔记库的搜索、待办、文件树不受影响</li>
+  <li><b>编辑</b>：点一下在编辑区打开，就地改，改的就是 <code>~/.claude/CLAUDE.md</code> 本身；工具同时在写时，外部改动保护接住</li>
+  <li><b>不做</b>：不进待办、不进语义索引和「问笔记」、不在工具目录里新建文件（新建一律落 <code>记忆/</code>）、点到没有的链接不弹「新建笔记」</li>
+  <li><b>空状态</b>：本机一个工具都没有、也没有 <code>记忆/</code> 时，用 PanelIntro：这是什么、怎么会有内容、一个「建立记忆库」按钮</li>
+</ul>
+
+<h2>三版面板</h2>
+<p>区别只在一件事：树的第一层按什么分。三版的底层数据和动作完全一样，可以先做一版，后面加个切换。</p>
+
+<div class="variants">
+
+  <!-- 方案 A -->
+  <div class="variant">
+    <h3>A · 按工具</h3>
+    <div class="tag">第一层是来源：记忆、Claude Code、Codex、Hermes、WorkBuddy</div>
+    <div class="shell">
+      <div class="rail">
+        <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>笔记库</button>
+        <button class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" y1="16" x2="8" y2="16"/><line x1="16" y1="16" x2="16" y2="16"/></svg>上下文</button>
+        <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>目录</button>
+        <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></svg>标签</button>
+        <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>待办</button>
+        <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>搜索</button>
+      </div>
+      <div class="panel">
+        <div class="hdr"><span>AI 上下文</span><span class="sp"></span><span class="ib">↻</span></div>
+        <div class="search">🔍 搜身份和记忆</div>
+        <div class="row"><span class="chev">▾</span><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg><span class="nm">记忆</span><span class="meta">8 篇</span></div>
+        <div class="row d1"><span class="nm">我是谁</span></div>
+        <div class="row d1"><span class="nm">工作方式</span></div>
+        <div class="row d1"><span class="nm">公众号</span></div>
+        <div class="row d1"><span class="nm">课件与 PPT</span><span class="meta">…</span></div>
+        <div class="row"><span class="chev">▾</span><svg class="ico o" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/></svg><span class="nm">Claude Code</span><span class="meta">286 条</span></div>
+        <div class="row d1 sel"><span class="nm">CLAUDE.md</span><span class="chip">规则</span></div>
+        <div class="row d1"><span class="chev">▾</span><span class="nm">记忆</span></div>
+        <div class="row d2"><span class="chev">▸</span><span class="nm">imoling.git / iml-markdown-editor</span><span class="meta">42</span></div>
+        <div class="row d2"><span class="chev">▸</span><span class="nm">Personal / MBA 作业</span><span class="meta">19</span></div>
+        <div class="row d2"><span class="chev">▸</span><span class="nm">Work / training</span><span class="meta">11</span></div>
+        <div class="row d2"><span class="nm meta">还有 51 个项目…</span></div>
+        <div class="row d1"><span class="nm">技能</span><span class="meta">36 个</span></div>
+        <div class="row"><span class="chev">▸</span><svg class="ico g" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/></svg><span class="nm">Codex</span><span class="meta">21 条</span></div>
+        <div class="row"><span class="chev">▸</span><svg class="ico m" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/></svg><span class="nm">Hermes</span><span class="meta">只有模板</span></div>
+        <div class="row"><span class="chev">▸</span><svg class="ico m" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/></svg><span class="nm">WorkBuddy</span><span class="meta">1 条</span></div>
+        <div class="foot">
+          <div class="act"><span>⇣</span> 从各工具提炼记忆</div>
+          <div class="act"><span>⇅</span> 同步到各工具</div>
+          <div class="act"><span>⎘</span> 导出一份给别的 AI</div>
+        </div>
+      </div>
+    </div>
+    <div class="pros"><b>好在</b>：和文件系统一一对应，不用解释；想知道「Codex 现在记得什么」一眼找到；实现最直接，就是现有扫描结果画成树</div>
+    <div class="cons"><b>代价</b>：「我是谁」散在四个工具里，要点开四处才能对比；54 个项目目录名是 <code>-Users-imoling-Personal-MBA---</code> 这种，还原成可读路径要靠猜</div>
+  </div>
+
+  <!-- 方案 B -->
+  <div class="variant">
+    <h3>B · 按内容</h3>
+    <div class="tag">第一层是内容类型：我是谁、规矩、记忆、技能；工具变成每一行的小标签</div>
+    <div class="shell">
+      <div class="rail">
+        <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>笔记库</button>
+        <button class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/></svg>上下文</button>
+        <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/></svg>目录</button>
+        <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></svg>标签</button>
+        <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/></svg>待办</button>
+        <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>搜索</button>
+      </div>
+      <div class="panel">
+        <div class="hdr"><span>AI 上下文</span><span class="sp"></span><span class="ib">↻</span></div>
+        <div class="search">🔍 搜身份和记忆</div>
+        <div class="sect">我是谁</div>
+        <div class="row d1"><span class="nm">记忆 / 我是谁</span><span class="badge ok">源</span></div>
+        <div class="row d1"><span class="nm">CLAUDE.md</span><span class="chip">Claude</span><span class="meta">11-01</span></div>
+        <div class="row d1"><span class="nm">AGENTS.md</span><span class="chip">Codex</span><span class="badge warn">无身份</span></div>
+        <div class="row d1"><span class="nm">SOUL.md</span><span class="chip">Hermes</span><span class="badge warn">模板</span></div>
+        <div class="row d1"><span class="nm">USER.md</span><span class="chip">WorkBuddy</span><span class="meta">09-29</span></div>
+        <div class="sect">规矩</div>
+        <div class="row d1"><span class="nm">工作方式</span></div>
+        <div class="row d1"><span class="nm">写作</span></div>
+        <div class="row d1"><span class="nm">公众号</span></div>
+        <div class="row d1"><span class="nm meta">还有 4 篇…</span></div>
+        <div class="sect">记忆 · 按项目</div>
+        <div class="row d1"><span class="chev">▸</span><span class="nm">iml-markdown-editor</span><span class="chip">Claude</span><span class="meta">42</span></div>
+        <div class="row d1"><span class="chev">▸</span><span class="nm">MBA 作业</span><span class="chip">Claude</span><span class="meta">19</span></div>
+        <div class="row d1"><span class="chev">▸</span><span class="nm">Managerzone</span><span class="chip">Codex</span><span class="meta">6</span></div>
+        <div class="row d1"><span class="nm meta">还有 53 个项目…</span></div>
+        <div class="sect">技能</div>
+        <div class="row d1"><span class="nm">Claude 36 · Codex 4 · Hermes 2</span></div>
+        <div class="foot">
+          <div class="act"><span>⇣</span> 从各工具提炼记忆</div>
+          <div class="act"><span>⇅</span> 同步到各工具</div>
+          <div class="act"><span>⎘</span> 导出一份给别的 AI</div>
+        </div>
+      </div>
+    </div>
+    <div class="pros"><b>好在</b>：直接回答「可携带记忆」的核心问题——身份有没有漂。四个工具的身份文件并排，哪个没有、哪个停在 9 月，一眼看到；按内容组织和 <code>记忆/</code> 的分法一致</div>
+    <div class="cons"><b>代价</b>：「哪个文件算身份」靠工具表判断，表外的工具归不进来；记忆按项目合并后仍然 56 个项目，第三节会很长；面板切成四节，每节都要滚</div>
+  </div>
+
+  <!-- 方案 C -->
+  <div class="variant">
+    <h3>C · 记忆库为主，工具是来源 <span class="pill pill--rec">推荐</span></h3>
+    <div class="tag">上半是你的 8 篇记忆；下半「来源」按工具列，每个工具一行先给状态，展开才是文件</div>
+    <div class="shell">
+      <div class="rail">
+        <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>笔记库</button>
+        <button class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/></svg>上下文</button>
+        <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/></svg>目录</button>
+        <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></svg>标签</button>
+        <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/></svg>待办</button>
+        <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>搜索</button>
+      </div>
+      <div class="panel">
+        <div class="hdr"><span>AI 上下文</span><span class="sp"></span><span class="ib">↻</span></div>
+        <div class="search">🔍 搜身份和记忆</div>
+        <div class="sect">记忆库 · 笔记库/记忆</div>
+        <div class="row d1"><span class="nm">我是谁</span></div>
+        <div class="row d1"><span class="nm">工作方式</span><span class="badge">待加入 3</span></div>
+        <div class="row d1"><span class="nm">写作</span></div>
+        <div class="row d1"><span class="nm">公众号</span><span class="badge">待加入 1</span></div>
+        <div class="row d1"><span class="nm">课件与 PPT</span></div>
+        <div class="row d1"><span class="nm">编程与产品</span></div>
+        <div class="row d1"><span class="nm">方案与评审</span></div>
+        <div class="sect">来源</div>
+        <div class="row"><span class="chev">▾</span><svg class="ico o" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/></svg><span class="nm">Claude Code</span><span class="badge ok">已同步</span></div>
+        <div class="row d1"><span class="nm">CLAUDE.md</span><span class="meta">11-01</span></div>
+        <div class="row d1"><span class="chev">▸</span><span class="nm">记忆</span><span class="meta">286 · 54 项目</span></div>
+        <div class="row d1"><span class="nm">技能</span><span class="meta">36</span></div>
+        <div class="row"><span class="chev">▸</span><svg class="ico g" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/></svg><span class="nm">Codex</span><span class="badge warn">未同步</span></div>
+        <div class="row"><span class="chev">▸</span><svg class="ico m" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/></svg><span class="nm">Hermes</span><span class="badge warn">未同步</span></div>
+        <div class="row"><span class="chev">▸</span><svg class="ico m" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/></svg><span class="nm">WorkBuddy</span><span class="meta">读不到规则</span></div>
+        <div class="row"><span class="nm meta">豆包、Kimi：装了，内容在云端</span></div>
+        <div class="foot">
+          <div class="act primary"><span>⇣</span> 提炼 4 条新记忆</div>
+          <div class="act"><span>⇅</span> 同步到各工具</div>
+          <div class="act"><span>⎘</span> 导出一份给别的 AI</div>
+        </div>
+      </div>
+    </div>
+    <div class="pros"><b>好在</b>：面板就是「可携带记忆」这件事本身的工作台。你拥有的东西在上面，来源在下面，每个来源一行先告诉你两件事：有几条还没提炼进来、身份同步了没有。主按钮随状态变：有新的就是「提炼 N 条」，没有就是灰的「都提炼过了」</div>
+    <div class="cons"><b>代价</b>：浏览工具文件退到第二层，要多点一下；「待加入 N」要先做出采集（一期里本来就要做）；来源行的「已同步 / 未同步」要等二期的标记块才有意义，一期先只显示日期</div>
+  </div>
+
+</div>
+
+<div class="note">C 不是另起炉灶：它的「来源」展开后就是 A 的树；B 最有价值的那一眼（身份漂没漂）变成了来源行上的状态角标。所以推荐 C，A 和 B 的好处都保住了，只是把「你的记忆」放在了最上面。</div>
+
+<h3>页签叫什么</h3>
+<p>图标栏每格只有 36 px 宽，现有标签都是两三个字（笔记库、目录、标签）。「AI 上下文」放不下，三个候选：</p>
+<table>
+  <tr><th>标签</th><th>悬停提示</th><th>说明</th></tr>
+  <tr><td><b>上下文</b></td><td>AI 上下文</td><td>和菜单、文档里的叫法一致，「一个概念一个词」；推荐</td></tr>
+  <tr><td>记忆</td><td>AI 记忆</td><td>更亲切，但面板里还有规则文件和技能，不全是记忆</td></tr>
+  <tr><td>AI</td><td>AI 上下文</td><td>最短，但「智能」菜单已经代表 AI 功能，容易混</td></tr>
+</table>
+
+<h2>三个弹窗</h2>
+<p>都是主窗口内的浮层，标题固定、正文滚动。写盘的动作都先看清单再确认。</p>
+
+<h3>提炼：从各工具采新的，勾选后追加到记忆库</h3>
+<div class="modal">
+  <div class="modal__hd"><h4>提炼记忆</h4><p>从 Claude Code、Codex 采到 4 条记忆库里还没有的，勾上的追加到对应那篇的末尾</p></div>
+  <div class="modal__bd">
+    <div class="grouph">工作方式 · 3 条</div>
+    <div class="cand"><div class="box on"></div><div>改任何文件前先重读当前内容，我会在两轮之间直接改文件而不说<div class="src">2026-10-09 · Claude Code · Personal / WeChat Account · user-edits-md-directly</div></div><div class="to">追加到 <b>工作方式</b> ▾</div></div>
+    <div class="cand"><div class="box on"></div><div>周报不要编，不清楚的先问清楚再写；不把计划写成已完成<div class="src">Codex · memory_summary · User preferences</div></div><div class="to">追加到 <b>工作方式</b> ▾</div></div>
+    <div class="cand"><div class="box"></div><div>设计 bot 团队时先给精简、标准、分层三档再定名单<div class="src">2026-10-12 · Claude Code · Personal / hermes-agent-tutorial</div></div><div class="to">追加到 <b>工作方式</b> ▾</div></div>
+    <div class="grouph">公众号 · 1 条</div>
+    <div class="cand"><div class="box on"></div><div>教程开头要制造「然后呢？」，不从背景、定义或「今天教大家」开始<div class="src">Codex · memory_summary · 未来导航仪</div></div><div class="to">追加到 <b>公众号</b> ▾</div></div>
+  </div>
+  <div class="modal__ft"><span class="ft-note">去重看的是整行是否已在记忆库里；说同一件事但措辞不同的，这一版认不出来</span><span class="btn">取消</span><span class="btn primary">追加 3 条</span></div>
+</div>
+<ul>
+  <li>领域由来源目录推断（MBA 归课件、WeChat Account 归公众号、imoling.git 归编程），每条都能改</li>
+  <li>原文超过一行的，取 Claude 记忆正文的第一句；完整内容点行首能展开看</li>
+  <li>「说同一件事」的合并，交给三期的技能，这里不装懂</li>
+</ul>
+
+<h3>同步：把记忆库的入口写进各工具的规则文件</h3>
+<div class="modal">
+  <div class="modal__hd"><h4>同步到各工具</h4><p>只改标记块里面的内容，改之前整个文件备份到 笔记库/记忆/.备份/</p></div>
+  <div class="modal__bd">
+    <div class="sync"><div><b>Claude Code</b></div><div class="f">~/.claude/CLAUDE.md</div><div class="st ok">已是最新</div></div>
+    <div class="sync"><div><b>Codex</b></div><div class="f">~/.codex/AGENTS.md</div><div class="st warn">将写入标记块</div></div>
+    <div class="sync"><div><b>Hermes</b></div><div class="f">~/.hermes/SOUL.md</div><div class="st warn">将写入标记块</div></div>
+    <div class="sync"><div><b>WorkBuddy</b></div><div class="f">USER.md 由应用生成</div><div class="st na">不写</div></div>
+    <div class="grouph">写进去的是这样一块</div>
+<div class="block">&lt;!-- iml-memory:start --&gt;
+## 我是谁
+- 康伟，常被叫康 Sir 或康总。科大讯飞星火企业军团，负责数字员工产品……
+（「我是谁」全文，12 行）
+
+开工先读 ~/Personal/笔记库/记忆/ 里的 README 和「工作方式」，其余按任务挑着读。
+&lt;!-- iml-memory:end --&gt;</div>
+  </div>
+  <div class="modal__ft"><span class="ft-note">Claude Code 的 CLAUDE.md 支持 @ 引入文件，可以不内联；要不要这么做见文末</span><span class="btn">取消</span><span class="btn primary">写入 2 个文件</span></div>
+</div>
+
+<h3>导出：给读不到文件的那些</h3>
+<div class="two">
+  <div class="modal" style="margin-top:0">
+    <div class="modal__hd"><h4>导出一份给别的 AI</h4><p>贴到豆包、Kimi、ChatGPT 这类新对话的第一句</p></div>
+    <div class="modal__bd">
+      <div class="cand" style="grid-template-columns:22px 1fr"><div class="box on"></div><div>我是谁 <span class="src" style="display:inline">12 行</span></div></div>
+      <div class="cand" style="grid-template-columns:22px 1fr"><div class="box on"></div><div>工作方式 <span class="src" style="display:inline">31 行</span></div></div>
+      <div class="cand" style="grid-template-columns:22px 1fr"><div class="box on"></div><div>写作 · 公众号 · 课件与 PPT · 编程与产品 · 方案与评审</div></div>
+      <div class="cand" style="grid-template-columns:22px 1fr"><div class="box"></div><div>当前项目的笔记 <span class="src" style="display:inline">项目/iML Markdown Editor 改造</span></div></div>
+    </div>
+    <div class="modal__ft"><span class="ft-note">共 181 行，约 6 KB；标了「仅本机」的不在里面</span><span class="btn">存成文件</span><span class="btn primary">复制</span></div>
+  </div>
+  <div>
+    <p>给命令行 Agent 的不用弹窗，直接一句：</p>
+    <div class="block">iml memory              # 打印同一份合集
+iml memory --domain 公众号
+iml memory --project "iML Markdown Editor 改造"</div>
+    <p>换了终端，第一句话就是让它跑 <code>iml memory</code>。这和弹窗导出的是同一份内容，一处生成。</p>
+  </div>
+</div>
+
+<h2>分期（按 C 做）</h2>
+<table>
+  <tr><th style="width:70px">期</th><th>做什么</th><th>要动的地方</th></tr>
+  <tr><td>一期</td><td>页签与面板（记忆库 + 来源树 + 搜索）、独立索引、就地打开编辑、<code>[[链接]]</code> 与反链、提炼弹窗（不用模型）、<code>iml memory</code>、导出弹窗、撤掉旧弹窗</td><td><code>SearchIndex</code> 支持多根并在根上不跳点目录；新 <code>AiContextPanel.tsx</code>；链接解析按文件归属选索引；<code>aiContext/harvest.ts</code>；CLI 加子命令</td></tr>
+  <tr><td>二期</td><td>同步弹窗（标记块、备份、清单确认）；来源行的「已同步 / 未同步」状态</td><td><code>aiContext/sync.ts</code>，先例是 iml-switchboard 写 <code>AGENTS.md</code></td></tr>
+  <tr><td>三期</td><td>模型提炼：合并说同一件事的几条、把单个案例泛化成规矩。做成技能在 Claude Code 或 Codex 里跑，读 <code>iml memory harvest --json</code>，编辑器不碰模型</td><td>一个技能目录，加每周复盘的 hook</td></tr>
+</table>
+
+<h2>要你定的</h2>
+<ol>
+  <li><b>面板选哪版</b>：A、B 还是 C。我推荐 C</li>
+  <li><b>页签标签</b>：「上下文」「记忆」还是「AI」。我推荐「上下文」</li>
+  <li><b>CLAUDE.md 怎么办</b>：二期同步时，Claude Code 这份是内联「我是谁」（和别家一样），还是改成 <code>@~/Personal/笔记库/记忆/我是谁.md</code> 引入（只有它支持，不会漂）。我推荐引入；这一步动的是你的 <code>~/.claude</code></li>
+  <li><b>来源文件能不能改</b>：就地可编辑（推荐，一个编辑器管所有 Agent 的规则），还是只读加「在访达中显示」</li>
+</ol>
+
+</div>
+</body>
+</html>

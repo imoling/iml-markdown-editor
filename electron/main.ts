@@ -1,5 +1,6 @@
 import { app, BrowserWindow, ipcMain, nativeImage, Menu, shell, safeStorage } from 'electron';
 import path from 'path';
+import os from 'os';
 import fs from 'fs';
 import https from 'https';
 import http from 'http';
@@ -18,6 +19,11 @@ import { setupQuickCapture } from './capture';
 import { syncFolderCandidates, labelCloudStorageDir, SYNC_LIBRARY_NAME } from './shared/syncFolders';
 import { describeLibrary, normalizeRecentLibraries, touchRecentLibraries } from './shared/recentLibraries';
 import { OpenFileWatcher, filesOutsideLibrary } from './openFileWatcher';
+import { contextFiles, isScanned, readContextFile, scanAiContext, type ContextScan, type ContextHit } from './aiContext/scan';
+import { buildMemoryBundle, createMemoryDir, memoryDirOf, readMemoryState } from './aiContext/memory';
+import { applyHarvest, harvestMemories, type HarvestApply } from './aiContext/harvest';
+import { applySync, planSync } from './aiContext/sync';
+import { cliPath, installCli } from './cli/install';
 import { parseAppUrl, appUrlFromArgv, APP_URL_SCHEME, AppUrlAction } from './shared/appUrl';
 import { registerAssetScheme, handleAssetProtocol, findOrphanImages, filterTrashable, fetchPageTitle } from './assets';
 import { AI_DISABLED } from './shared/uiText';
@@ -371,6 +377,8 @@ let openFiles: string[] = [];
 const syncOpenFileWatcher = () => openFileWatcher.sync(filesOutsideLibrary(openFiles, watchedLibrary));
 // 笔记库全文索引
 const searchIndex = new SearchIndex();
+/** AI 上下文：各工具的身份、记忆文件和记忆库，单独一份，不进待办、不进语义索引 */
+const contextIndex = new SearchIndex();
 
 function createWindow() {
   // 冒烟测试：IML_SMOKE_OFFSCREEN=1 时用离屏渲染（不显示窗口，按定时器出帧），显示器休眠、无人值守时也能截图；
@@ -643,6 +651,10 @@ function setupAppMenu() {
           label: '本机资源…',
           click: () => openDialogInMain('resources'),
         },
+        {
+          label: 'AI 上下文',
+          click: () => mainWindow?.webContents.send('menu:show-sidebar', 'context'),
+        },
       ],
     },
     { role: 'windowMenu', label: '窗口' },
@@ -825,6 +837,8 @@ app.whenReady().then(() => {
           const paths = [...libraryChanged];
           libraryChanged.clear();
           await searchIndex.refresh(paths).catch(() => {});
+          const memoryPrefix = memoryDirOf(dirPath) + path.sep;
+          await contextIndex.refresh(paths.filter((p) => contextIndex.has(p) || p.startsWith(memoryPrefix))).catch(() => {});
           void syncSemanticIndex();
           if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('library:changed', paths);
         }, 400);
@@ -850,11 +864,85 @@ app.whenReady().then(() => {
     syncOpenFileWatcher();
   });
 
+  // ── 本机 AI 上下文：各工具的身份、记忆，加上笔记库里的「记忆」目录。单独一份索引，和笔记库的分开 ──
+  const contextHome = () => (isDev && process.env.IML_SMOKE_HOME) || os.homedir();
+  /** 记忆库跟着当前打开的笔记库走 */
+  const contextLibrary = () => watchedLibrary || (getAppSettings().defaultLibraryPath as string) || null;
+  let contextScan: ContextScan = { tools: [], cloud: [] };
+  /** 每个上下文文件属于哪个工具；「记忆」目录里的记为记忆库 */
+  const contextOwner = new Map<string, string>();
+  const rebuildContextIndex = async () => {
+    contextOwner.clear();
+    const files: string[] = [];
+    for (const { tool, file } of contextFiles(contextScan)) { contextOwner.set(file.path, tool); files.push(file.path); }
+    const library = contextLibrary();
+    if (library) {
+      const state = await readMemoryState(library);
+      for (const f of state.files) { contextOwner.set(f.path, '记忆'); files.push(f.path); }
+    }
+    await contextIndex.buildFiles(files);
+  };
+  ipcMain.handle('aiContext:scan', async () => {
+    contextScan = await scanAiContext(contextHome(), process.platform);
+    await rebuildContextIndex();
+    return contextScan;
+  });
+  ipcMain.handle('aiContext:read', (_event, file: string) => readContextFile(contextScan, String(file || '')));
+  ipcMain.handle('aiContext:search', (_event, query: string): ContextHit[] => contextIndex.search(String(query || ''), 50).map((r) => {
+    const snippet = r.snippets[0];
+    return { tool: contextOwner.get(r.path) ?? '', file: { path: r.path, name: r.title, bytes: 0, modifiedAt: 0 }, snippet: snippet ? `${snippet.before}${snippet.match}${snippet.after}` : r.title };
+  }));
+  ipcMain.handle('aiContext:reveal', (_event, file: string) => { if (isScanned(contextScan, file)) shell.showItemInFolder(file); });
+  ipcMain.handle('aiContext:owns', (_event, file: string) => contextIndex.has(String(file || '')));
+  ipcMain.handle('aiContext:memoryState', async () => { const library = contextLibrary(); return library ? readMemoryState(library) : null; });
+  ipcMain.handle('aiContext:createMemory', async () => {
+    const library = contextLibrary();
+    if (!library) return null;
+    const state = await createMemoryDir(library);
+    await rebuildContextIndex();
+    return state;
+  });
+  ipcMain.handle('aiContext:harvest', async () => { const library = contextLibrary(); return library ? harvestMemories(library, contextScan) : { candidates: [], domains: [] }; });
+  ipcMain.handle('aiContext:applyHarvest', async (_event, apply: HarvestApply) => {
+    const library = contextLibrary();
+    if (!library) return { appended: 0, files: [] };
+    const result = await applyHarvest(library, apply);
+    await rebuildContextIndex();
+    return result;
+  });
+  ipcMain.handle('aiContext:syncPlan', async () => { const library = contextLibrary(); return library ? planSync(library, contextHome()) : { ready: false, rows: [] }; });
+  ipcMain.handle('aiContext:applySync', async (_event, ids: string[]) => {
+    const library = contextLibrary();
+    if (!library) return { written: [], backups: [] };
+    const result = await applySync(library, contextHome(), Array.isArray(ids) ? ids.map(String) : []);
+    contextScan = await scanAiContext(contextHome(), process.platform);
+    await rebuildContextIndex();
+    return result;
+  });
+  ipcMain.handle('aiContext:bundle', async (_event, names?: string[]) => {
+    const library = contextLibrary();
+    return library ? buildMemoryBundle(library, { names: Array.isArray(names) ? names.map(String) : undefined }) : { text: '', files: [] };
+  });
+  const cliState = () => {
+    const target = cliPath(contextHome(), process.platform);
+    return { installed: fs.existsSync(target), path: target };
+  };
+  ipcMain.handle('aiContext:cliState', () => cliState());
+  ipcMain.handle('aiContext:installCli', async () => {
+    await installCli(process.execPath, contextHome(), process.platform);
+    return cliState();
+  });
+
   // ── 全文搜索 ──
   ipcMain.handle('search:query', (_event, query: string, limit?: number) => searchIndex.search(String(query || ''), limit));
   ipcMain.handle('search:status', () => searchIndex.status());
-  ipcMain.handle('search:listNotes', () => searchIndex.listNotes());
-  ipcMain.handle('search:backlinks', (_event, nameOrPath: string) => searchIndex.backlinks(String(nameOrPath || '')));
+  /** 从哪篇出发：AI 上下文里的文件连记忆和各工具的文件一起算，还能链到笔记库；笔记库里的只认笔记库 */
+  const unionByPath = <T extends { path: string }>(first: T[], second: T[]) => { const seen = new Set(first.map((n) => n.path)); return [...first, ...second.filter((n) => !seen.has(n.path))]; };
+  ipcMain.handle('search:listNotes', (_event, from?: string) => (from && contextIndex.has(String(from)) ? unionByPath(contextIndex.listNotes(), searchIndex.listNotes()) : searchIndex.listNotes()));
+  ipcMain.handle('search:backlinks', (_event, nameOrPath: string) => {
+    const key = String(nameOrPath || '');
+    return contextIndex.has(key) ? unionByPath(contextIndex.backlinks(key), searchIndex.backlinks(key)) : searchIndex.backlinks(key);
+  });
   // 用系统默认应用打开笔记库里的附件（嵌入的 PDF 卡片上的「打开」）。只认库里的、已经进了索引的附件，别的路径一律不开
   ipcMain.handle('search:openAttachment', async (_event, filePath: string) => {
     const target = searchIndex.knownAttachment(String(filePath || ''));
@@ -863,7 +951,8 @@ app.whenReady().then(() => {
   });
   ipcMain.handle('search:findAttachment', (_event, name: string, fromDir?: string | null) => searchIndex.findAttachment(String(name || ''), fromDir ? String(fromDir) : null));
   ipcMain.handle('search:tasks', (_event, includeDone?: boolean) => searchIndex.listTasks(!!includeDone));
-  ipcMain.handle('search:unlinkedMentions', (_event, filePath: string) => searchIndex.unlinkedMentions(String(filePath || '')));
+  // 上下文文件不找「未链接提及」：那个功能会往别的文件里写链接，工具自己的文件不动
+  ipcMain.handle('search:unlinkedMentions', (_event, filePath: string) => (contextIndex.has(String(filePath)) ? [] : searchIndex.unlinkedMentions(String(filePath || ''))));
   ipcMain.handle('search:tags', () => searchIndex.listTags());
   ipcMain.handle('search:notesByTag', (_event, tag: string, includeTemplates?: boolean) => searchIndex.notesByTag(String(tag || ''), !!includeTemplates));
 

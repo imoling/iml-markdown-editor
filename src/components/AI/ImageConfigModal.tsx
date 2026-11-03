@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Cloud, Cpu } from 'lucide-react';
 import { useAppStore, type ImageGenConfig } from '../../stores/appStore';
+import { useShallow } from 'zustand/react/shallow';
 import { LocalImageSection } from './LocalImageSection';
 import { KeyPrivacyNote } from './CopyNotes';
 import { stripIpcError } from './ModelConfigModal';
@@ -49,7 +50,7 @@ const cloudProviderOf = (p: ImageGenConfig['provider']): CloudProvider => (p ===
 export const ImageConfigModal: React.FC<Props> = ({ onClose }) => {
   const isStandalone = new URLSearchParams(window.location.search).get('window') === 'image-config';
   const isMac = window.api.app.platform === 'darwin';
-  const { imageGenConfig, setImageGenConfig } = useAppStore();
+  const { imageGenConfig, setImageGenConfig } = useAppStore(useShallow((s) => ({ imageGenConfig: s.imageGenConfig, setImageGenConfig: s.setImageGenConfig })));
   const [config, setConfig] = useState<ImageGenConfig>({ ...imageGenConfig });
   // 切到本机再切回来时，还是原来那家网络服务
   const [lastCloud, setLastCloud] = useState<CloudProvider>(cloudProviderOf(imageGenConfig.provider));

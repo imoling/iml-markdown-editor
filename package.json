@@ -2,7 +2,7 @@
   "name": "iml-markdown-editor",
   "version": "26.9.0",
   "description": "极简而极致的 Markdown 编辑器，支持双模编辑、PDF 导出与智能目录同步。",
-  "main": "dist-electron/main.js",
+  "main": "dist-electron/boot.js",
   "scripts": {
     "test": "vitest run",
     "predev": "node scripts/build-syscap.mjs && npx tsc -p electron/tsconfig.json",

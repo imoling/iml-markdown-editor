@@ -1,6 +1,8 @@
+import { useDueCount } from './useDueCount';
 import { startTreeDrag } from '../../utils/treeDrag';
 import React from 'react';
 import { useAppStore, FileNode, HeadingNode, readLibraryDir } from '../../stores/appStore';
+import { useShallow } from 'zustand/react/shallow';
 import { SearchPanel } from './SearchPanel';
 import { TagsPanel } from './TagsPanel';
 import { RelatedPanel } from './RelatedPanel';
@@ -8,9 +10,10 @@ import { AskPanel } from './AskPanel';
 import { TranscribePanel } from './TranscribePanel';
 import { CalendarPanel } from './CalendarPanel';
 import { TasksPanel } from './TasksPanel';
+import { AiContextPanel } from './AiContextPanel';
 import { sortFileNodes, FILE_SORT_LABELS, FileSortMode } from '../../utils/fileSort';
 import {
-  ChevronDown, ChevronRight, FolderOpen, FileText, FileCode, FolderClosed,
+  ChevronDown, ChevronRight, FolderOpen, FileText, FileCode, FolderClosed, Bot,
   List, RotateCw, Star, BookOpen, Settings, FilePlus, FolderPlus, CalendarDays, LayoutTemplate, FolderOpen as FolderOpenIcon, Search, Hash, MessageCircleQuestion, Mic, Link2, ListChecks, ArrowUpDown, Check, ChevronsUpDown,
 } from 'lucide-react';
 import { describeLibrary } from '../../../electron/shared/recentLibraries';
@@ -20,10 +23,12 @@ const isMac = window.api.app.platform === 'darwin';
 const REVEAL_LABEL = isMac ? '在访达中显示' : '在资源管理器中显示';
 const MD_RE = /\.(md|markdown|mdown|mkd)$/i;
 
-export const ActivityBar: React.FC = () => {
-  const { sidebarTab, setSidebarTab, sidebarVisible } = useAppStore();
+const ActivityBarImpl: React.FC = () => {
+  const { sidebarTab, setSidebarTab, sidebarVisible } = useAppStore(useShallow((s) => ({ sidebarTab: s.sidebarTab, setSidebarTab: s.setSidebarTab, sidebarVisible: s.sidebarVisible })));
+  const dueCount = useDueCount();
   const tabs = [
     { id: 'library' as const, icon: <BookOpen size={16} />, label: '笔记库', title: '笔记库' },
+    { id: 'context' as const, icon: <Bot size={16} />, label: '上下文', title: 'AI 上下文：各 AI 工具的身份、记忆和你的记忆库' },
     { id: 'catalog' as const, icon: <List size={16} />, label: '目录', title: '目录、反向链接与相关笔记' },
     { id: 'tags' as const, icon: <Hash size={16} />, label: '标签', title: '所有标签' },
     { id: 'tasks' as const, icon: <ListChecks size={16} />, label: '待办', title: '全库待办' },
@@ -37,6 +42,7 @@ export const ActivityBar: React.FC = () => {
         <button key={t.id} className={`activity-bar-btn ${sidebarTab === t.id && sidebarVisible ? 'active' : ''}`} onClick={() => setSidebarTab(t.id)} title={t.title}>
           {t.icon}
           <span>{t.label}</span>
+          {t.id === 'tasks' && dueCount > 0 && <i className="activity-bar-btn__badge">{dueCount > 99 ? '99+' : dueCount}</i>}
         </button>
       ))}
     </div>
@@ -66,7 +72,11 @@ async function moveTo(path: string) {
 }
 
 const FileTreeItem: React.FC<{ node: FileNode; level: number }> = ({ node, level }) => {
-  const { updateFileNode, activeTabId, expandedPaths, setExpanded, starredFiles, toggleStar, selectedNodePath, setSelectedNodePath, renamingPath, setRenamingPath, renameFile, setContextMenu } = useAppStore();
+  const {
+    updateFileNode, activeTabId, expandedPaths, setExpanded, starredFiles, toggleStar, selectedNodePath, setSelectedNodePath, renamingPath, setRenamingPath, renameFile, setContextMenu,
+  } = useAppStore(useShallow((s) => ({
+    updateFileNode: s.updateFileNode, activeTabId: s.activeTabId, expandedPaths: s.expandedPaths, setExpanded: s.setExpanded, starredFiles: s.starredFiles, toggleStar: s.toggleStar, selectedNodePath: s.selectedNodePath, setSelectedNodePath: s.setSelectedNodePath, renamingPath: s.renamingPath, setRenamingPath: s.setRenamingPath, renameFile: s.renameFile, setContextMenu: s.setContextMenu,
+  })));
   const isOpen = expandedPaths.includes(node.path);
   const fileSort = useAppStore((st) => st.fileSort);
   const [editName, setEditName] = React.useState(node.name.replace(/\.md$/i, ''));
@@ -171,7 +181,7 @@ const FileTreeItem: React.FC<{ node: FileNode; level: number }> = ({ node, level
 };
 
 const StarredItem: React.FC<{ path: string }> = ({ path }) => {
-  const { activeTabId, toggleStar } = useAppStore();
+  const { activeTabId, toggleStar } = useAppStore(useShallow((s) => ({ activeTabId: s.activeTabId, toggleStar: s.toggleStar })));
   const name = path.split(/[/\\]/).pop() || 'Unknown';
   const isActive = activeTabId === path;
   return (
@@ -187,7 +197,7 @@ const StarredItem: React.FC<{ path: string }> = ({ path }) => {
 };
 
 const OutlineItem: React.FC<{ node: HeadingNode }> = ({ node }) => {
-  const { scrollToHeading } = useAppStore();
+  const { scrollToHeading } = useAppStore(useShallow((s) => ({ scrollToHeading: s.scrollToHeading })));
   return (
     <div className="tree-item" style={{ paddingLeft: `${(node.level - 1) * 16 + 12}px` }} onClick={() => scrollToHeading(node)}>
       <span className={node.level === 1 ? 'outline-item--h1' : 'outline-item'}>{node.text}</span>
@@ -202,7 +212,11 @@ const MenuItem: React.FC<{ label: string; hint?: string; danger?: boolean; onCli
 );
 
 const ContextMenuComponent = () => {
-  const { contextMenu, setContextMenu, setRenamingPath, duplicateFile, deleteFile, createNoteIn, createFolderIn, workspacePath } = useAppStore();
+  const {
+    contextMenu, setContextMenu, setRenamingPath, duplicateFile, deleteFile, createNoteIn, createFolderIn, workspacePath,
+  } = useAppStore(useShallow((s) => ({
+    contextMenu: s.contextMenu, setContextMenu: s.setContextMenu, setRenamingPath: s.setRenamingPath, duplicateFile: s.duplicateFile, deleteFile: s.deleteFile, createNoteIn: s.createNoteIn, createFolderIn: s.createFolderIn, workspacePath: s.workspacePath,
+  })));
 
   React.useEffect(() => {
     const close = () => setContextMenu({ visible: false });
@@ -382,7 +396,11 @@ const LibraryMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 };
 
 const TemplateMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
-  const { listTemplates, createNoteFromTemplate, createSampleTemplates, workspacePath } = useAppStore();
+  const {
+    listTemplates, createNoteFromTemplate, createSampleTemplates, workspacePath,
+  } = useAppStore(useShallow((s) => ({
+    listTemplates: s.listTemplates, createNoteFromTemplate: s.createNoteFromTemplate, createSampleTemplates: s.createSampleTemplates, workspacePath: s.workspacePath,
+  })));
   const [templates, setTemplates] = React.useState<{ name: string; path: string }[] | null>(null);
 
   React.useEffect(() => {
@@ -422,12 +440,12 @@ const TemplateMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   );
 };
 
-export const Sidebar: React.FC = () => {
+const SidebarImpl: React.FC = () => {
   const {
-    fileTree, workspacePath, workspaceName, sidebarVisible, outline, sidebarTab,
-    refreshWorkspace, starredFiles, sidebarWidth, setSidebarWidth,
-    createNoteIn, createFolderIn, getNewNoteDir, setContextMenu, setSelectedNodePath, openDailyNote,
-  } = useAppStore();
+    fileTree, workspacePath, workspaceName, sidebarVisible, outline, sidebarTab, refreshWorkspace, starredFiles, sidebarWidth, setSidebarWidth, createNoteIn, createFolderIn, getNewNoteDir, setContextMenu, setSelectedNodePath, openDailyNote,
+  } = useAppStore(useShallow((s) => ({
+    fileTree: s.fileTree, workspacePath: s.workspacePath, workspaceName: s.workspaceName, sidebarVisible: s.sidebarVisible, outline: s.outline, sidebarTab: s.sidebarTab, refreshWorkspace: s.refreshWorkspace, starredFiles: s.starredFiles, sidebarWidth: s.sidebarWidth, setSidebarWidth: s.setSidebarWidth, createNoteIn: s.createNoteIn, createFolderIn: s.createFolderIn, getNewNoteDir: s.getNewNoteDir, setContextMenu: s.setContextMenu, setSelectedNodePath: s.setSelectedNodePath, openDailyNote: s.openDailyNote,
+  })));
   const [showTemplates, setShowTemplates] = React.useState(false);
   const [showSort, setShowSort] = React.useState(false);
   const [showLibraries, setShowLibraries] = React.useState(false);
@@ -489,7 +507,9 @@ export const Sidebar: React.FC = () => {
     <aside ref={asideRef} className="sidebar" style={{ width: sidebarWidth }}>
       <div ref={handleRef} className="sidebar-resize-handle" onPointerDown={onHandlePointerDown} onPointerMove={onHandlePointerMove} onPointerUp={onHandlePointerUp} title="拖动调整宽度" />
       <div className="sidebar-content" onContextMenu={sidebarTab === 'library' ? openRootMenu : undefined}>
-        {sidebarTab === 'transcribe' ? (
+        {sidebarTab === 'context' ? (
+          <AiContextPanel />
+        ) : sidebarTab === 'transcribe' ? (
           <TranscribePanel />
         ) : sidebarTab === 'ask' ? (
           <AskPanel />
@@ -557,3 +577,9 @@ export const Sidebar: React.FC = () => {
     </aside>
   );
 };
+
+/** 不接 props，只靠自己订阅的 store 片段更新：App 因为弹窗、标签页这类事重渲染时，这一整块不跟着重画 */
+export const ActivityBar = React.memo(ActivityBarImpl);
+
+/** 不接 props，只靠自己订阅的 store 片段更新：App 因为弹窗、标签页这类事重渲染时，这一整块不跟着重画 */
+export const Sidebar = React.memo(SidebarImpl);

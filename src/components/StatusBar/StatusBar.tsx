@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import { useAppStore } from '../../stores/appStore';
+import { useShallow } from 'zustand/react/shallow';
 import { Minus, Plus, Loader2, ChevronUp } from 'lucide-react';
 import { describeAiDestination } from '../../utils/aiService';
 import { useTranscribeStore } from '../../stores/transcribeStore';
@@ -42,8 +43,12 @@ const RecordingIndicator: React.FC = () => {
   );
 };
 
-export const StatusBar: React.FC = () => {
-  const { mode, toggleMode, activeTabId, tabs, statusBarVisible, aiStatus, zoom, setZoom } = useAppStore();
+const StatusBarImpl: React.FC = () => {
+  const {
+    mode, toggleMode, activeTabId, tabs, statusBarVisible, aiStatus, zoom, setZoom,
+  } = useAppStore(useShallow((s) => ({
+    mode: s.mode, toggleMode: s.toggleMode, activeTabId: s.activeTabId, tabs: s.tabs, statusBarVisible: s.statusBarVisible, aiStatus: s.aiStatus, zoom: s.zoom, setZoom: s.setZoom,
+  })));
   const notice = useAppStore((s) => s.notice);
   const aiEnabled = useAppStore((s) => s.aiEnabled);
   const dialog = useAppStore((s) => s.dialog);
@@ -163,3 +168,6 @@ export const StatusBar: React.FC = () => {
     </footer>
   );
 };
+
+/** 不接 props，只靠自己订阅的 store 片段更新：App 因为弹窗、标签页这类事重渲染时，这一整块不跟着重画 */
+export const StatusBar = React.memo(StatusBarImpl);

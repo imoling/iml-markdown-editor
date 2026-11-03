@@ -95,6 +95,23 @@ export function toggleTaskLine(content: string, task: Pick<NoteTask, 'line' | 'r
 export type DueBucket = 'overdue' | 'today' | 'tomorrow' | 'week' | 'later';
 
 /** 到期日相对今天落在哪一段（today 是 YYYY-MM-DD）。「本周」指接下来 7 天内 */
+/** 没做完的待办里，逾期和今天到期的各有几件 */
+export function countDue(notes: { tasks: { done: boolean; due: string | null }[] }[], today: string): { overdue: number; due: number } {
+  let overdue = 0;
+  let due = 0;
+  for (const note of notes) {
+    for (const task of note.tasks) {
+      if (task.done || !task.due) continue;
+      if (task.due < today) overdue++;
+      else if (task.due === today) due++;
+    }
+  }
+  return { overdue, due };
+}
+
+export const dueNotice = (overdue: number, due: number) =>
+  [due > 0 && `今天 ${due} 件到期`, overdue > 0 && `逾期 ${overdue} 件`].filter(Boolean).join('，');
+
 export function dueBucket(due: string, today: string): DueBucket {
   if (due < today) return 'overdue';
   if (due === today) return 'today';
